@@ -1,0 +1,68 @@
+
+services:
+  mongodb:
+    image: mongo:7.0
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: "stockpilot321"
+      MONGO_INITDB_DATABASE: stockpilot
+
+    volumes:
+      - mongodb_data:/data/db
+      - ./mongodb-init.js:/docker-entrypoint-initdb.d/mongodb-init.js:ro
+
+    networks:
+      - stockpilot-network
+
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - 'mongosh --quiet --username "$$MONGO_INITDB_ROOT_USERNAME" --password "$$MONGO_INITDB_ROOT_PASSWORD" --authenticationDatabase admin --eval "quit(db.adminCommand({ ping: 1 }).ok ? 0 : 1)"'
+      interval: 10s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+    restart: unless-stopped
+
+    ports:
+      - "3000:3000"
+
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      HOSTNAME: 0.0.0.0
+      MONGODB_URI: "mongodb://root:stockpilot321@mongodb:27017/stockpilot?authSource=admin"
+      JWT_ACCESS_SECRET: "avQm2xL9pR5kT8wN4yH6cF1zB4aD0lE7uJ9iK2mL"
+      JWT_REFRESH_SECRET: "eA8nZ3rW6pY1tK9vC4xH7qP2dF5sB0eU8kG6iR4"
+
+    depends_on:
+      mongodb:
+        condition: service_healthy
+
+    networks:
+      - stockpilot-network
+
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:3000/api/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  mongodb_data:
+
+networks:
+  stockpilot-network:
+    driver: bridge

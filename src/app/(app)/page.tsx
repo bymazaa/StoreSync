@@ -1,0 +1,48 @@
+
+import { Suspense } from "react";
+import { redirect } from "next/navigation";
+
+import { Dashboard } from "@/components/dashboard/dashboard";
+import { getCurrentUser } from "@/lib/auth/session";
+
+export default function Home() {
+  return (
+    <Suspense
+      fallback={
+        <div
+          className="min-h-screen bg-background"
+          aria-busy="true"
+          aria-label="Loading dashboard"
+        />
+      }
+    >
+      <HomeContent />
+    </Suspense>
+  );
+}
+
+async function HomeContent() {
+  const user = await getCurrentUser();
+
+  const permissions = new Set(
+    user?.rolePermissions.map((entry) => entry.permission) ?? []
+  );
+
+  if (!permissions.has("VIEW_REPORTS")) {
+    if (permissions.has("CREATE_SALES")) {
+      redirect("/sales");
+    }
+
+    if (permissions.has("CREATE_PURCHASES")) {
+      redirect("/purchases");
+    }
+
+    if (permissions.has("MANAGE_PRODUCTS")) {
+      redirect("/products");
+    }
+
+    redirect("/guide");
+  }
+
+  return <Dashboard />;
+}

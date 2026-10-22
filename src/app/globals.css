@@ -1,0 +1,162 @@
+@import "tailwindcss";
+
+@media print {
+  @page { size: letter; margin: 12mm; }
+  @page receipt { size: 80mm auto; margin: 0; }
+  body { background: #fff !important; color: #111827 !important; }
+  aside, nav, header[role="banner"], .app-shell-header, button, a[href], .print\:hidden { display: none !important; }
+  main { padding: 0 !important; }
+  .rounded-2xl, .rounded-3xl { border-radius: 0 !important; box-shadow: none !important; }
+  .bg-card, .bg-background { background: #fff !important; }
+  .invoice-panel { padding: 0 !important; border: 0 !important; background: #fff !important; }
+  .print-document .overflow-x-auto { overflow: visible !important; }
+  .invoice-paper { padding: 0 !important; }
+  .print-document > header, .print-document > section.ml-auto, .print-document > section.receipt-return-summary { break-inside: avoid; page-break-inside: avoid; }
+  .print-document table { font-variant-numeric: tabular-nums; }
+  .print-document { width: 100%; max-width: none !important; color: #172523 !important; font-family: "Inter Variable", "Noto Sans Bengali Variable", Arial, sans-serif; font-size: 10pt; line-height: 1.5; }
+  .print-document, .print-document * { text-transform: uppercase; }
+  .invoice-brand-header { border-bottom: 2px solid #0f766e !important; padding-bottom: 6mm !important; }
+  .invoice-shop-logo { max-height: 16mm; }
+  .invoice-shop-mark { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+  .invoice-number-block { min-width: 44mm; }
+  .print-document > section.grid { padding-top: 6mm; padding-bottom: 6mm; }
+  .print-document > section.ml-auto { margin-top: 6mm; }
+  .print-document table { width: 100%; border-collapse: collapse; }
+  .print-document thead { display: table-header-group; }
+  .print-document tr, .print-document section, .print-document footer { break-inside: avoid; page-break-inside: avoid; }
+  .print-document th, .print-document td { vertical-align: top; border-bottom: 1px solid #e5e7eb; }
+  .print-document th { padding: 3mm 2mm; background: #f3f7f6 !important; color: #53625f !important; font-size: 8pt; font-weight: 700; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+  .print-document td { padding: 3mm 2mm; }
+  .print-document footer { color: #64716f !important; }
+  .receipt-print-mode { margin: 0 !important; }
+  .receipt-print-mode > section { margin: 0 !important; padding: 0 !important; border: 0 !important; }
+  .receipt-print-mode .print-document { page: receipt; box-sizing: border-box; width: 76mm; max-width: 76mm; margin: 0 auto; padding: 3mm; font-size: 9pt; }
+  .receipt-print-mode .truncate-receipt { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .receipt-print-mode .print-document > header { display: block; padding-bottom: 3mm; text-align: center; }
+  .receipt-print-mode .print-document > header > div:last-child { margin-top: 2mm; text-align: center; }
+  .receipt-print-mode .print-document > section.grid { display: block; padding: 3mm 0; }
+  .receipt-print-mode .print-document > section.grid > div + div { margin-top: 2mm; text-align: left; }
+  .receipt-print-mode .print-document table { width: 100%; table-layout: fixed; font-size: 7pt; }
+  .receipt-print-mode .print-document th, .receipt-print-mode .print-document td { padding: 1.2mm 0.5mm; overflow-wrap: anywhere; }
+  .receipt-print-mode .print-document th:first-child, .receipt-print-mode .print-document td:first-child { width: 29%; }
+  .receipt-print-mode .print-document th:last-child, .receipt-print-mode .print-document td:last-child { text-align: right; }
+  .receipt-print-mode .print-document > section.ml-auto { max-width: 100%; }
+  .receipt-print-mode .receipt-return-summary { margin-top: 4mm; padding-top: 3mm; }
+  .receipt-print-mode .receipt-return { padding-bottom: 2mm; }
+  .receipt-print-mode .receipt-return-summary h2 { font-size: 9pt; }
+  .receipt-print-mode .print-document footer { margin-top: 4mm; padding-top: 2mm; }
+}
+@custom-variant dark (&:where(.dark, .dark *));
+
+@font-face {
+  font-family: "Inter Variable";
+  src: url("/fonts/inter-latin-wght-normal.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Noto Sans Bengali Variable";
+  src: url("/fonts/noto-sans-bengali-wght-normal.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  unicode-range: U+0980-09FF, U+200C-200D;
+}
+
+:root {
+  color-scheme: light;
+  --background: #f6f8f7;
+  --foreground: #152b2a;
+  --card: #ffffff;
+  --border: #e6ece9;
+  --muted: #f0f4f2;
+  --muted-foreground: #74817e;
+  --primary: #0f9d8a;
+  --primary-foreground: #ffffff;
+  --primary-soft: #e5f4f0;
+  --sidebar: #102a43;
+  --sidebar-foreground: #e1ebf3;
+  --ring: #14a392;
+  --success: #13866e;
+  --danger: #d45151;
+  --teal-soft: #e5f4f0;
+  --teal-strong: #0d897a;
+  --blue-soft: #eaf1fb;
+  --blue-strong: #4b75ba;
+  --amber-soft: #fff3dc;
+  --amber-strong: #bd811e;
+  --violet-soft: #f0ebfb;
+  --violet-strong: #8264bd;
+  --chart-primary: #0f9d8a;
+  --chart-secondary: #93a9cc;
+  --chart-grid: #e9efed;
+  --chart-label: #8b9794;
+  --tooltip-bg: #ffffff;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-border: var(--border);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-soft: var(--primary-soft);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-ring: var(--ring);
+  --color-success: var(--success);
+  --color-danger: var(--danger);
+  --color-teal-soft: var(--teal-soft);
+  --color-teal-strong: var(--teal-strong);
+  --color-blue-soft: var(--blue-soft);
+  --color-blue-strong: var(--blue-strong);
+  --color-amber-soft: var(--amber-soft);
+  --color-amber-strong: var(--amber-strong);
+  --color-violet-soft: var(--violet-soft);
+  --color-violet-strong: var(--violet-strong);
+  --color-chart-secondary: var(--chart-secondary);
+  --shadow-card: 0 4px 18px rgb(24 58 51 / 0.045);
+  --font-sans: "Inter Variable", "Noto Sans Bengali Variable", ui-sans-serif, system-ui, sans-serif;
+}
+
+.dark {
+  color-scheme: dark;
+  --background: #101918;
+  --foreground: #e5eeeb;
+  --card: #17211f;
+  --border: #293733;
+  --muted: #202c29;
+  --muted-foreground: #9aa9a4;
+  --primary: #54c5b1;
+  --primary-foreground: #082a26;
+  --primary-soft: #183b35;
+  --sidebar: #131d1b;
+  --sidebar-foreground: #adbbb6;
+  --ring: #54c5b1;
+  --success: #60c6a6;
+  --danger: #f17b79;
+  --teal-soft: #183b35;
+  --teal-strong: #70d2bf;
+  --blue-soft: #1d3047;
+  --blue-strong: #9bb7e5;
+  --amber-soft: #3d321e;
+  --amber-strong: #e9b658;
+  --violet-soft: #302742;
+  --violet-strong: #bca4ec;
+  --chart-primary: #55c8b4;
+  --chart-secondary: #839ac0;
+  --chart-grid: #2a3935;
+  --chart-label: #9aa9a4;
+  --tooltip-bg: #17211f;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: "Inter Variable", "Noto Sans Bengali Variable", ui-sans-serif, system-ui, sans-serif;
+}

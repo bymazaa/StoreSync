@@ -1,0 +1,54 @@
+# Dependencies
+node_modules
+.pnpm-store
+
+# Build output (will be generated in container)
+.next
+out
+
+# Development
+.git
+.gitignore
+.vscode
+.idea
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Documentation (not needed in production)
+*.md
+!README.md
+docker-compose-dev.yml
+# Docker files
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Scripts and configs not needed in production
+tsconfig.tsbuildinfo
+
+# Test files
+__tests__
+*.test.ts
+*.test.tsx
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE files
+*.swp
+*.swo
+*~
+
+# Logs
+logs
+*.log
+npm-debug.log*
+
+# Temporary files
+tmp
+temp
+*.tmp

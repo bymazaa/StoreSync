@@ -1,0 +1,156 @@
+"use client";
+
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import { Boxes, LoaderCircle, Search, ShoppingBag, ShoppingCart, Truck, UsersRound } from "lucide-react";
+
+type Suggestion = { type: string; id: string; title: string; subtitle: string; href: string; amount?: string };
+type Group = { key: string; label: string; items: Suggestion[] };
+
+const typeIcons: Record<string, typeof Boxes> = {
+  product: Boxes,
+  customer: UsersRound,
+  supplier: Truck,
+  sale: ShoppingCart,
+  purchase: ShoppingBag,
+};
+
+export function HeaderSearch({ currencyCode, locale }: { currencyCode: string; locale: string }) {
+  const router = useRouter();
+  const rootRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [query, setQuery] = useState("");
+  const [groups, setGroups] = useState<Group[]>([]);
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [active, setActive] = useState(0);
+
+  const items = useMemo(() => groups.flatMap((group) => group.items), [groups]);
+  const indexByKey = useMemo(() => new Map(items.map((item, position) => [`${item.type}-${item.id}`, position])), [items]);
+  const currency = useMemo(() => new Intl.NumberFormat(locale, { style: "currency", currency: currencyCode }), [locale, currencyCode]);
+
+  useEffect(() => {
+    const term = query.trim();
+    if (term.length < 2) return;
+    const controller = new AbortController();
+    const timer = window.setTimeout(async () => {
+      setLoading(true); setOpen(true);
+      try {
+        const response = await fetch(`/api/search?q=${encodeURIComponent(term)}`, { signal: controller.signal });
+        if (!response.ok) throw new Error("Search failed.");
+        const payload = (await response.json()) as { groups: Group[] };
+        setGroups(payload.groups); setActive(0);
+      } catch {
+        if (!controller.signal.aborted) setGroups([]);
+      } finally {
+        if (!controller.signal.aborted) setLoading(false);
+      }
+    }, 180);
+    return () => { window.clearTimeout(timer); controller.abort(); };
+  }, [query]);
+
+  useEffect(() => {
+    function handlePointerDown(event: MouseEvent) {
+      if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
+    }
+    function handleShortcut(event: KeyboardEvent) {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        inputRef.current?.focus(); inputRef.current?.select();
+      }
+    }
+    document.addEventListener("mousedown", handlePointerDown);
+    window.addEventListener("keydown", handleShortcut);
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      window.removeEventListener("keydown", handleShortcut);
+    };
+  }, []);
+
+  function changeQuery(value: string) {
+    setQuery(value);
+    if (value.trim().length < 2) { setGroups([]); setLoading(false); setOpen(false); }
+  }
+
+  function select(item: Suggestion) {
+    setOpen(false); setQuery(""); setGroups([]);
+    inputRef.current?.blur();
+    router.push(item.href);
+  }
+
+  function handleKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
+    if (event.key === "Escape") { setOpen(false); inputRef.current?.blur(); return; }
+    if (event.key === "ArrowDown") { event.preventDefault(); setOpen(true); setActive((current) => Math.min(current + 1, items.length - 1)); return; }
+    if (event.key === "ArrowUp") { event.preventDefault(); setActive((current) => Math.max(current - 1, 0)); return; }
+    if (event.key === "Enter" && open) {
+      const item = items[active];
+      if (!item) return;
+      event.preventDefault();
+      select(item);
+    }
+  }
+
+  const term = query.trim();
+  const showEmpty = open && !loading && groups.length === 0 && term.length >= 2;
+
+  return (
+    <div ref={rootRef} className="relative hidden w-[280px] sm:block xl:w-[350px]">
+      <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+      <input
+        ref={inputRef}
+        value={query}
+        onChange={(event) => changeQuery(event.target.value)}
+        onFocus={() => { if (term.length >= 2) setOpen(true); }}
+        onKeyDown={handleKeyDown}
+        role="combobox"
+        aria-expanded={open}
+        aria-controls="header-search-results"
+        aria-autocomplete="list"
+        aria-activedescendant={open && items[active] ? `header-search-${items[active].type}-${items[active].id}` : undefined}
+        className="h-10 w-full rounded-xl border border-border bg-card pl-9 pr-14 text-sm text-foreground outline-none placeholder:text-muted-foreground focus:border-primary/50 focus:ring-2 focus:ring-primary/10"
+        placeholder="Search products, invoices..."
+        aria-label="Search products, invoices, customers and suppliers"
+      />
+      {loading ? (
+        <LoaderCircle size={14} className="absolute right-3 top-1/2 -translate-y-1/2 animate-spin text-muted-foreground" />
+      ) : (
+        <kbd className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 rounded-md border border-border bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">⌘ K</kbd>
+      )}
+
+      {open && (loading || items.length > 0 || showEmpty) && (
+        <div id="header-search-results" role="listbox" className="absolute left-0 right-0 top-12 z-40 max-h-[70vh] overflow-y-auto rounded-xl border border-border bg-card p-1.5 shadow-xl">
+          {showEmpty && <p className="px-3 py-6 text-center text-sm text-muted-foreground">No matches for “{term}”.</p>}
+          {groups.map((group) => (
+            <div key={group.key} className="py-1">
+              <p className="px-3 pb-1 pt-2 text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground">{group.label}</p>
+              {group.items.map((item) => {
+                const current = indexByKey.get(`${item.type}-${item.id}`) ?? -1;
+                const Icon = typeIcons[item.type] ?? Search;
+                return (
+                  <button
+                    key={`${item.type}-${item.id}`}
+                    id={`header-search-${item.type}-${item.id}`}
+                    type="button"
+                    role="option"
+                    aria-selected={active === current}
+                    onMouseEnter={() => setActive(current)}
+                    onClick={() => select(item)}
+                    className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left transition-colors ${active === current ? "bg-muted" : "hover:bg-muted/60"}`}
+                  >
+                    <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-primary-soft text-primary"><Icon size={15} /></span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-[13px] font-semibold text-foreground">{item.title}</span>
+                      <span className="block truncate text-[11px] text-muted-foreground">
+                        {item.amount ? `${currency.format(Number(item.amount))}${item.subtitle ? ` · ${item.subtitle}` : ""}` : item.subtitle}
+                      </span>
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
