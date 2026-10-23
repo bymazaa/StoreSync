@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
-import { randomBytes } from "node:crypto";
 import { Permission } from "@/types";
 import { authorized, authorizedAny } from "@/lib/auth/api-guard";
 import connectDB from "@/lib/db";
 import { Product, Category, Unit, AuditLog } from "@/models";
 import { invalidBody } from "@/lib/http/api-response";
 import { productSchema } from "@/lib/validation/api";
+import { skuCategoryPrefix } from "@/lib/utils";
 
 export async function GET(request: Request) {
   await connectDB();
@@ -134,14 +134,21 @@ export async function POST(request: Request) {
       }
     }
     
-    // Generate SKU
+    // Generate SKU: the shop reads these off the sticker and keys them in at the counter,
+    // so they run in order per category (RIC-001, RIC-002) instead of a random hex string.
     const prefix = skuCategoryPrefix(category?.name);
+    // Prefix is always [A-Z0-9], so it needs no escaping inside the anchored regex.
+    const siblings = await Product.find({ sku: { $regex: `^${prefix}-(\\d+)$` } }).select("sku").lean();
+    let nextNumber = 1;
+    for (const sibling of siblings) {
+      const used = Number(sibling.sku.slice(prefix.length + 1));
+      if (Number.isFinite(used) && used >= nextNumber) nextNumber = used + 1;
+    }
     let sku = "";
     for (let attempt = 0; attempt < 5; attempt += 1) {
-      sku = `${prefix}-${randomBytes(3).toString("hex").toUpperCase()}`;
-      const existing = await Product.findOne({ sku }).lean();
-      if (!existing) break;
-      sku = "";
+      const candidate = `${prefix}-${String(nextNumber + attempt).padStart(3, "0")}`;
+      const existing = await Product.findOne({ sku: candidate }).lean();
+      if (!existing) { sku = candidate; break; }
     }
     if (!sku) throw new Error("A unique SKU could not be generated. Please try again.");
     
@@ -197,12 +204,4 @@ export async function POST(request: Request) {
     }
     throw error;
   }
-}
-
-class ProductCreationError extends Error {}
-
-function skuCategoryPrefix(categoryName?: string | null) {
-  const words = (categoryName ?? "").toUpperCase().match(/[A-Z0-9]+/g) ?? [];
-  if (words.length > 1) return words.map((word) => word[0]).join("").slice(0, 2) || "PR";
-  return words[0]?.slice(0, 2) || "PR";
 }

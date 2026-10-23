@@ -2,6 +2,22 @@ services:
   mongodb:
     image: mongo:7.0
     restart: unless-stopped
+    # Sales/purchase/return writes run inside transactions, which MongoDB only accepts on a
+    # replica set member — so this runs as a single-member replica set instead of standalone.
+    # A replica set with auth enabled also requires a keyFile, generated once into a volume.
+    user: root
+    entrypoint: ["bash", "-c"]
+    command:
+      - |
+        set -eu
+        KEYFILE=/key/mongo-keyfile
+        if [ ! -s "$$KEYFILE" ]; then
+          head -c 512 /dev/urandom | base64 -w 0 | tr -d '\n' > "$$KEYFILE"
+          echo "Generated MongoDB key file."
+        fi
+        chown 999:999 "$$KEYFILE"
+        chmod 400 "$$KEYFILE"
+        exec docker-entrypoint.sh mongod --replSet rs0 --bind_ip_all --keyFile "$$KEYFILE"
     ports:
       - "27017:27017"
     environment:
@@ -9,18 +25,67 @@ services:
       MONGO_INITDB_ROOT_PASSWORD: "stockpilot321"
       MONGO_INITDB_DATABASE: stockpilot
     volumes:
-      - mongodb_data:/data/db
+      # Separate volume from docker-compose.yml: the replica set advertises a different host
+      # here (localhost, so `pnpm dev` on the machine can reach it) and the config is persisted.
+      - mongodb_dev_data:/data/db
+      - mongo_keyfile:/key
       - ./mongodb-init.js:/docker-entrypoint-initdb.d/mongodb-init.js:ro
     networks:
       - stockpilot-network
     healthcheck:
       test:
         - CMD-SHELL
-        - 'mongosh --quiet --username "$$MONGO_INITDB_ROOT_USERNAME" --password "$$MONGO_INITDB_ROOT_PASSWORD" --authenticationDatabase admin --eval "quit(db.adminCommand({ ping: 1 }).ok ? 0 : 1)"'
+        - 'mongosh --quiet --username "$$MONGO_INITDB_ROOT_USERNAME" --password "$$MONGO_INITDB_ROOT_PASSWORD" --authenticationDatabase admin --eval "quit(db.hello().isWritablePrimary ? 0 : 1)"'
       interval: 10s
       timeout: 10s
-      retries: 5
-      start_period: 20s
+      retries: 10
+      start_period: 30s
+
+  mongo-init:
+    image: mongo:7.0
+    restart: "no"
+    depends_on:
+      mongodb:
+        condition: service_started
+    environment:
+      MONGO_ROOT_USERNAME: root
+      MONGO_ROOT_PASSWORD: "stockpilot321"
+      REPLICA_SET_NAME: rs0
+      REPLICA_SET_HOST: "localhost:27017"
+    networks:
+      - stockpilot-network
+    entrypoint: ["bash", "-c"]
+    command:
+      - |
+        set -uo pipefail
+        # directConnection keeps this shell pinned to the seeded host; the replica set advertises
+        # REPLICA_SET_HOST, which is not resolvable from inside this throwaway container.
+        URL="mongodb://$$MONGO_ROOT_USERNAME:$$MONGO_ROOT_PASSWORD@mongodb:27017/?authSource=admin&directConnection=true"
+        echo "Waiting for mongod to accept connections..."
+        for _ in $$(seq 1 60); do
+          mongosh "$$URL" --quiet --eval 'db.adminCommand({ ping: 1 })' > /dev/null 2>&1 && break
+          sleep 2
+        done
+        mongosh "$$URL" --quiet --eval "
+          try {
+            const status = rs.status();
+            print('Replica set already initiated (myState=' + status.myState + ').');
+          } catch (error) {
+            rs.initiate({ _id: '$$REPLICA_SET_NAME', members: [{ _id: 0, host: '$$REPLICA_SET_HOST' }] });
+            print('Replica set initiated.');
+          }
+        "
+        echo "Waiting for a writable primary..."
+        ready=0
+        for _ in $$(seq 1 30); do
+          mongosh "$$URL" --quiet --eval 'quit(db.hello().isWritablePrimary ? 0 : 1)' && ready=1 && break
+          sleep 2
+        done
+        if [ "$$ready" != "1" ]; then
+          echo "Replica set did not elect a primary in time." >&2
+          exit 1
+        fi
+        echo "Replica set $$REPLICA_SET_NAME is ready at $$REPLICA_SET_HOST."
 
   mongo-express:
     image: mongo-express:1.0.2-20
@@ -28,18 +93,21 @@ services:
     ports:
       - "127.0.0.1:8081:8081"
     environment:
-      ME_CONFIG_MONGODB_URL: "mongodb://root:stockpilot321@mongodb:27017/?authSource=admin"
+      ME_CONFIG_MONGODB_URL: "mongodb://root:stockpilot321@mongodb:27017/?authSource=admin&directConnection=true"
       ME_CONFIG_BASICAUTH_ENABLED: "true"
       ME_CONFIG_BASICAUTH_USERNAME: "admin"
       ME_CONFIG_BASICAUTH_PASSWORD: "pass"
     depends_on:
       mongodb:
         condition: service_healthy
+      mongo-init:
+        condition: service_completed_successfully
     networks:
       - stockpilot-network
 
 volumes:
-  mongodb_data:
+  mongodb_dev_data:
+  mongo_keyfile:
 
 networks:
   stockpilot-network:

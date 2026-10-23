@@ -324,54 +324,89 @@ export async function GET(request: Request) {
     });
   }
 
+  // Report tables read column names from the first row's keys, so the money column must come first.
+  const daysOverdue = (date: Date | string) => Math.max(0, Math.floor((Date.now() - new Date(date).getTime()) / 86_400_000));
+
+  const dueRow = (
+    contact: { _id: string; name: string; phoneE164?: string | null; email?: string | null; address?: string | null },
+    invoices: { invoiceNumber: string; dueAmount: number; invoiceDate: Date }[],
+  ) => {
+    const due = invoices.reduce((sum, invoice) => sum + invoice.dueAmount, 0);
+    let due0to30 = 0; let due31to60 = 0; let dueOver60 = 0; let oldestDays = 0;
+    for (const invoice of invoices) {
+      const age = daysOverdue(invoice.invoiceDate);
+      oldestDays = Math.max(oldestDays, age);
+      if (age <= 30) due0to30 += invoice.dueAmount;
+      else if (age <= 60) due31to60 += invoice.dueAmount;
+      else dueOver60 += invoice.dueAmount;
+    }
+    return {
+      // Identity first: the due table and CSV cut off after ten columns, so the collector details must not fall off the end.
+      name: contact.name,
+      phone: contact.phoneE164 ?? "",
+      address: contact.address ?? "",
+      email: contact.email ?? "",
+      dueAmount: due.toFixed(2),
+      due0to30: due0to30.toFixed(2),
+      due31to60: due31to60.toFixed(2),
+      dueOver60: dueOver60.toFixed(2),
+      oldestDueDays: oldestDays,
+      invoices: invoices.length,
+      invoiceNumbers: invoices.map((invoice) => invoice.invoiceNumber).join(", "),
+      id: contact._id,
+    };
+  };
+
   if (type === "due") {
-    const customers = await Customer.find({}).lean();
-    const suppliers = await Supplier.find({}).lean();
-    
-    // Calculate due amounts for each customer
-    const customersWithDue = [];
-    for (const customer of customers) {
-      const sales = await Sale.find({ 
-        customerId: customer._id, 
-        dueAmount: { $gt: 0 }, 
-        status: { $in: [SaleStatus.COMPLETED, SaleStatus.PARTIALLY_RETURNED] } 
-      })
-      .select("_id invoiceNumber total paidAmount dueAmount soldAt")
-      .lean();
-      
-      if (sales.length > 0) {
-        customersWithDue.push({ ...customer, sales });
+    const [customers, suppliers, openSales, openPurchases] = await Promise.all([
+      Customer.find({}).lean(),
+      Supplier.find({}).lean(),
+      Sale.find({ dueAmount: { $gt: 0 }, status: { $in: [SaleStatus.COMPLETED, SaleStatus.PARTIALLY_RETURNED] } })
+        .select("customerId invoiceNumber dueAmount soldAt").lean(),
+      Purchase.find({ dueAmount: { $gt: 0 }, status: { $in: [PurchaseStatus.COMPLETED, PurchaseStatus.PARTIALLY_RETURNED] } })
+        .select("supplierId invoiceNumber dueAmount purchasedAt").lean(),
+    ]);
+
+    const groupByContact = <T extends Record<string, any>>(rows: T[], key: string) => {
+      const grouped = new Map<string, T[]>();
+      for (const row of rows) {
+        const contactId = row[key];
+        if (!contactId) continue;
+        const bucket = grouped.get(contactId);
+        if (bucket) bucket.push(row); else grouped.set(contactId, [row]);
       }
-    }
-    
-    const suppliersWithDue = [];
-    for (const supplier of suppliers) {
-      const purchases = await Purchase.find({ 
-        supplierId: supplier._id, 
-        dueAmount: { $gt: 0 }, 
-        status: { $in: [PurchaseStatus.COMPLETED, PurchaseStatus.PARTIALLY_RETURNED] } 
-      })
-      .select("_id invoiceNumber total paidAmount dueAmount purchasedAt")
-      .lean();
-      
-      if (purchases.length > 0) {
-        suppliersWithDue.push({ ...supplier, purchases });
-      }
-    }
-    
-    const customerDue = customersWithDue.reduce((sum: number, c: any) => 
-      sum + (c.sales || []).reduce((s: number, sale: any) => s + toNumber(sale.dueAmount), 0), 0);
-    const supplierDue = suppliersWithDue.reduce((sum: number, s: any) => 
-      sum + (s.purchases || []).reduce((acc: number, p: any) => acc + toNumber(p.dueAmount), 0), 0);
-    
-    return NextResponse.json({ 
-      type, shop, currencyCode: settings?.currencyCode ?? "USD", 
-      customers: customersWithDue, 
-      suppliers: suppliersWithDue, 
-      summary: { 
-        customerDue: customerDue.toFixed(2), 
-        supplierDue: supplierDue.toFixed(2) 
-      } 
+      return grouped;
+    };
+    const salesByCustomer = groupByContact(openSales as Record<string, any>[], "customerId");
+    const purchasesBySupplier = groupByContact(openPurchases as Record<string, any>[], "supplierId");
+
+    const customersWithDue = customers
+      .map((customer) => dueRow(customer, (salesByCustomer.get(customer._id) ?? []).map((sale) => ({
+        invoiceNumber: sale.invoiceNumber, dueAmount: toNumber(sale.dueAmount), invoiceDate: sale.soldAt,
+      }))))
+      .filter((row) => Number(row.dueAmount) > 0)
+      .sort((a, b) => Number(b.dueAmount) - Number(a.dueAmount));
+
+    const suppliersWithDue = suppliers
+      .map((supplier) => dueRow(supplier, (purchasesBySupplier.get(supplier._id) ?? []).map((purchase) => ({
+        invoiceNumber: purchase.invoiceNumber, dueAmount: toNumber(purchase.dueAmount), invoiceDate: purchase.purchasedAt,
+      }))))
+      .filter((row) => Number(row.dueAmount) > 0)
+      .sort((a, b) => Number(b.dueAmount) - Number(a.dueAmount));
+
+    const customerDue = customersWithDue.reduce((sum: number, row) => sum + toNumber(row.dueAmount), 0);
+    const supplierDue = suppliersWithDue.reduce((sum: number, row) => sum + toNumber(row.dueAmount), 0);
+
+    return NextResponse.json({
+      type, shop, currencyCode: settings?.currencyCode ?? "USD",
+      customers: customersWithDue,
+      suppliers: suppliersWithDue,
+      summary: {
+        customerDue: customerDue.toFixed(2),
+        supplierDue: supplierDue.toFixed(2),
+        customersOwed: customersWithDue.length,
+        suppliersOwed: suppliersWithDue.length,
+      },
     });
   }
 

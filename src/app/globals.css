@@ -1,11 +1,13 @@
 @import "tailwindcss";
 
 @media print {
-  @page { size: letter; margin: 12mm; }
+  @page { size: A4; margin: 10mm; }
   @page receipt { size: 80mm auto; margin: 0; }
+  /* Tailwind sizes/spacing are rem-based, so shrinking the root font scales the whole invoice to one A4 page. */
+  html { font-size: 11px; }
   body { background: #fff !important; color: #111827 !important; }
   aside, nav, header[role="banner"], .app-shell-header, button, a[href], .print\:hidden { display: none !important; }
-  main { padding: 0 !important; }
+  main, .min-h-screen { padding: 0 !important; }
   .rounded-2xl, .rounded-3xl { border-radius: 0 !important; box-shadow: none !important; }
   .bg-card, .bg-background { background: #fff !important; }
   .invoice-panel { padding: 0 !important; border: 0 !important; background: #fff !important; }
@@ -13,20 +15,22 @@
   .invoice-paper { padding: 0 !important; }
   .print-document > header, .print-document > section.ml-auto, .print-document > section.receipt-return-summary { break-inside: avoid; page-break-inside: avoid; }
   .print-document table { font-variant-numeric: tabular-nums; }
-  .print-document { width: 100%; max-width: none !important; color: #172523 !important; font-family: "Inter Variable", "Noto Sans Bengali Variable", Arial, sans-serif; font-size: 10pt; line-height: 1.5; }
+  .print-document { width: 100%; max-width: none !important; color: #172523 !important; font-family: "Inter Variable", "Noto Sans Bengali Variable", Arial, sans-serif; font-size: 9pt; line-height: 1.38; }
   .print-document, .print-document * { text-transform: uppercase; }
-  .invoice-brand-header { border-bottom: 2px solid #0f766e !important; padding-bottom: 6mm !important; }
-  .invoice-shop-logo { max-height: 16mm; }
+  .invoice-brand-header { border-bottom: 2px solid #0f766e !important; padding-bottom: 2.5mm !important; }
+  .invoice-shop-logo { max-height: 12mm; }
   .invoice-shop-mark { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
   .invoice-number-block { min-width: 44mm; }
-  .print-document > section.grid { padding-top: 6mm; padding-bottom: 6mm; }
-  .print-document > section.ml-auto { margin-top: 6mm; }
+  .print-document > section.grid { padding-top: 2.5mm; padding-bottom: 2.5mm; }
+  .print-document > section.ml-auto { margin-top: 3mm; }
+  .print-document > section.ml-auto > * + * { margin-top: 0.8mm !important; }
+  .print-document > section.mt-6, .print-document > section.mt-7, .print-document > p.mt-5, .print-document > footer { margin-top: 2.5mm !important; padding-top: 2mm !important; }
   .print-document table { width: 100%; border-collapse: collapse; }
   .print-document thead { display: table-header-group; }
   .print-document tr, .print-document section, .print-document footer { break-inside: avoid; page-break-inside: avoid; }
   .print-document th, .print-document td { vertical-align: top; border-bottom: 1px solid #e5e7eb; }
-  .print-document th { padding: 3mm 2mm; background: #f3f7f6 !important; color: #53625f !important; font-size: 8pt; font-weight: 700; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
-  .print-document td { padding: 3mm 2mm; }
+  .print-document th { padding: 1.2mm 1.8mm; background: #f3f7f6 !important; color: #53625f !important; font-size: 7.5pt; font-weight: 700; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+  .print-document td { padding: 1.2mm 1.8mm; }
   .print-document footer { color: #64716f !important; }
   .receipt-print-mode { margin: 0 !important; }
   .receipt-print-mode > section { margin: 0 !important; padding: 0 !important; border: 0 !important; }
@@ -41,11 +45,68 @@
   .receipt-print-mode .print-document th:first-child, .receipt-print-mode .print-document td:first-child { width: 29%; }
   .receipt-print-mode .print-document th:last-child, .receipt-print-mode .print-document td:last-child { text-align: right; }
   .receipt-print-mode .print-document > section.ml-auto { max-width: 100%; }
-  .receipt-print-mode .receipt-return-summary { margin-top: 4mm; padding-top: 3mm; }
+  .receipt-print-mode .print-document .receipt-return-summary { margin-top: 4mm !important; padding-top: 3mm !important; }
   .receipt-print-mode .receipt-return { padding-bottom: 2mm; }
   .receipt-print-mode .receipt-return-summary h2 { font-size: 9pt; }
-  .receipt-print-mode .print-document footer { margin-top: 4mm; padding-top: 2mm; }
+  .receipt-print-mode .print-document footer { margin-top: 4mm !important; padding-top: 2mm !important; }
+  /* Printing the payment slip hides the rest of the contacts page. */
+  .payment-receipt-mode { margin: 0 !important; }
+  .payment-receipt-mode > *:not(.receipt-print-mode) { display: none !important; }
+  /* Printing the sticker sheet hides the rest of the products page. */
+  @page label { size: A4 portrait; margin: 8mm; }
+  .label-print-mode { page: label; }
+  .label-print-mode > *:not(.label-sheet) { display: none !important; }
+  .label-print-mode .label-sheet { display: block; }
+  .label-print-mode .label-sheet svg { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+  @page report { size: A4 landscape; margin: 9mm 10mm; }
+  /* Screen uses the app font stack; print repeats it so every script (Bengali included) shapes from the loaded webfont. */
+  .report-print { page: report; color: #1b2b28; font-family: "Inter Variable", "Noto Sans Bengali Variable", "Noto Sans", "Shonar Bangla", "Vrinda", ui-sans-serif, system-ui, sans-serif; }
+  .report-print .overflow-x-auto { overflow: visible !important; }
+  .report-print thead { display: table-header-group; }
+  .report-print tr, .report-print section { break-inside: avoid; page-break-inside: avoid; }
+  .report-print table { width: 100%; border-collapse: collapse; font-size: 8pt; font-variant-numeric: tabular-nums; }
+  .report-print th { padding: 1.4mm 1.6mm; line-height: 1.35; background: #0f766e !important; color: #fff !important; font-size: 6.8pt; font-weight: 700; letter-spacing: 0.09em; text-transform: uppercase; text-align: left; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+  .report-print th.text-right, .report-print td.text-right { text-align: right; }
+  /* Bengali pre-base matras and conjuncts stack below the baseline, so print rows need extra leading. */
+  .report-print td { padding: 1.15mm 1.6mm; line-height: 1.55; border-bottom: 0.15mm solid #e1eae7; color: #24342f; vertical-align: top; }
+  .report-print tbody tr:nth-child(even) { background: #f4f8f7 !important; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+  .report-print .report-empty { color: #7c8a86 !important; background: #fff !important; }
+  /* Screen cells clip with an ellipsis; the printed report must keep every value. */
+  .report-print td.truncate { max-width: none !important; overflow: visible !important; white-space: normal !important; text-overflow: clip !important; overflow-wrap: anywhere; }
+  .report-letterhead { display: flex; align-items: flex-start; justify-content: space-between; gap: 8mm; padding-bottom: 2mm; border-bottom: 0.5mm solid #0f766e; }
+  .report-shop-name { font-size: 13pt; font-weight: 700; letter-spacing: 0.01em; line-height: 1.3; color: #0c4a44 !important; }
+  .report-contact { margin-top: 0.7mm; font-size: 8pt; line-height: 1.55; color: #5d6b68 !important; }
+  .report-meta { font-size: 7.6pt; color: #2f403c !important; text-align: left; }
+  .report-meta > div { display: flex; justify-content: flex-end; gap: 2mm; }
+  .report-meta > div + div { margin-top: 0.45mm; }
+  .report-meta-label { min-width: 21mm; text-align: right; font-size: 6.5pt; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #86938f !important; }
+  .report-title-band { display: flex; align-items: baseline; justify-content: space-between; gap: 6mm; margin-top: 2.4mm; }
+  .report-title { font-size: 10.5pt; font-weight: 700; letter-spacing: 0.09em; text-transform: uppercase; color: #172523 !important; }
+  .report-period { font-size: 7.6pt; color: #5d6b68 !important; }
+  .report-print .report-section { margin-top: 2.6mm !important; padding: 2.4mm 2.8mm !important; border: 0.2mm solid #d6e2de !important; border-radius: 1.8mm !important; background: #fff !important; box-shadow: none !important; }
+  .report-print .report-section h2 { font-size: 8.6pt; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase; color: #0c4a44 !important; }
+  .report-print .report-section p { font-size: 7.4pt; color: #6b7a76 !important; }
+  .report-print .report-section > div:first-child { margin-bottom: 1.8mm !important; padding-bottom: 1.4mm; border-bottom: 0.2mm solid #e6eeeb; }
+  .report-summary { display: grid !important; grid-template-columns: repeat(4, minmax(0, 1fr)) !important; gap: 0 !important; margin-top: 2.6mm !important; border: 0.2mm solid #d6e2de; border-radius: 1.8mm; overflow: hidden; }
+  .report-summary > div { padding: 1.7mm 2.2mm !important; margin: 0 !important; border: 0 !important; border-left: 0.2mm solid #e6eeeb !important; border-radius: 0 !important; background: #fff !important; }
+  .report-summary > div:nth-child(4n+1) { border-left: 0 !important; }
+  .report-summary > div:nth-child(n+5) { border-top: 0.2mm solid #e6eeeb; }
+  .report-summary p:first-child { font-size: 6.5pt; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #7f8c89 !important; }
+  .report-summary p:last-child { margin-top: 0.6mm !important; font-size: 9.5pt; font-weight: 700; color: #0c4a44 !important; }
+  .report-footnote { justify-content: space-between; gap: 6mm; margin-top: 2.6mm !important; padding-top: 1.4mm; border-top: 0.35mm solid #0f766e; font-size: 6.6pt; letter-spacing: 0.05em; color: #74817e !important; }
 }
+/* Stickers keep the same look on screen and paper; only the printable sheet is hidden until printed. */
+.label-sheet { display: none; }
+.label-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 2.5mm; }
+.label-item { display: flex; flex-direction: column; justify-content: space-between; gap: 1mm; height: 28mm; padding: 2mm 2.4mm; border: 0.25mm dashed #9aa8a4; border-radius: 1.2mm; break-inside: avoid; page-break-inside: avoid; background: #fff; color: #172523; }
+.label-name { font-size: 8pt; font-weight: 700; line-height: 1.25; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
+.label-code { height: 7mm; }
+.label-code-text { font-size: 8pt; font-weight: 700; text-align: center; }
+.label-price { font-size: 11pt; font-weight: 700; color: #0c4a44; }
+.label-sku { font-size: 6pt; letter-spacing: 0.12em; text-transform: uppercase; color: #4c5b57; font-variant-numeric: tabular-nums; }
+.label-foot { display: flex; align-items: baseline; justify-content: space-between; gap: 2mm; }
+/* On a narrow screen three fixed columns squeeze; paper always gets the exact grid. */
+@media screen { .label-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); } }
 @custom-variant dark (&:where(.dark, .dark *));
 
 @font-face {

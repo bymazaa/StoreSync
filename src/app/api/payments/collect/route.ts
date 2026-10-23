@@ -9,6 +9,9 @@ import PaymentMethod from "@/models/PaymentMethod";
 import SalePayment from "@/models/SalePayment";
 import PurchasePayment from "@/models/PurchasePayment";
 import AuditLog from "@/models/AuditLog";
+import Customer from "@/models/Customer";
+import Supplier from "@/models/Supplier";
+import Settings from "@/models/Settings";
 import { invalidBody } from "@/lib/http/api-response";
 import { paymentCollectionSchema as collectionSchema } from "@/lib/validation/api";
 
@@ -57,7 +60,8 @@ export async function POST(request: Request) {
       }], { session });
       
       await session.commitTransaction();
-      return NextResponse.json({ payment: payment[0] }, { status: 201 });
+      const receipt = await buildReceipt("sale", sale, method.name, amount, reference || null, guard.user.fullName, payment[0].paidAt);
+      return NextResponse.json({ payment: payment[0], receipt }, { status: 201 });
     }
     
     // Purchase payment
@@ -80,7 +84,8 @@ export async function POST(request: Request) {
     }], { session });
     
     await session.commitTransaction();
-    return NextResponse.json({ payment: payment[0] }, { status: 201 });
+    const receipt = await buildReceipt("purchase", purchase, method.name, amount, reference || null, guard.user.fullName, payment[0].paidAt);
+    return NextResponse.json({ payment: payment[0], receipt }, { status: 201 });
   } catch (error) {
     await session.abortTransaction();
     
@@ -98,6 +103,40 @@ export async function POST(request: Request) {
 }
 
 class CollectionError extends Error {}
+
+async function buildReceipt(
+  invoiceType: "sale" | "purchase",
+  invoice: { invoiceNumber: string; dueAmount?: number; customerId?: string; supplierId?: string },
+  methodName: string,
+  amount: number,
+  reference: string | null,
+  recordedBy: string,
+  paidAt: Date,
+) {
+  const contactId = invoiceType === "sale" ? invoice.customerId : invoice.supplierId;
+  const contactQuery = invoiceType === "sale" ? Customer.findById(contactId) : Supplier.findById(contactId);
+  const [settings, contactDoc] = await Promise.all([
+    Settings.findById("shop").select("shopName address phone currencyCode").lean(),
+    contactId ? contactQuery.select("name phoneE164").lean() : Promise.resolve(null),
+  ]);
+  const contact = contactDoc as { name?: string; phoneE164?: string | null } | null;
+  return {
+    kind: invoiceType,
+    shopName: settings?.shopName ?? "StockPilot",
+    shopAddress: settings?.address ?? null,
+    shopPhone: settings?.phone ?? null,
+    currencyCode: settings?.currencyCode ?? "USD",
+    contactName: contact?.name ?? "",
+    contactPhone: contact?.phoneE164 ?? null,
+    invoiceNumber: invoice.invoiceNumber,
+    amount: amount.toFixed(2),
+    balanceDue: Math.max(0, Number(invoice.dueAmount ?? 0) - amount).toFixed(2),
+    methodName,
+    reference,
+    recordedBy,
+    paidAt,
+  };
+}
 
 async function replayPayment(clientRequestId: string, invoiceType: "sale" | "purchase", actorId: string) {
   const payment = invoiceType === "sale"

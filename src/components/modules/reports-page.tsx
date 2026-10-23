@@ -1,22 +1,74 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Download, Search } from "lucide-react";
+import { FileDown, Printer, Search } from "lucide-react";
 import { apiRequest } from "@/lib/client-api";
 import { ErrorMessage, inputClass, PageHeader, Panel, selectClass } from "@/components/ui/page";
 import { Button } from "@/components/ui/button";
 import { useShopFormat } from "@/components/app/shop-context";
 
 type ReportType = "sales" | "purchases" | "product-sales" | "profit-loss" | "stock" | "due" | "expenses";
-type Payload = Record<string, unknown> & { type: string; currencyCode?: string; shop?: { name: string; address: string | null; phone: string | null }; summary?: Record<string, string | number>; sales?: Record<string, unknown>[]; purchases?: Record<string, unknown>[]; products?: Record<string, unknown>[]; expenses?: Record<string, unknown>[]; customers?: Record<string, unknown>[]; suppliers?: Record<string, unknown>[]; lowStock?: Record<string, unknown>[]; expiringBatches?: Record<string, unknown>[] };
+type Row = Record<string, unknown>;
+type Payload = Record<string, unknown> & { type: string; currencyCode?: string; shop?: { name: string; address: string | null; phone: string | null }; summary?: Record<string, string | number>; sales?: Row[]; purchases?: Row[]; products?: Row[]; expenses?: Row[]; customers?: Row[]; suppliers?: Row[]; lowStock?: Row[]; expiringBatches?: Row[] };
 const options: { value: ReportType; label: string }[] = [{ value: "sales", label: "Sales" }, { value: "purchases", label: "Purchases" }, { value: "product-sales", label: "Product sales" }, { value: "profit-loss", label: "Profit & loss" }, { value: "stock", label: "Stock valuation" }, { value: "due", label: "Customer & supplier due" }, { value: "expenses", label: "Expenses" }];
 const printable = (value: unknown): string => { if (value == null) return "—"; if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") return String(value); return ""; };
 const isInternalField = (key: string) => key.toLowerCase() === "id" || /(?:Id|ID|_id)$/.test(key) || key.toLowerCase().includes("requestid");
 const columnLabel = (key: string) => key.replace(/([a-z0-9])([A-Z])/g, "$1 $2").replaceAll("_", " ").replaceAll("-", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
-const moneyKeys = new Set(["total", "subtotal", "paidAmount", "dueAmount", "discountAmount", "revenue", "grossProfit", "netProfit", "expenses", "costOfGoods", "purchasePrice", "sellingPrice", "amount", "valuation"]);
+const moneyKeys = new Set(["total", "subtotal", "paidAmount", "dueAmount", "discountAmount", "revenue", "grossProfit", "netProfit", "expenses", "costOfGoods", "purchasePrice", "sellingPrice", "amount", "valuation", "customerDue", "supplierDue", "due0to30", "due31to60", "dueOver60"]);
+const quantityKeys = new Set(["quantity", "baseQuantity", "soldQuantity", "stockOnHand", "lowStockThreshold", "count", "rowCount", "invoiceCount", "invoices", "oldestDueDays"]);
+const hiddenColumns = ["createdBy", "customer", "supplier", "payments", "items", "returns", "product", "category", "baseUnit"];
+const isNumericColumn = (key: string) => moneyKeys.has(key) || quantityKeys.has(key);
+const visibleColumns = (rows: Row[]) => rows.length ? Object.keys(rows[0]).filter((key) => !isInternalField(key) && !hiddenColumns.includes(key) && typeof rows[0][key] !== "object").slice(0, 10) : [];
+
+/** CSV and filenames must carry the shop's own clock: toISOString() would put every soldAt/createdAt line hours off for a Bengali shop. */
+const zonedParts = (value: string, timeZone: string) => {
+  const date = new Date(value);
+  if (!Number.isFinite(date.getTime())) return null;
+  // en-CA keeps the parts ISO-ordered with ASCII digits even when the shop locale is Bengali.
+  return new Intl.DateTimeFormat("en-CA", { timeZone, hourCycle: "h23", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" }).formatToParts(date);
+};
+const csvStampFor = (value: string, timeZone: string) => {
+  const parts = zonedParts(value, timeZone);
+  if (!parts) return printable(value);
+  const part = (kind: string) => parts.find((item) => item.type === kind)?.value ?? "";
+  return `${part("year")}-${part("month")}-${part("day")} ${part("hour")}:${part("minute")}:${part("second")}`;
+};
+const csvDayFor = (value: string, timeZone: string) => csvStampFor(value, timeZone).slice(0, 10);
+const shopDay = (timeZone: string) => csvDayFor(new Date().toISOString(), timeZone);
+// SoldAt/createdAt are timestamps, expenseDate is a calendar day — both arrive as UTC ISO strings.
+const csvValue = (key: string, value: unknown, stamp: (value: string) => string, day: (value: string) => string) => {
+  if (value == null || value === "") return "";
+  const lower = key.toLowerCase();
+  if (lower.endsWith("date")) return day(String(value));
+  if (lower.endsWith("at")) return stamp(String(value));
+  return printable(value).replace("—", "");
+};
+const csvCell = (value: string) => (/[",\r\n]/.test(value) ? `"${value.replaceAll('"', '""')}"` : value);
+
+function buildCsv(tables: { name: string; rows: Row[] }[], meta: string[], stamp: (value: string) => string, day: (value: string) => string) {
+  const lines = [`# ${meta.join(" · ")}`, ""];
+  for (const table of tables) {
+    const columns = visibleColumns(table.rows);
+    if (columns.length === 0) continue;
+    lines.push(`# ${table.name}`, columns.map((key) => csvCell(columnLabel(key))).join(","));
+    for (const row of table.rows) lines.push(columns.map((key) => csvCell(csvValue(key, row[key], stamp, day))).join(","));
+    lines.push("");
+  }
+  // Excel needs the BOM to read Bengali UTF-8 cells.
+  return `﻿${lines.join("\r\n")}\r\n`;
+}
+
+function downloadFile(filename: string, content: string, mime: string) {
+  const url = URL.createObjectURL(new Blob([content], { type: mime }));
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename;
+  anchor.click();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
 
 export function ReportsPage() {
-  const { formatMoney, formatDateTime, locale } = useShopFormat();
+  const { formatMoney, formatDateTime, timezone } = useShopFormat();
   const [type, setType] = useState<ReportType>("sales");
   const [from, setFrom] = useState(""); const [to, setTo] = useState("");
   const [data, setData] = useState<Payload | null>(null); const [error, setError] = useState(""); const [busy, setBusy] = useState(false);
@@ -28,137 +80,86 @@ export function ReportsPage() {
   }, [type, from, to]);
   useEffect(() => { const timer = window.setTimeout(() => { void load(); }, 0); return () => window.clearTimeout(timer); }, [load]);
   const rows = data ? (data.sales ?? data.purchases ?? data.products ?? data.expenses ?? (type === "due" ? [...(data.customers ?? []), ...(data.suppliers ?? [])] : data.lowStock ?? [])) : [];
-  const columns = rows.length ? Object.keys(rows[0]).filter((key) => !isInternalField(key) && !["createdBy", "customer", "supplier", "payments", "items", "returns", "product", "category", "baseUnit"].includes(key) && typeof rows[0][key] !== "object").slice(0, 9) : [];
-  const format = (key: string, value: unknown) => moneyKeys.has(key) ? formatMoney(printable(value)) : key.toLowerCase().endsWith("at") ? formatDateTime(printable(value)) : printable(value);
-  // jsPDF's built-in fonts cannot render glyphs such as ₹, so PDF amounts use grouped numbers only.
-  const pdfMoney = (value: unknown) => {
-    const amount = Number(printable(value));
-    return Number.isFinite(amount) ? new Intl.NumberFormat(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(amount) : printable(value);
-  };
-  const formatPdf = (key: string, value: unknown) => {
-    if (moneyKeys.has(key)) return pdfMoney(value);
-    if (key.toLowerCase() === "status") return printable(value).replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
-    return key.toLowerCase().endsWith("at") ? formatDateTime(printable(value)) : printable(value);
-  };
-  async function exportPdf() {
-    if (!data) return;
-    const { jsPDF } = await import("jspdf");
-    const { default: autoTable } = await import("jspdf-autotable");
-    const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4", compress: true });
-    const pageWidth = doc.internal.pageSize.getWidth();
-    const pageHeight = doc.internal.pageSize.getHeight();
-    const marginX = 12;
-    const contentWidth = pageWidth - marginX * 2;
-    const reportLabel = options.find((item) => item.value === type)?.label ?? "Report";
-    const shopName = data.shop?.name ?? "StockPilot";
-    const period = `${from || "All time"} to ${to || "Today"}`;
-    const lastY = () => (doc as unknown as { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY ?? 30;
-
-    doc.setProperties({ title: `${shopName} ${reportLabel} report`, subject: period, creator: "StockPilot" });
-    doc.setFont("helvetica", "bold"); doc.setFontSize(18); doc.setTextColor(12, 74, 68);
-    doc.text(shopName.toUpperCase(), marginX, 16);
-    doc.setFont("helvetica", "normal"); doc.setFontSize(11); doc.setTextColor(35, 45, 44);
-    doc.text(`${reportLabel} report`, marginX, 23);
-    doc.setFontSize(8); doc.setTextColor(110, 120, 118);
-    const contact = [data.shop?.address, data.shop?.phone].filter(Boolean).join("  ·  ");
-    if (contact) doc.text(contact, marginX, 28);
-    doc.text(`Period: ${period}`, pageWidth - marginX, 12, { align: "right" });
-    doc.text(`Generated: ${formatDateTime(new Date())}`, pageWidth - marginX, 17, { align: "right" });
-    doc.text(`Currency: ${data.currencyCode ?? "—"}`, pageWidth - marginX, 22, { align: "right" });
-    doc.setDrawColor(15, 118, 110); doc.setLineWidth(0.8); doc.line(marginX, 32, pageWidth - marginX, 32);
-
-    const drawContinuationHeader = () => {
-      if (doc.getCurrentPageInfo().pageNumber === 1) return;
-      doc.setFillColor(15, 118, 110);
-      doc.rect(0, 0, pageWidth, 12, "F");
-      doc.setFont("helvetica", "bold"); doc.setFontSize(8.5); doc.setTextColor(255, 255, 255);
-      doc.text(shopName.toUpperCase(), marginX, 7.8);
-      doc.setFont("helvetica", "normal");
-      doc.text(`${reportLabel} report  ·  ${period}`, pageWidth - marginX, 7.8, { align: "right" });
-    };
-
-    let y = 39;
-    if (data.summary && Object.keys(data.summary).length) {
-      doc.setFont("helvetica", "bold"); doc.setFontSize(9.5); doc.setTextColor(15, 76, 70);
-      doc.text("SUMMARY", marginX, y);
-      y += 3.5;
-      const summaryRows: string[][] = Object.entries(data.summary).map(([key, value]) => [columnLabel(key), moneyKeys.has(key) ? pdfMoney(value) : String(value)]);
-      autoTable(doc, {
-        startY: y,
-        body: summaryRows,
-        theme: "grid",
-        styles: { fontSize: 8.5, cellPadding: 2.2, textColor: [35, 45, 44], lineColor: [226, 234, 231], lineWidth: 0.1, overflow: "linebreak" },
-        columnStyles: { 0: { fontStyle: "bold", cellWidth: contentWidth * 0.68 }, 1: { fontStyle: "bold", halign: "right", cellWidth: contentWidth * 0.32 } },
-        margin: { left: marginX, right: marginX, top: 18 },
-        willDrawPage: drawContinuationHeader,
-      });
-      y = lastY() + 10;
-    }
-
-    const addSection = (sectionTitle: string, tableRows: Record<string, unknown>[]) => {
-      if (!tableRows.length) {
-        if (sectionTitle) {
-          if (y > pageHeight - 24) { doc.addPage(); y = 20; }
-          doc.setFont("helvetica", "italic"); doc.setFontSize(8.5); doc.setTextColor(120, 128, 126);
-          doc.text(`${sectionTitle}: no records for this period.`, marginX, y); y += 8;
-        }
-        return;
-      }
-      if (y > pageHeight - 38) { doc.addPage(); y = 20; }
-      if (sectionTitle) {
-        doc.setFillColor(229, 244, 240);
-        doc.rect(marginX, y - 4.2, contentWidth, 7, "F");
-        doc.setFont("helvetica", "bold"); doc.setFontSize(9); doc.setTextColor(13, 96, 86);
-        doc.text(sectionTitle.toUpperCase(), marginX + 2, y + 0.6);
-        y += 6.5;
-      }
-      const keys = Object.keys(tableRows[0]).filter((key) => !isInternalField(key) && !["createdBy", "customer", "supplier", "payments", "items", "returns", "product", "category", "baseUnit"].includes(key) && typeof tableRows[0][key] !== "object").slice(0, 10);
-      if (!keys.length) return;
-      autoTable(doc, {
-        startY: y,
-        head: [keys.map(columnLabel)],
-        body: tableRows.map((row) => keys.map((key) => formatPdf(key, row[key]))),
-        theme: "grid",
-        showHead: "everyPage",
-        styles: { fontSize: 7.2, cellPadding: 1.8, overflow: "linebreak", textColor: [38, 48, 46], lineColor: [226, 234, 231], lineWidth: 0.1, valign: "middle" },
-        headStyles: { fillColor: [15, 118, 110], textColor: 255, fontStyle: "bold", fontSize: 7.4 },
-        alternateRowStyles: { fillColor: [245, 249, 248] },
-        columnStyles: Object.fromEntries(keys.map((key, index) => [index, moneyKeys.has(key) ? { halign: "right" } : {}])),
-        margin: { left: marginX, right: marginX, top: 18, bottom: 16 },
-        willDrawPage: drawContinuationHeader,
-      });
-      y = lastY() + 10;
-    };
-
-    if (type === "due") { addSection("Customer balances", data.customers ?? []); addSection("Supplier balances", data.suppliers ?? []); }
-    else if (type === "stock") { addSection("Current stock", data.products ?? []); addSection("Low stock", data.lowStock ?? []); addSection("Expiring batches", data.expiringBatches ?? []); }
-    else addSection(reportLabel, rows);
-
-    const pageCount = doc.getNumberOfPages();
-    for (let page = 1; page <= pageCount; page += 1) {
-      doc.setPage(page);
-      doc.setDrawColor(216, 226, 223); doc.setLineWidth(0.3);
-      doc.line(marginX, pageHeight - 11, pageWidth - marginX, pageHeight - 11);
-      doc.setFont("helvetica", "normal"); doc.setFontSize(7.5); doc.setTextColor(115, 125, 123);
-      doc.text(`${shopName}  ·  ${reportLabel} report  ·  ${period}`, marginX, pageHeight - 6);
-      doc.text(`Page ${page} of ${pageCount}`, pageWidth - marginX, pageHeight - 6, { align: "right" });
-    }
-    doc.save(`stockpilot-${type}-${new Date().toISOString().slice(0, 10)}.pdf`);
+  const columns = visibleColumns(rows);
+  const reportLabel = options.find((item) => item.value === type)?.label ?? "Report";
+  const period = `${from || "All time"} → ${to || "Today"}`;
+  const generatedAt = data ? formatDateTime(new Date()) : "";
+  const csvStamp = (value: string) => csvStampFor(value, timezone);
+  const csvDay = (value: string) => csvDayFor(value, timezone);
+  const contact = [data?.shop?.address, data?.shop?.phone].filter(Boolean).join(" · ");
+  const shopName = data?.shop?.name ?? "StockPilot";
+  const fileStem = `stockpilot-${type}-${shopDay(timezone)}`;
+  const tables: { name: string; rows: Row[] }[] = data
+    ? type === "stock"
+      ? [{ name: "Low stock", rows: data.lowStock ?? [] }, { name: "Expiring batches", rows: data.expiringBatches ?? [] }]
+      : type === "due"
+        ? [{ name: "Customers with due", rows: data.customers ?? [] }, { name: "Suppliers with due", rows: data.suppliers ?? [] }]
+        : [{ name: `${reportLabel} records`, rows }]
+    : [];
+  const dueCustomers = data?.customers ?? [];
+  const dueSuppliers = data?.suppliers ?? [];
+  // jsPDF cannot shape Bengali conjuncts, so the PDF comes from the browser's own print pipeline
+  // instead — the document title becomes the suggested filename.
+  function printReport() {
+    const previousTitle = document.title;
+    const restore = () => { document.title = previousTitle; window.removeEventListener("afterprint", restore); };
+    document.title = fileStem;
+    window.addEventListener("afterprint", restore);
+    window.print();
   }
-  return <div className="space-y-6 print:space-y-4"><div className="print:hidden"><PageHeader eyebrow="Business insights" title="Reports" description="Filter store records and export a clean printable report."/></div>
-    {error && <ErrorMessage>{error}</ErrorMessage>}
-    <Panel title="Report filters" description="Date ranges follow the shop timezone." action={<Button variant="outline" icon={<Download size={15}/>} onClick={() => void exportPdf()} disabled={!data || busy}>Export PDF</Button>}>
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[minmax(200px,1fr)_1fr_1fr_auto]"><select aria-label="Report type" value={type} onChange={(e) => setType(e.target.value as ReportType)} className={selectClass}>{options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}</select><label className="text-xs text-muted-foreground">From<input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className={`${inputClass} mt-1`}/></label><label className="text-xs text-muted-foreground">To<input type="date" value={to} onChange={(e) => setTo(e.target.value)} className={`${inputClass} mt-1`}/></label><Button variant="outline" icon={<Search size={15}/>} onClick={() => void load()} disabled={busy}>{busy ? "Loading…" : "Refresh"}</Button></div>
-    </Panel>
-    {data?.summary && <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">{Object.entries(data.summary).slice(0, 8).map(([key, value]) => <div key={key} className="rounded-2xl border border-border bg-card p-4"><p className="text-xs capitalize text-muted-foreground">{columnLabel(key)}</p><p className="mt-2 text-xl font-semibold">{moneyKeys.has(key) ? formatMoney(String(value)) : value}</p></div>)}</section>}
-    {type === "stock" && data && <><Panel title="Low stock" description="Products at or below their reorder threshold."><ReportTable rows={data.lowStock ?? []}/></Panel><Panel title="Expiring batches" description="Tracked stock due to expire within 30 days."><ReportTable rows={data.expiringBatches ?? []}/></Panel></>}
-    {type === "due" && data && <><Panel title="Customers with due balances"><ReportTable rows={data.customers ?? []}/></Panel><Panel title="Suppliers with due balances"><ReportTable rows={data.suppliers ?? []}/></Panel></>}
-    {type !== "stock" && type !== "due" && <Panel title={`${options.find((o) => o.value === type)?.label ?? "Report"} records`} description={`${rows.length.toLocaleString()} rows returned.`}><div className="overflow-x-auto"><table className="w-full text-left text-sm"><thead className="text-xs text-muted-foreground"><tr>{columns.map((key) => <th className="px-3 py-3" key={key}>{columnLabel(key)}</th>)}</tr></thead><tbody className="divide-y divide-border">{rows.map((row, index) => <tr key={printable(row.id) || index}>{columns.map((key) => <td key={key} className="max-w-64 truncate px-3 py-3">{format(key, row[key])}</td>)}</tr>)}{rows.length === 0 && <tr><td colSpan={Math.max(columns.length, 1)} className="px-3 py-8 text-center text-muted-foreground">No rows in the selected period.</td></tr>}</tbody></table></div></Panel>}
-  </div>;
+  function exportCsv() {
+    if (!data) return;
+    downloadFile(`${fileStem}.csv`, buildCsv(tables, [`${shopName} — ${reportLabel} report`, `Period: ${period}`, `Generated: ${csvStamp(new Date().toISOString())}`, `Currency: ${data.currencyCode ?? "—"}`], csvStamp, csvDay), "text/csv;charset=utf-8");
+  }
+
+  return (
+    <div className="report-print space-y-6 print:space-y-0">
+      <div className="print:hidden"><PageHeader eyebrow="Business insights" title="Reports" description="Filter store records, then print or save the report as a PDF."/></div>
+      <div className="hidden print:block">
+        <div className="report-letterhead">
+          <div className="report-letterhead-shop">
+            <p className="report-shop-name">{shopName}</p>
+            {contact ? <p className="report-contact">{contact}</p> : null}
+          </div>
+          <div className="report-meta">
+            <div><span className="report-meta-label">Report</span><span>{reportLabel}</span></div>
+            <div><span className="report-meta-label">Period</span><span className="tabular-nums">{period}</span></div>
+            <div><span className="report-meta-label">Generated</span><span className="tabular-nums">{generatedAt}</span></div>
+            <div><span className="report-meta-label">Currency</span><span>{data?.currencyCode ?? "—"}</span></div>
+          </div>
+        </div>
+        <div className="report-title-band">
+          <p className="report-title">{reportLabel} report</p>
+          <p className="report-period">{rows.length.toLocaleString()} records · {period}</p>
+        </div>
+      </div>
+
+      {error && <div className="print:hidden"><ErrorMessage>{error}</ErrorMessage></div>}
+      <Panel className="print:hidden" title="Report filters" description="Date ranges follow the shop timezone." action={<div className="flex flex-wrap gap-2"><Button variant="outline" icon={<FileDown size={15}/>} onClick={exportCsv} disabled={!data || busy}>Export CSV</Button><Button variant="outline" icon={<Printer size={15}/>} onClick={printReport} disabled={!data || busy}>Print / Save PDF</Button></div>}>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[minmax(200px,1fr)_1fr_1fr_auto]"><select aria-label="Report type" value={type} onChange={(e) => setType(e.target.value as ReportType)} className={selectClass}>{options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}</select><label className="text-xs text-muted-foreground">From<input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className={`${inputClass} mt-1`}/></label><label className="text-xs text-muted-foreground">To<input type="date" value={to} onChange={(e) => setTo(e.target.value)} className={`${inputClass} mt-1`}/></label><Button variant="outline" icon={<Search size={15}/>} onClick={() => void load()} disabled={busy}>{busy ? "Loading…" : "Refresh"}</Button></div>
+        {type === "due" && <p className="mt-3 text-xs text-muted-foreground">Aging buckets are counted from each unpaid invoice date.</p>}
+      </Panel>
+      {data?.summary && <section className="report-summary grid gap-3 sm:grid-cols-2 xl:grid-cols-4">{Object.entries(data.summary).slice(0, 8).map(([key, value]) => <div key={key} className="rounded-2xl border border-border bg-card p-4"><p className="text-xs capitalize text-muted-foreground">{columnLabel(key)}</p><p className="mt-2 text-xl font-semibold tabular-nums">{moneyKeys.has(key) ? formatMoney(String(value)) : value}</p></div>)}</section>}
+      {type === "stock" && data && <><Panel className="report-section" title="Low stock" description="Products at or below their reorder threshold."><ReportTable rows={data.lowStock ?? []}/></Panel><Panel className="report-section" title="Expiring batches" description="Tracked stock due to expire within 30 days."><ReportTable rows={data.expiringBatches ?? []}/></Panel></>}
+      {type === "due" && data && <><Panel className="report-section" title="Customers with due balances" description="Grouped by how long each invoice has been unpaid."><ReportTable rows={dueCustomers}/></Panel><Panel className="report-section" title="Suppliers with due balances"><ReportTable rows={dueSuppliers}/></Panel></>}
+      {type !== "stock" && type !== "due" && <Panel className="report-section" title={`${reportLabel} records`} description={`${rows.length.toLocaleString()} rows returned.`}><ReportTable rows={rows} columns={columns}/></Panel>}
+      <div className="report-footnote hidden print:flex"><span>StockPilot · {reportLabel} · {generatedAt}</span><span>Data from this shop’s own database — verify before external use.</span></div>
+    </div>
+  );
 }
 
-function ReportTable({ rows }: { rows: Record<string, unknown>[] }) {
-  const { formatMoney, formatDateTime } = useShopFormat();
-  const columns = rows.length ? Object.keys(rows[0]).filter((key) => !isInternalField(key) && !["createdBy", "customer", "supplier", "payments", "items", "returns", "product", "category", "baseUnit"].includes(key) && typeof rows[0][key] !== "object").slice(0, 9) : [];
-  return <div className="overflow-x-auto"><table className="w-full text-left text-sm"><thead className="text-xs text-muted-foreground"><tr>{columns.map((key) => <th key={key} className="px-3 py-3">{columnLabel(key)}</th>)}</tr></thead><tbody className="divide-y divide-border">{rows.map((row, index) => <tr key={printable(row.id) || index}>{columns.map((key) => <td key={key} className="px-3 py-3">{moneyKeys.has(key) ? formatMoney(printable(row[key])) : key.toLowerCase().endsWith("at") ? formatDateTime(printable(row[key])) : printable(row[key])}</td>)}</tr>)}{rows.length === 0 && <tr><td className="px-3 py-8 text-center text-muted-foreground" colSpan={Math.max(columns.length, 1)}>No records.</td></tr>}</tbody></table></div>;
+function ReportTable({ rows, columns: provided }: { rows: Row[]; columns?: string[] }) {
+  const { formatMoney, formatDate, formatDateTime } = useShopFormat();
+  const columns = provided ?? visibleColumns(rows);
+  const cell = (key: string, value: unknown) => {
+    if (moneyKeys.has(key)) return formatMoney(printable(value));
+    const raw = printable(value);
+    if (raw === "" || raw === "—") return raw;
+    const lower = key.toLowerCase();
+    // *Date is a calendar day, *At a moment — both must render on the shop's clock, not raw UTC.
+    if (lower.endsWith("date")) return formatDate(raw);
+    if (lower.endsWith("at")) return formatDateTime(raw);
+    return raw;
+  };
+  return <div className="overflow-x-auto"><table className="w-full text-left text-sm"><thead className="text-xs text-muted-foreground"><tr>{columns.map((key) => <th key={key} className={isNumericColumn(key) ? "px-3 py-3 text-right" : "px-3 py-3"}>{columnLabel(key)}</th>)}</tr></thead><tbody className="divide-y divide-border">{rows.map((row, index) => <tr key={printable(row.id) || index}>{columns.map((key) => <td key={key} className={`${isNumericColumn(key) ? "text-right" : ""} max-w-64 truncate px-3 py-3 tabular-nums`}>{cell(key, row[key])}</td>)}</tr>)}{rows.length === 0 && <tr><td className="report-empty px-3 py-8 text-center text-muted-foreground" colSpan={Math.max(columns.length, 1)}>No records.</td></tr>}</tbody></table></div>;
 }

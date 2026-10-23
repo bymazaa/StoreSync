@@ -48,6 +48,10 @@ export async function POST(request: Request) {
   try {
     const product = await Product.findById(input.productId).session(session).lean();
     if (!product || !product.isActive) throw new AdjustmentError("Product was not found.");
+    // Stock in without a selling price would let the item be sold for 0, so opening stock must come from a purchase.
+    if (input.direction === StockDirection.IN && toNumber(product.sellingPrice) <= 0) {
+      throw new AdjustmentError("This product has no selling price yet. Receive it with Purchases → New purchase so quantity, cost and selling price are recorded together.");
+    }
     
     const quantity = parseDecimalString(input.quantity);
     const baseUnit = await Unit.findById(product.baseUnitId).session(session).lean();

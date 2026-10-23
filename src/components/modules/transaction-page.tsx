@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from "react";
 import Link from "next/link";
 import { Search, X } from "lucide-react";
 import { apiRequest, jsonBody } from "@/lib/client-api";
@@ -57,6 +57,7 @@ export function TransactionPage({ mode }: { mode: "sale" | "purchase" }) {
   const [error, setError] = useState("");
   const [invoice, setInvoice] = useState<{ id: string; invoiceNumber: string; total: string; dueAmount: string } | null>(null);
   const pendingTransactionRequests = useRef(new Map<string, string>());
+  const searchRef = useRef<HTMLInputElement>(null);
   const title = isSale ? "New sale" : "New purchase";
   const load = useCallback(async () => {
     try {
@@ -80,7 +81,10 @@ export function TransactionPage({ mode }: { mode: "sale" | "purchase" }) {
   }, []);
   useEffect(() => {
     const queryText = contactSearch.trim();
-    if (!queryText) { setContactResults(contacts); return; }
+    if (!queryText) {
+      const timer = window.setTimeout(() => setContactResults(contacts), 0);
+      return () => window.clearTimeout(timer);
+    }
     let active = true;
     const timer = window.setTimeout(() => {
       const endpoint = isSale ? "customers" : "suppliers";
@@ -99,6 +103,13 @@ export function TransactionPage({ mode }: { mode: "sale" | "purchase" }) {
     }, 180);
     return () => { active = false; window.clearTimeout(timer); };
   }, [query]);
+  // The counter is a scan-and-type screen, so the product search takes focus when the page opens
+  // and again once an invoice is finished — no click needed for the next customer.
+  useEffect(() => {
+    if (invoice) return;
+    const timer = window.setTimeout(() => searchRef.current?.focus(), 0);
+    return () => window.clearTimeout(timer);
+  }, [invoice]);
   useEffect(() => {
     if (!isSale) return;
     const digits = contactPhone.replace(/\D/g, "");
@@ -124,12 +135,16 @@ export function TransactionPage({ mode }: { mode: "sale" | "purchase" }) {
   const enteredPaidCents = decimalCents(amountPaid || "0");
   const duePreview = centsToMoney(totalCents > enteredPaidCents ? totalCents - enteredPaidCents : BigInt(0));
   useEffect(() => {
-    if (allowDue && decimalCents(paidAmount || "0") > totalCents) setPaidAmount(total);
+    if (!(allowDue && decimalCents(paidAmount || "0") > totalCents)) return;
+    const timer = window.setTimeout(() => setPaidAmount(total), 0);
+    return () => window.clearTimeout(timer);
   }, [allowDue, paidAmount, total, totalCents]);
   const results = searchResults.slice(0, 8);
+  // Keep the caret in the search box so a scanner can feed the next item immediately.
+  function keepSearchFocused() { window.setTimeout(() => searchRef.current?.focus(), 0); }
   function addProduct(product: Product) {
     if (isSale && Number(product.stockOnHand) <= 0) {
-      setOutOfStock(product.name); setQuery(""); setSearchResults([]);
+      setOutOfStock(product.name); setQuery(""); setSearchResults([]); keepSearchFocused();
       return;
     }
     setOutOfStock("");
@@ -138,8 +153,25 @@ export function TransactionPage({ mode }: { mode: "sale" | "purchase" }) {
       if (index >= 0) return existing.map((line, i) => i === index ? { ...line, quantity: String(Number(line.quantity) + 1) } : line);
       return [...existing, { productId: product.id, unitId: product.baseUnitId, quantity: "1", price: trimDecimalZeros(isSale ? product.sellingPrice : product.purchasePrice), sellingPrice: trimDecimalZeros(product.sellingPrice), batchNumber: "", expiresAt: "", trackBatch: product.tracksBatch, trackExpiry: product.tracksExpiry }];
     }); setQuery("");
+    keepSearchFocused();
   }
   function updateLine(index: number, patch: Partial<Line>) { setLines((old) => old.map((line, i) => i === index ? { ...line, ...patch } : line)); }
+  // A scanner sends Enter right after the last digit, before the debounced lookup has fired,
+  // so the term is resolved on demand: one match goes straight into the invoice.
+  async function commitSearch() {
+    const term = query.trim();
+    if (!term) return;
+    try {
+      const found = await apiRequest<{ products: Product[] }>(`/api/products?q=${encodeURIComponent(term)}`);
+      if (found.products.length === 1) addProduct(found.products[0]);
+      else setSearchResults(found.products);
+    } catch { setSearchResults([]); }
+  }
+  function searchKeyDown(event: KeyboardEvent<HTMLInputElement>) {
+    if (event.key !== "Enter") return;
+    event.preventDefault();
+    void commitSearch();
+  }
   function updateContactPhone(value: string) {
     setContactPhone(value);
     if (!isSale) return;
@@ -219,7 +251,7 @@ export function TransactionPage({ mode }: { mode: "sale" | "purchase" }) {
   if (invoice) return <div className="space-y-5"><PageHeader eyebrow={isSale ? "Sales / POS" : "Purchasing"} title="Invoice completed" description="The transaction and stock update were saved together."/><Panel title={invoice.invoiceNumber} description={`Total ${formatMoney(invoice.total)} · Due ${formatMoney(invoice.dueAmount)}`}><div className="flex flex-wrap gap-3"><Link className="rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground" href={`/${isSale ? "sales" : "purchases"}/${invoice.id}`}>Open printable invoice</Link><Button variant="outline" onClick={() => { setInvoice(null); setLines([]); setPaidAmount("0"); setAdditionalCost("0"); setAllowDue(false); setContactId(""); setContactPhone(""); setContactName(""); setContactAddress(""); }}>Create another</Button></div></Panel></div>;
   return <div className="space-y-6"><PageHeader eyebrow={isSale ? "Sales / POS" : "Purchasing"} title={title} description={isSale ? "Search or scan a product, add items and complete the sale." : "Choose a supplier, record received stock and payment."}/>
     {error && <ErrorMessage>{error}</ErrorMessage>}
-    <Panel title="Add products" description="Search by name, SKU or barcode; package units convert into base stock units."><div className="relative"><input autoComplete="off" value={query} onChange={(e) => { setQuery(e.target.value); setSearchResults([]); setOutOfStock(""); }} className={inputClass} placeholder="Search or scan barcode"/>{query && <div className="absolute z-10 mt-1 max-h-64 w-full overflow-y-auto rounded-xl border border-border bg-card shadow-lg">{results.map((p) => { const stock = Number(p.stockOnHand); return <button type="button" key={p.id} onClick={() => addProduct(p)} className="flex w-full items-center justify-between gap-3 border-b border-border px-4 py-3 text-left text-sm last:border-0 hover:bg-muted"><span className="min-w-0"><span className="block truncate font-medium">{p.name}<span className="ml-2 text-xs text-muted-foreground">{p.sku}</span></span><span className={`mt-0.5 block text-xs ${stock <= 0 ? "font-semibold text-danger" : "text-muted-foreground"}`}>{trimDecimalZeros(p.stockOnHand)} {p.baseUnit.symbol} in stock{stock <= 0 ? " · out of stock" : ""}</span></span><span className="shrink-0">{formatMoney(isSale ? p.sellingPrice : p.purchasePrice)} / {p.baseUnit.symbol}</span></button>; })}{results.length === 0 && <p className="p-4 text-sm text-muted-foreground">No products found.</p>}</div>}</div>
+    <Panel title="Add products" description="Search by name, SKU or barcode; scanning ends with Enter and adds a unique match. Package units convert into base stock units."><div className="relative"><input ref={searchRef} autoComplete="off" value={query} onChange={(e) => { setQuery(e.target.value); setSearchResults([]); setOutOfStock(""); }} onKeyDown={searchKeyDown} className={inputClass} placeholder="Search or scan barcode"/>{query && <div className="absolute z-10 mt-1 max-h-64 w-full overflow-y-auto rounded-xl border border-border bg-card shadow-lg">{results.map((p) => { const stock = Number(p.stockOnHand); return <button type="button" key={p.id} onClick={() => addProduct(p)} className="flex w-full items-center justify-between gap-3 border-b border-border px-4 py-3 text-left text-sm last:border-0 hover:bg-muted"><span className="min-w-0"><span className="block truncate font-medium">{p.name}<span className="ml-2 text-xs text-muted-foreground">{p.sku}</span></span><span className={`mt-0.5 block text-xs ${stock <= 0 ? "font-semibold text-danger" : "text-muted-foreground"}`}>{trimDecimalZeros(p.stockOnHand)} {p.baseUnit.symbol} in stock{stock <= 0 ? " · out of stock" : ""}</span></span><span className="shrink-0">{formatMoney(isSale ? p.sellingPrice : p.purchasePrice)} / {p.baseUnit.symbol}</span></button>; })}{results.length === 0 && <p className="p-4 text-sm text-muted-foreground">No products found.</p>}</div>}</div>
       {outOfStock && <div role="alert" className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl border border-danger/30 bg-danger/10 px-3 py-2 text-xs text-danger"><span><strong>{outOfStock}</strong> is out of stock. Receive a purchase before selling it.</span>{canPurchase && <Link href="/purchases" className="font-semibold underline">Create a purchase</Link>}<button type="button" onClick={() => setOutOfStock("")} className="ml-auto rounded-md p-1 hover:bg-danger/10" aria-label="Dismiss stock warning"><X size={14} /></button></div>}
     </Panel>
     <form onSubmit={submit} className="space-y-5">

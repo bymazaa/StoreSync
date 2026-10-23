@@ -1,10 +1,13 @@
 "use client";
 
-import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
-import { Archive, Barcode, Boxes, LoaderCircle, Pencil, Plus, Search, X } from "lucide-react";
+import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Archive, Barcode, Boxes, LoaderCircle, Pencil, Plus, Printer, Search, X } from "lucide-react";
 import { PageHeader, Panel, ErrorMessage, Notice, TableEmpty, inputClass, selectClass } from "@/components/ui/page";
 import { Button } from "@/components/ui/button";
+import { BarcodeSvg } from "@/components/ui/barcode";
+import { isCode128Encodable } from "@/lib/barcode";
 import { apiRequest, jsonBody } from "@/lib/client-api";
+import { skuCategoryPrefix } from "@/lib/utils";
 import { useHasPermission, useShopFormat } from "@/components/app/shop-context";
 
 type Unit = { id: string; code: string; name: string; symbol: string; isActive?: boolean };
@@ -17,11 +20,6 @@ type Product = {
 };
 
 type ConversionDraft = { unitId: string; conversionToBase: string };
-
-function skuPrefix(categoryName?: string) {
-  const words = categoryName?.toUpperCase().match(/[A-Z0-9]+/g) ?? [];
-  return words.length > 1 ? words.map((word) => word[0]).join("").slice(0, 2) || "PR" : words[0]?.slice(0, 2) || "PR";
-}
 
 function ProductEditor({ product, units, categories, onClose, onSaved }: {
   product: Product | null; units: Unit[]; categories: Category[]; onClose: () => void; onSaved: () => void;
@@ -63,7 +61,7 @@ function ProductEditor({ product, units, categories, onClose, onSaved }: {
         <form key={product?.id ?? "new-product"} onSubmit={submit} className="space-y-5">
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="block sm:col-span-2"><span className="mb-1.5 block text-xs font-medium">Product name</span><input name="name" required maxLength={160} defaultValue={product?.name} className={inputClass} placeholder="e.g. Basmati rice" /></label>
-            <div className="block"><span className="mb-1.5 block text-xs font-medium">SKU · Auto generated</span><p className={`${inputClass} flex items-center bg-muted text-muted-foreground`}>{product?.sku ?? `${skuPrefix(categories.find((item) => item.id === categoryId)?.name)}-XXXXXX`}</p></div>
+            <div className="block"><span className="mb-1.5 block text-xs font-medium">SKU · Auto generated from category</span><p className={`${inputClass} flex items-center bg-muted text-muted-foreground`}>{product?.sku ?? `${skuCategoryPrefix(categories.find((item) => item.id === categoryId)?.name)}-###`}</p></div>
             <label className="block"><span className="mb-1.5 block text-xs font-medium">Brand <span className="text-muted-foreground">optional</span></span><input name="brand" maxLength={120} defaultValue={product?.brand ?? ""} className={inputClass} placeholder="Brand name" /></label>
             <label className="block"><span className="mb-1.5 flex items-center gap-1.5 text-xs font-medium"><Barcode size={14} /> Barcode <span className="text-muted-foreground">optional</span></span><input name="barcode" maxLength={120} defaultValue={product?.barcode ?? ""} className={inputClass} placeholder="Scan or type barcode" /></label>
             <label className="block"><span className="mb-1.5 block text-xs font-medium">Category</span><select name="categoryId" value={categoryId} onChange={(event) => setCategoryId(event.target.value)} className={selectClass}><option value="">Uncategorized</option>{categories.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
@@ -77,6 +75,23 @@ function ProductEditor({ product, units, categories, onClose, onSaved }: {
           <div className="flex justify-end gap-2 border-t border-border pt-4"><Button type="button" variant="outline" onClick={onClose}>Cancel</Button><Button type="submit" disabled={busy} icon={busy ? <LoaderCircle size={15} className="animate-spin" /> : undefined}>{busy ? "Saving..." : product ? "Save changes" : "Create product"}</Button></div>
         </form>
       </section>
+    </div>
+  );
+}
+
+const LABELS_PER_PAGE = 24;
+
+/** The sticker carries the product's own SKU — the same code the counter search accepts, so print and scan never diverge. */
+function StickerSheet({ product, count, priceLabel }: { product: Product; count: number; priceLabel: string }) {
+  return (
+    <div className="label-grid">
+      {Array.from({ length: count }, (_, index) => (
+        <div key={index} className="label-item">
+          <p className="label-name">{product.name}</p>
+          <div className="label-code">{isCode128Encodable(product.sku) ? <BarcodeSvg value={product.sku} /> : <p className="label-code-text">{product.sku}</p>}</div>
+          <div className="label-foot"><span className="label-sku">{product.sku}</span><span className="label-price">{priceLabel}</span></div>
+        </div>
+      ))}
     </div>
   );
 }
@@ -99,6 +114,19 @@ export function ProductsPage({ initialSearch = "" }: { initialSearch?: string })
   const [editingUnit, setEditingUnit] = useState<Unit | null>(null);
   const [categoryFormVersion, setCategoryFormVersion] = useState(0);
   const [unitFormVersion, setUnitFormVersion] = useState(0);
+  const [labelProductId, setLabelProductId] = useState("");
+  const [labelCount, setLabelCount] = useState(10);
+  const [labelPrint, setLabelPrint] = useState(false);
+  const printedTitle = useRef("");
+
+  useEffect(() => {
+    const reset = () => {
+      setLabelPrint(false);
+      if (printedTitle.current) { document.title = printedTitle.current; printedTitle.current = ""; }
+    };
+    window.addEventListener("afterprint", reset);
+    return () => window.removeEventListener("afterprint", reset);
+  }, []);
 
   const load = useCallback(async () => {
     try {
@@ -117,6 +145,17 @@ export function ProductsPage({ initialSearch = "" }: { initialSearch?: string })
     return () => window.clearTimeout(timer);
   }, [load]);
   const visibleProducts = useMemo(() => products.filter((product) => `${product.name} ${product.sku} ${product.barcode ?? ""}`.toLowerCase().includes(search.toLowerCase())), [products, search]);
+  const labelProduct = products.find((product) => product.id === labelProductId) ?? null;
+  const labelTotal = Math.min(120, Math.max(1, Math.round(Number(labelCount) || 1)));
+
+  function printLabels() {
+    if (!labelProduct) return;
+    printedTitle.current = document.title;
+    document.title = `stockpilot-labels-${labelProduct.sku}`;
+    setLabelPrint(true);
+    // The printable sheet is mounted by the state change above, so print one tick later.
+    window.setTimeout(() => window.print(), 120);
+  }
 
   async function changeActive(product: Product) {
     setBusyId(product.id); setError(""); setNotice("");
@@ -170,13 +209,23 @@ export function ProductsPage({ initialSearch = "" }: { initialSearch?: string })
     catch (caught) { setError(caught instanceof Error ? caught.message : "Category could not be updated."); }
   }
 
-  return <>
+  return <div className={`flex flex-col gap-5 ${labelPrint ? "label-print-mode" : ""}`}>
     <PageHeader eyebrow="Catalog" title="Products" description="Manage products, prices, stock thresholds and package sizes." action={canManageProducts ? <Button icon={<Plus size={16} />} onClick={() => { setEditing(null); setEditorOpen(true); }}>Add product</Button> : undefined} />
-    {notice && <div className="mb-4"><Notice>{notice}</Notice></div>}{error && <div className="mb-4"><ErrorMessage>{error}</ErrorMessage></div>}
+    {notice && <Notice>{notice}</Notice>}{error && <ErrorMessage>{error}</ErrorMessage>}
     {canManageProducts && <><Panel title="Categories" description="Organize the product catalog. Archived categories remain on past invoices."><div className="flex flex-wrap gap-2">{categories.map((category) => <span key={category.id} className="inline-flex items-center gap-2 rounded-full border border-border px-3 py-1.5 text-xs">{category.name}{category.isActive === false && <span className="text-muted-foreground">(archived)</span>}<button type="button" onClick={() => setEditingCategory(category)} className="font-semibold text-primary">Edit</button><button type="button" onClick={() => void toggleCategory(category)} className="font-semibold text-primary">{category.isActive === false ? "Restore" : "Archive"}</button></span>)}</div><form key={`${editingCategory?.id ?? "new-category"}-${categoryFormVersion}`} onSubmit={saveCategory} className="mt-4 grid gap-2 sm:grid-cols-[1fr_2fr_auto]"><input name="categoryName" required maxLength={100} defaultValue={editingCategory?.name} className={inputClass} placeholder="Category name"/><input name="categoryDescription" maxLength={500} defaultValue={editingCategory?.description ?? ""} className={inputClass} placeholder="Description (optional)"/><div className="flex gap-2"><Button type="submit">{editingCategory ? "Save" : "Add category"}</Button>{editingCategory && <Button type="button" variant="ghost" onClick={() => setEditingCategory(null)}>Cancel</Button>}</div></form></Panel><Panel title="Units" description="Add store-specific units for product package conversions. Archived units remain attached to historical records."><div className="mb-4 flex flex-wrap gap-2">{units.map((unit) => <span key={unit.id} className="inline-flex items-center gap-2 rounded-full border border-border px-3 py-1.5 text-xs">{unit.name} ({unit.symbol}){unit.isActive === false && <span className="text-muted-foreground">(archived)</span>}<button type="button" onClick={() => setEditingUnit(unit)} className="font-semibold text-primary">Edit</button><button type="button" onClick={() => void toggleUnit(unit)} className="font-semibold text-primary">{unit.isActive === false ? "Restore" : "Archive"}</button></span>)}</div><form key={`${editingUnit?.id ?? "new-unit"}-${unitFormVersion}`} onSubmit={saveUnit} className="grid gap-2 sm:grid-cols-4"><input name="name" required maxLength={80} defaultValue={editingUnit?.name} className={inputClass} placeholder="Unit name"/><input name="symbol" required maxLength={20} defaultValue={editingUnit?.symbol} className={inputClass} placeholder="Symbol"/><input name="code" required maxLength={30} defaultValue={editingUnit?.code} className={inputClass} placeholder="Unique code"/><div className="flex gap-2"><Button type="submit">{editingUnit ? "Save" : "Add unit"}</Button>{editingUnit && <Button type="button" variant="ghost" onClick={() => setEditingUnit(null)}>Cancel</Button>}</div></form></Panel></>}
     <Panel title="Product catalog" description={`${visibleProducts.length.toLocaleString()} products`} action={<div className="flex flex-wrap items-center gap-2"><label className="relative"><Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" /><input value={search} onChange={(event) => setSearch(event.target.value)} className={`${inputClass} w-56 pl-9`} placeholder="Search name, SKU, barcode" /></label>{canManageProducts && <label className="flex items-center gap-2 rounded-xl border border-border px-3 py-2 text-xs"><input type="checkbox" checked={includeInactive} onChange={(event) => setIncludeInactive(event.target.checked)} className="accent-primary" /> Include archived</label>}</div>}>
-      {loading ? <div className="space-y-3">{Array.from({ length: 5 }, (_, index) => <div key={index} className="h-12 animate-pulse rounded-lg bg-muted" />)}</div> : <div className="overflow-x-auto"><table className="w-full min-w-[840px] text-left text-sm"><thead><tr className="border-b border-border text-xs text-muted-foreground"><th className="pb-3 font-medium">Product</th><th className="pb-3 font-medium">SKU / Barcode</th><th className="pb-3 font-medium">Stock</th><th className="pb-3 font-medium">Purchase</th><th className="pb-3 font-medium">Selling</th><th className="pb-3 font-medium">Status</th><th className="pb-3 text-right font-medium">Actions</th></tr></thead><tbody className="divide-y divide-border">{visibleProducts.map((product) => <tr key={product.id} className="align-middle"><td className="py-3.5"><p className="font-semibold">{product.name}</p><p className="mt-0.5 text-xs text-muted-foreground">{product.category?.name ?? "Uncategorized"} · {product.baseUnit.symbol}</p></td><td className="py-3.5 text-xs"><p>{product.sku}</p><p className="mt-0.5 text-muted-foreground">{product.barcode || "No barcode"}</p></td><td className="py-3.5"><p className="font-medium">{product.stockOnHand} {product.baseUnit.symbol}</p><p className="mt-0.5 text-xs text-muted-foreground">Alert at {product.lowStockThreshold}</p></td><td className="py-3.5 tabular-nums">{formatMoney(product.purchasePrice)}</td><td className="py-3.5 tabular-nums">{formatMoney(product.sellingPrice)}</td><td className="py-3.5"><span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${product.isActive ? "bg-success/10 text-success" : "bg-muted text-muted-foreground"}`}>{product.isActive ? "Active" : "Archived"}</span></td><td className="py-3.5">{canManageProducts && <div className="flex justify-end gap-1"><button type="button" onClick={() => { setEditing(product); setEditorOpen(true); }} aria-label={`Edit ${product.name}`} className="grid size-8 place-items-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground"><Pencil size={15} /></button><button type="button" disabled={busyId === product.id} onClick={() => void changeActive(product)} aria-label={product.isActive ? `Archive ${product.name}` : `Restore ${product.name}`} className="grid size-8 place-items-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-50"><Archive size={15} /></button></div>}</td></tr>)}</tbody></table>{visibleProducts.length === 0 && <TableEmpty><><Boxes className="mx-auto mb-2 text-muted-foreground" size={24} />No products match this search.</></TableEmpty>}</div>}
+      {loading ? <div className="space-y-3">{Array.from({ length: 5 }, (_, index) => <div key={index} className="h-12 animate-pulse rounded-lg bg-muted" />)}</div> : <div className="overflow-x-auto"><table className="w-full min-w-[840px] text-left text-sm"><thead><tr className="border-b border-border text-xs text-muted-foreground"><th className="pb-3 font-medium">Product</th><th className="pb-3 font-medium">Barcode</th><th className="pb-3 font-medium">Stock</th><th className="pb-3 font-medium">Purchase</th><th className="pb-3 font-medium">Selling</th><th className="pb-3 font-medium">Status</th><th className="pb-3 text-right font-medium">Actions</th></tr></thead><tbody className="divide-y divide-border">{visibleProducts.map((product) => <tr key={product.id} className="align-middle"><td className="py-3.5"><p className="font-semibold">{product.name}</p><p className="mt-1 flex flex-wrap items-center gap-1.5"><span className="rounded-md bg-teal-soft px-1.5 py-0.5 text-[11px] font-semibold tabular-nums tracking-[0.08em] text-teal-strong">{product.sku}</span><span className="text-xs text-muted-foreground">{product.category?.name ?? "Uncategorized"} · {product.baseUnit.symbol}</span></p></td><td className="py-3.5 text-xs text-muted-foreground">{product.barcode || "No barcode"}</td><td className="py-3.5"><p className="font-medium">{product.stockOnHand} {product.baseUnit.symbol}</p><p className="mt-0.5 text-xs text-muted-foreground">Alert at {product.lowStockThreshold}</p></td><td className="py-3.5 tabular-nums">{formatMoney(product.purchasePrice)}</td><td className="py-3.5 tabular-nums">{formatMoney(product.sellingPrice)}</td><td className="py-3.5"><span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${product.isActive ? "bg-success/10 text-success" : "bg-muted text-muted-foreground"}`}>{product.isActive ? "Active" : "Archived"}</span></td><td className="py-3.5">{canManageProducts && <div className="flex justify-end gap-1"><button type="button" onClick={() => { setEditing(product); setEditorOpen(true); }} aria-label={`Edit ${product.name}`} className="grid size-8 place-items-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground"><Pencil size={15} /></button><button type="button" disabled={busyId === product.id} onClick={() => void changeActive(product)} aria-label={product.isActive ? `Archive ${product.name}` : `Restore ${product.name}`} className="grid size-8 place-items-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-50"><Archive size={15} /></button></div>}</td></tr>)}</tbody></table>{visibleProducts.length === 0 && <TableEmpty><><Boxes className="mx-auto mb-2 text-muted-foreground" size={24} />No products match this search.</></TableEmpty>}</div>}
     </Panel>
+    {canManageProducts && <Panel title="Barcode stickers" description="A4 sheet: three columns, eight rows — 24 stickers per page. Each sticker prints the product’s own SKU as a Code 128, so the scanned code and the typed SKU are always the same thing.">
+      <div className="grid items-end gap-3 sm:grid-cols-[minmax(240px,1fr)_150px_auto]">
+        <label className="text-xs text-muted-foreground">Product<select className={`${selectClass} mt-1`} value={labelProductId} onChange={(event) => setLabelProductId(event.target.value)}><option value="">Choose a product</option>{products.filter((product) => product.isActive).map((product) => <option key={product.id} value={product.id}>{product.name} ({product.sku})</option>)}</select></label>
+        <label className="text-xs text-muted-foreground">Number of stickers<input type="number" min={1} max={120} value={labelCount} onChange={(event) => setLabelCount(Number(event.target.value) || 1)} className={`${inputClass} mt-1`} /></label>
+        <Button icon={<Printer size={15} />} onClick={printLabels} disabled={!labelProduct}>Print sheet</Button>
+      </div>
+      {labelProduct && <p className="mt-3 text-xs text-muted-foreground">{labelTotal} stickers over {Math.ceil(labelTotal / LABELS_PER_PAGE)} page(s) · SKU {labelProduct.sku} as Code 128 · price {formatMoney(labelProduct.sellingPrice)}{Number(labelProduct.sellingPrice) > 0 ? "" : " — set a selling price by completing a purchase"}</p>}
+      {labelProduct && <div className="mt-4 overflow-x-auto"><StickerSheet product={labelProduct} count={Math.min(labelTotal, LABELS_PER_PAGE)} priceLabel={formatMoney(labelProduct.sellingPrice)} /></div>}
+    </Panel>}
+    {labelProduct && <div className="label-sheet"><StickerSheet product={labelProduct} count={labelTotal} priceLabel={formatMoney(labelProduct.sellingPrice)} /></div>}
     {editorOpen && <ProductEditor key={editing?.id ?? "new"} product={editing} units={units} categories={categories} onClose={() => setEditorOpen(false)} onSaved={() => { setEditorOpen(false); setNotice(editing ? "Product updated." : "Product created."); void load(); }} />}
-  </>;
+  </div>;
 }

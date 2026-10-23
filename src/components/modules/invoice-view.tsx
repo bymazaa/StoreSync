@@ -786,6 +786,7 @@ export function InvoiceView({ mode }: { mode: 'sale' | 'purchase' }) {
                 invoice.status === 'COMPLETED' &&
                 Number(invoice.paidAmount) === 0 && (
                     <Panel
+                        className="print:hidden"
                         title="Cancel unpaid invoice"
                         description="Cancellation is allowed only before any payment is recorded. The API reverses stock and writes the audit trail."
                     >
