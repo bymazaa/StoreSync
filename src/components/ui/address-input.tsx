@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { apiRequest } from "@/lib/client-api";
 import { inputClass } from "@/components/ui/page";
 
@@ -18,12 +18,13 @@ export function AddressInput({ value, onChange, countryCode, name = "address", p
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const requestId = useRef(0);
+  const suggestionListId = useId();
   const selectedValue = useRef<string | null>(null);
 
   useEffect(() => {
     const query = value.trim();
     if (selectedValue.current === value) { selectedValue.current = null; return; }
-    if (query.length < 3) { setSuggestions([]); setLoading(false); return; }
+    if (query.length < 3) { const clear = window.setTimeout(() => { setSuggestions([]); setLoading(false); }, 0); return () => window.clearTimeout(clear); }
     const controller = new AbortController();
     const currentRequest = ++requestId.current;
     const timer = window.setTimeout(() => {
@@ -44,8 +45,8 @@ export function AddressInput({ value, onChange, countryCode, name = "address", p
   }
 
   return <div className={`relative ${className}`}>
-    <input name={name} autoComplete="street-address" value={value} onChange={(event) => { onChange(event.target.value); setOpen(true); }} onFocus={() => { if (suggestions.length) setOpen(true); }} onBlur={() => window.setTimeout(() => setOpen(false), 120)} className={inputClass} placeholder={placeholder} aria-autocomplete="list" aria-expanded={open && suggestions.length > 0} />
-    {open && suggestions.length > 0 && <div className="absolute z-30 mt-1 w-full overflow-hidden rounded-xl border border-border bg-card shadow-lg"><ul role="listbox" className="max-h-64 overflow-y-auto py-1">
+    <input name={name} autoComplete="street-address" value={value} onChange={(event) => { onChange(event.target.value); setOpen(true); }} onFocus={() => { if (suggestions.length) setOpen(true); }} onBlur={() => window.setTimeout(() => setOpen(false), 120)} className={inputClass} placeholder={placeholder} role="combobox" aria-haspopup="listbox" aria-autocomplete="list" aria-expanded={open && suggestions.length > 0} aria-controls={open && suggestions.length > 0 ? suggestionListId : undefined} />
+    {open && suggestions.length > 0 && <div className="absolute z-30 mt-1 w-full overflow-hidden rounded-xl border border-border bg-card shadow-lg"><ul role="listbox" id={suggestionListId} className="max-h-64 overflow-y-auto py-1">
       {suggestions.map((suggestion) => <li key={suggestion.id} role="option" aria-selected="false"><button type="button" onMouseDown={(event) => event.preventDefault()} onClick={() => chooseAddress(suggestion)} className="w-full px-3 py-2.5 text-left text-sm leading-5 hover:bg-muted">{suggestion.label}</button></li>)}
     </ul><p className="border-t border-border px-3 py-2 text-[10px] text-muted-foreground">Address data © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer" className="underline">OpenStreetMap contributors</a> · Search by <a href="https://github.com/komoot/photon" target="_blank" rel="noreferrer" className="underline">Photon</a></p></div>}
     {loading && <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">Searching…</span>}

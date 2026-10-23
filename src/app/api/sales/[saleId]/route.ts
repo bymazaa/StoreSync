@@ -12,7 +12,6 @@ import Customer from "@/models/Customer";
 import User from "@/models/User";
 import Product from "@/models/Product";
 import Unit from "@/models/Unit";
-import InventoryBatch from "@/models/InventoryBatch";
 import Settings from "@/models/Settings";
 import { z } from "zod";
 

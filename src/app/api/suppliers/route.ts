@@ -17,7 +17,7 @@ export async function GET(request: Request) {
   const q = searchParams.get("q")?.trim();
   const includeInactive = searchParams.get("includeInactive") === "true";
   
-  let query: any = {};
+  const query: any = {};
   if (!includeInactive) query.isActive = true;
   
   if (q) {

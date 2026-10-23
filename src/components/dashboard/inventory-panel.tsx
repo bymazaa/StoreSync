@@ -16,12 +16,12 @@ export function InventoryPanel({ inventory }: { inventory: LowStockProduct[] }) 
         {inventory.length === 0 ? (
           <p className="rounded-xl bg-teal-soft px-3.5 py-4 text-sm text-teal-strong">All active products are above their reorder levels.</p>
         ) : null}
-        {inventory.map((item) => {
+        {inventory.map((item,i) => {
           const stock = Number(item.stockOnHand);
           const threshold = Number(item.lowStockThreshold);
           const level = threshold > 0 ? Math.min(100, Math.max(4, (stock / threshold) * 100)) : 0;
           return (
-            <div key={item.id} className="rounded-xl px-2 py-2.5 transition-colors hover:bg-muted/60">
+            <div key={i} className="rounded-xl px-2 py-2.5 transition-colors hover:bg-muted/60">
               <div className="flex items-center justify-between gap-3">
                 <div className="flex min-w-0 items-center gap-2.5">
                   <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-amber-soft text-amber-strong"><AlertTriangle size={15} /></span>

@@ -68,7 +68,7 @@ function downloadFile(filename: string, content: string, mime: string) {
 }
 
 export function ReportsPage() {
-  const { formatMoney, formatDateTime, timezone } = useShopFormat();
+  const { formatMoney, formatNumber, formatDateTime, timezone } = useShopFormat();
   const [type, setType] = useState<ReportType>("sales");
   const [from, setFrom] = useState(""); const [to, setTo] = useState("");
   const [data, setData] = useState<Payload | null>(null); const [error, setError] = useState(""); const [busy, setBusy] = useState(false);
@@ -136,12 +136,27 @@ export function ReportsPage() {
 
       {error && <div className="print:hidden"><ErrorMessage>{error}</ErrorMessage></div>}
       <Panel className="print:hidden" title="Report filters" description="Date ranges follow the shop timezone." action={<div className="flex flex-wrap gap-2"><Button variant="outline" icon={<FileDown size={15}/>} onClick={exportCsv} disabled={!data || busy}>Export CSV</Button><Button variant="outline" icon={<Printer size={15}/>} onClick={printReport} disabled={!data || busy}>Print / Save PDF</Button></div>}>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[minmax(200px,1fr)_1fr_1fr_auto]"><select aria-label="Report type" value={type} onChange={(e) => setType(e.target.value as ReportType)} className={selectClass}>{options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}</select><label className="text-xs text-muted-foreground">From<input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className={`${inputClass} mt-1`}/></label><label className="text-xs text-muted-foreground">To<input type="date" value={to} onChange={(e) => setTo(e.target.value)} className={`${inputClass} mt-1`}/></label><Button variant="outline" icon={<Search size={15}/>} onClick={() => void load()} disabled={busy}>{busy ? "Loading…" : "Refresh"}</Button></div>
+        <div className="grid items-end gap-3 sm:grid-cols-2 lg:grid-cols-[minmax(220px,1.2fr)_minmax(150px,1fr)_minmax(150px,1fr)_auto]">
+          <label className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">Report type<select aria-label="Report type" value={type} onChange={(e) => setType(e.target.value as ReportType)} className={`${selectClass} mt-1.5 font-normal normal-case tracking-normal`}>{options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}</select></label>
+          <label className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">From<input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className={`${inputClass} mt-1.5`}/></label>
+          <label className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">To<input type="date" value={to} onChange={(e) => setTo(e.target.value)} className={`${inputClass} mt-1.5`}/></label>
+          <Button variant="outline" icon={<Search size={15}/>} onClick={() => void load()} disabled={busy}>{busy ? "Loading…" : "Refresh"}</Button>
+        </div>
         {type === "due" && <p className="mt-3 text-xs text-muted-foreground">Aging buckets are counted from each unpaid invoice date.</p>}
       </Panel>
-      {data?.summary && <section className="report-summary grid gap-3 sm:grid-cols-2 xl:grid-cols-4">{Object.entries(data.summary).slice(0, 8).map(([key, value]) => <div key={key} className="rounded-2xl border border-border bg-card p-4"><p className="text-xs capitalize text-muted-foreground">{columnLabel(key)}</p><p className="mt-2 text-xl font-semibold tabular-nums">{moneyKeys.has(key) ? formatMoney(String(value)) : value}</p></div>)}</section>}
-      {type === "stock" && data && <><Panel className="report-section" title="Low stock" description="Products at or below their reorder threshold."><ReportTable rows={data.lowStock ?? []}/></Panel><Panel className="report-section" title="Expiring batches" description="Tracked stock due to expire within 30 days."><ReportTable rows={data.expiringBatches ?? []}/></Panel></>}
-      {type === "due" && data && <><Panel className="report-section" title="Customers with due balances" description="Grouped by how long each invoice has been unpaid."><ReportTable rows={dueCustomers}/></Panel><Panel className="report-section" title="Suppliers with due balances"><ReportTable rows={dueSuppliers}/></Panel></>}
+      {data?.summary && <section className="report-summary grid gap-3 sm:grid-cols-2 xl:grid-cols-4">{Object.entries(data.summary).slice(0, 8).map(([key, value]) => {
+        const money = moneyKeys.has(key);
+        const numeric = typeof value === "number" || (typeof value === "string" && value.trim() !== "" && Number.isFinite(Number(value)));
+        const shown = money ? formatMoney(String(value)) : numeric ? formatNumber(Number(value)) : printable(value);
+        return (
+          <div key={key} className={`rounded-2xl border bg-card p-4 shadow-card ${money ? "border-primary/25" : "border-border"}`}>
+            <p className="flex items-center justify-between gap-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">{columnLabel(key)}{money ? <span className="rounded-full bg-teal-soft px-2 py-0.5 text-[9px] font-bold tracking-[0.1em] text-teal-strong print:hidden">Amount</span> : null}</p>
+            <p className={`mt-3 text-[26px] leading-none font-semibold tracking-tight tabular-nums ${money ? "text-teal-strong" : "text-foreground"}`}>{shown}</p>
+          </div>
+        );
+      })}</section>}
+      {type === "stock" && data && <><Panel className="report-section" title="Low stock" description={`${(data.lowStock ?? []).length} products at or below their reorder threshold.`}><ReportTable rows={data.lowStock ?? []}/></Panel><Panel className="report-section" title="Expiring batches" description={`${(data.expiringBatches ?? []).length} batches expiring within 30 days.`}><ReportTable rows={data.expiringBatches ?? []}/></Panel></>}
+      {type === "due" && data && <><Panel className="report-section" title="Customers with due balances" description={`${dueCustomers.length} customers · grouped by how long each invoice has been unpaid.`}><ReportTable rows={dueCustomers}/></Panel><Panel className="report-section" title="Suppliers with due balances" description={`${dueSuppliers.length} suppliers with unpaid invoices.`}><ReportTable rows={dueSuppliers}/></Panel></>}
       {type !== "stock" && type !== "due" && <Panel className="report-section" title={`${reportLabel} records`} description={`${rows.length.toLocaleString()} rows returned.`}><ReportTable rows={rows} columns={columns}/></Panel>}
       <div className="report-footnote hidden print:flex"><span>StockPilot · {reportLabel} · {generatedAt}</span><span>Data from this shop’s own database — verify before external use.</span></div>
     </div>
@@ -161,5 +176,5 @@ function ReportTable({ rows, columns: provided }: { rows: Row[]; columns?: strin
     if (lower.endsWith("at")) return formatDateTime(raw);
     return raw;
   };
-  return <div className="overflow-x-auto"><table className="w-full text-left text-sm"><thead className="text-xs text-muted-foreground"><tr>{columns.map((key) => <th key={key} className={isNumericColumn(key) ? "px-3 py-3 text-right" : "px-3 py-3"}>{columnLabel(key)}</th>)}</tr></thead><tbody className="divide-y divide-border">{rows.map((row, index) => <tr key={printable(row.id) || index}>{columns.map((key) => <td key={key} className={`${isNumericColumn(key) ? "text-right" : ""} max-w-64 truncate px-3 py-3 tabular-nums`}>{cell(key, row[key])}</td>)}</tr>)}{rows.length === 0 && <tr><td className="report-empty px-3 py-8 text-center text-muted-foreground" colSpan={Math.max(columns.length, 1)}>No records.</td></tr>}</tbody></table></div>;
+  return <div className="report-table-frame overflow-hidden rounded-xl border border-border/70"><div className="overflow-x-auto"><table className="w-full text-left text-sm"><thead className="bg-muted/40 text-[11px] uppercase tracking-[0.08em] text-muted-foreground"><tr>{columns.map((key) => <th key={key} className={isNumericColumn(key) ? "px-3 py-2.5 text-right font-semibold" : "px-3 py-2.5 font-semibold"}>{columnLabel(key)}</th>)}</tr></thead><tbody className="divide-y divide-border/70">{rows.map((row, index) => <tr key={printable(row.id) || index} className="transition-colors hover:bg-teal-soft/50">{columns.map((key, cellIndex) => <td key={key} className={`${isNumericColumn(key) ? "text-right" : ""} ${cellIndex === 0 ? "font-medium text-foreground" : "text-foreground/85"} max-w-64 truncate px-3 py-2.5 tabular-nums`}>{cell(key, row[key])}</td>)}</tr>)}{rows.length === 0 && <tr><td className="report-empty px-3 py-10 text-center text-sm text-muted-foreground" colSpan={Math.max(columns.length, 1)}>No records in this period.</td></tr>}</tbody></table></div></div>;
 }

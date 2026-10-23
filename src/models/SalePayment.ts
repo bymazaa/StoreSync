@@ -41,10 +41,13 @@ const SalePaymentSchema = new Schema<ISalePayment>(
       required: true,
       ref: 'User',
     },
+    /* Collection rows are positive; a customer return that overpays the due writes one negative refund
+       row, so the schema only caps the magnitude at the same 12-digit ceiling the API regex allows. */
     amount: {
       type: Number,
       required: true,
-      min: 0,
+      min: -999999999999,
+      max: 999999999999,
     },
     paidAt: {
       type: Date,

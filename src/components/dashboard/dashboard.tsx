@@ -8,7 +8,7 @@ import { RecentActivity } from "@/components/dashboard/recent-activity";
 import { SalesChart } from "@/components/dashboard/sales-chart";
 import { StatCard } from "@/components/dashboard/stat-card";
 import { Surface } from "@/components/ui/surface";
-import { useShopFormat } from "@/components/app/shop-context";
+import { useShopFormat, useShopPermissions } from "@/components/app/shop-context";
 import { apiRequest } from "@/lib/client-api";
 
 type DashboardPayload = {
@@ -19,15 +19,18 @@ type DashboardPayload = {
   recentSales: { id: string; invoiceNumber: string; total: string; soldAt: string; status: string; customer: { name: string } | null }[];
 };
 
+// Same permission rules as the sidebar, so "Jump to" never offers a page the staff member cannot open.
 const quickLinks = [
-  { href: "/sales", label: "Sales", icon: Receipt },
-  { href: "/purchases", label: "Purchases", icon: ShoppingBag },
-  { href: "/products", label: "Products", icon: Boxes },
-  { href: "/reports", label: "Reports", icon: BarChart3 },
+  { href: "/sales", label: "Sales", icon: Receipt, requires: ["CREATE_SALES"] },
+  { href: "/purchases", label: "Purchases", icon: ShoppingBag, requires: ["CREATE_PURCHASES"] },
+  { href: "/products", label: "Products", icon: Boxes, requires: ["MANAGE_PRODUCTS", "CREATE_SALES", "CREATE_PURCHASES"] },
+  { href: "/reports", label: "Reports", icon: BarChart3, requires: ["VIEW_REPORTS"] },
 ];
 
 export function Dashboard() {
   const { locale, formatMoney, formatNumber, formatDate } = useShopFormat();
+  const permissions = useShopPermissions();
+  const links = quickLinks.filter((link) => link.requires.some((permission) => permissions.includes(permission)));
   const [data, setData] = useState<DashboardPayload | null>(null);
   const [updatedAt, setUpdatedAt] = useState<Date | null>(null);
   const [error, setError] = useState("");
@@ -117,7 +120,7 @@ export function Dashboard() {
             <div className="flex min-w-0 flex-col gap-5">
               <Surface className="flex h-full flex-col p-5 sm:p-6">
                 <p className="text-base font-semibold text-foreground">Profit snapshot</p>
-                <p className="mt-1 text-sm text-muted-foreground">How today's sales converted</p>
+                <p className="mt-1 text-sm text-muted-foreground">How today’s sales converted</p>
                 <div className="mt-4 flex items-end justify-between gap-3">
                   <p className="text-[clamp(1.375rem,2.4vw,1.75rem)] font-semibold leading-none tracking-tight tabular-nums text-foreground">{formatMoney(data.today.profitEstimate)}</p>
                   <span className={`shrink-0 rounded-md px-2 py-1 text-[11px] font-semibold tabular-nums ${margin !== null && margin >= 0 ? "bg-violet-soft text-violet-strong" : "bg-danger/10 text-danger"}`}>{margin === null ? "No sales yet" : `${formatNumber(margin, 1)}% margin`}</span>
@@ -133,7 +136,7 @@ export function Dashboard() {
               <Surface className="p-5 sm:p-6">
                 <p className="text-base font-semibold text-foreground">Jump to</p>
                 <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-1">
-                  {quickLinks.map((link) => (
+                  {links.map((link) => (
                     <Link key={link.href} href={link.href} className="flex items-center gap-2.5 rounded-xl border border-border px-3 py-2.5 text-sm font-semibold text-foreground transition-colors hover:border-primary/30 hover:bg-muted">
                       <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-primary-soft text-teal-strong"><link.icon size={15} /></span>
                       <span className="flex-1 truncate">{link.label}</span>

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { Permission } from "@/types";
 import { authorizedAny } from "@/lib/auth/api-guard";
 import connectDB from "@/lib/db";
-import { StockMovement, Product, Unit, User } from "@/models";
+import { StockMovement, Product } from "@/models";
 import { apiError } from "@/lib/http/api-response";
 import { reportDateRange } from "@/lib/date-time";
 import { z } from "zod";
@@ -29,7 +29,7 @@ export async function GET(request: Request) {
     return apiError(400, "BAD_REQUEST", error instanceof Error ? error.message : "Invalid date range."); 
   }
   
-  let query: any = {};
+  const query: any = {};
   if (productId) query.productId = productId;
   if (dateRange) query.createdAt = dateRange;
   

@@ -117,7 +117,6 @@ export function InvoiceView({ mode }: { mode: 'sale' | 'purchase' }) {
     useEffect(() => {
         const reset = () => {
             document.getElementById('receipt-print-page-size')?.remove();
-            setReceiptPrint(false);
         };
         window.addEventListener('afterprint', reset);
         return () => window.removeEventListener('afterprint', reset);
@@ -206,14 +205,26 @@ export function InvoiceView({ mode }: { mode: 'sale' | 'purchase' }) {
             setBusy(false);
         }
     }
+    /** Chrome ignores named pages, so the 80 mm sheet size is injected only for the print job that needs it. */
+    function setReceiptPageSize(enabled: boolean) {
+        document.getElementById('receipt-print-page-size')?.remove();
+        if (!enabled) return;
+        const pageStyle = document.createElement('style');
+        pageStyle.id = 'receipt-print-page-size';
+        pageStyle.textContent = '@media print { @page { size: 80mm auto; margin: 0; } }';
+        document.head.append(pageStyle);
+    }
     function printReceipt() {
         setReceiptPrint(true);
         window.setTimeout(() => {
-            document.getElementById('receipt-print-page-size')?.remove();
-            const pageStyle = document.createElement('style');
-            pageStyle.id = 'receipt-print-page-size';
-            pageStyle.textContent = '@media print { @page { size: 80mm auto; margin: 0; } }';
-            document.head.append(pageStyle);
+            setReceiptPageSize(true);
+            window.print();
+        }, 100);
+    }
+    function printInvoice() {
+        setReceiptPrint(false);
+        window.setTimeout(() => {
+            setReceiptPageSize(false);
             window.print();
         }, 100);
     }
@@ -242,7 +253,7 @@ export function InvoiceView({ mode }: { mode: 'sale' | 'purchase' }) {
     const dueReducedByReturns = Math.max(0, returnedAmount - refundedAmount);
     const saleItemsById = new Map(invoice.items.map((item) => [item.id, item]));
     return (
-        <div className={`min-w-0 space-y-4 sm:space-y-6 ${receiptPrint ? 'receipt-print-mode' : ''}`}>
+        <div className={`min-w-0 space-y-4 sm:space-y-6 ${receiptPrint ? 'receipt-mode' : ''}`}>
             <div className="print:hidden">
                 <PageHeader
                     eyebrow={mode === 'sale' ? 'Sales invoice' : 'Purchase invoice'}
@@ -256,11 +267,11 @@ export function InvoiceView({ mode }: { mode: 'sale' | 'purchase' }) {
                             >
                                 Back
                             </Link>
-                            <Button
-                                className="min-h-10 flex-1 text-sm sm:flex-none"
-                                variant="outline"
-                                onClick={() => window.print()}
-                            >
+                            <div className="flex min-h-10 items-center gap-0.5 rounded-xl border border-border p-0.5">
+                                <button type="button" aria-pressed={!receiptPrint} onClick={() => setReceiptPrint(false)} className={`h-9 rounded-[10px] px-3 text-xs font-semibold transition-colors ${receiptPrint ? 'text-muted-foreground hover:bg-muted' : 'bg-teal-soft text-teal-strong'}`}>A4</button>
+                                <button type="button" aria-pressed={receiptPrint} onClick={() => setReceiptPrint(true)} className={`h-9 rounded-[10px] px-3 text-xs font-semibold transition-colors ${receiptPrint ? 'bg-teal-soft text-teal-strong' : 'text-muted-foreground hover:bg-muted'}`}>80 mm</button>
+                            </div>
+                            <Button className="min-h-10 flex-1 text-sm sm:flex-none" variant="outline" onClick={printInvoice}>
                                 Print invoice
                             </Button>
                             <Button
@@ -297,7 +308,7 @@ export function InvoiceView({ mode }: { mode: 'sale' | 'purchase' }) {
                             <div className="min-w-0 flex-1">
                                 <p
                                     title={shop?.shopName || 'StockPilot'}
-                                    className="max-w-full truncate text-lg font-bold uppercase tracking-tight sm:text-2xl"
+                                    className="receipt-shop-name max-w-full truncate text-lg font-bold uppercase tracking-tight sm:text-2xl"
                                 >
                                     {limitText(shop?.shopName || 'StockPilot', 42)}
                                 </p>
@@ -328,7 +339,7 @@ export function InvoiceView({ mode }: { mode: 'sale' | 'purchase' }) {
                             </p>
                             <p
                                 title={invoice.invoiceNumber}
-                                className="mt-1 max-w-full break-words text-base font-semibold sm:text-lg"
+                                className="receipt-doc-no mt-1 max-w-full break-words text-base font-semibold sm:text-lg"
                             >
                                 {limitText(invoice.invoiceNumber, 36)}
                             </p>
@@ -388,7 +399,7 @@ export function InvoiceView({ mode }: { mode: 'sale' | 'purchase' }) {
                         </div>
                     </section>
                     <div className="-mx-1 overflow-x-auto rounded-lg sm:mx-0">
-                        <table className="w-full min-w-[560px] text-left text-xs sm:min-w-0 sm:text-sm print:min-w-0">
+                        <table className={`w-full min-w-[560px] text-left text-xs sm:min-w-0 sm:text-sm print:min-w-0 ${completedReturns.length > 0 ? 'receipt-items-returns' : ''}`}>
                             <thead className="border-b border-border bg-muted/35 text-[11px] uppercase tracking-wide text-muted-foreground sm:text-xs">
                                 <tr>
                                     <th className="px-2 py-3 sm:px-3">Product</th>
@@ -410,7 +421,7 @@ export function InvoiceView({ mode }: { mode: 'sale' | 'purchase' }) {
                                             <span title={item.productName} className="block max-w-52 break-words font-semibold">
                                                 {limitText(item.productName, 42)}
                                             </span>
-                                            <span className="mt-0.5 block max-w-52 break-words text-[10px] text-muted-foreground sm:text-xs">
+                                            <span className="receipt-item-meta mt-0.5 block max-w-52 break-words text-[10px] text-muted-foreground sm:text-xs">
                                                 SKU {limitText(item.skuSnapshot, 24)}
                                                 {item.batchNumber
                                                     ? ` · Batch ${limitText(item.batchNumber, 18)}`
@@ -453,7 +464,7 @@ export function InvoiceView({ mode }: { mode: 'sale' | 'purchase' }) {
                             </tbody>
                         </table>
                     </div>
-                    <section className="ml-auto mt-5 w-full max-w-sm space-y-2.5 text-sm sm:mt-6">
+                    <section className="receipt-totals ml-auto mt-5 w-full max-w-sm space-y-2.5 text-sm sm:mt-6">
                         <div className="flex justify-between">
                             <span className="text-muted-foreground">Subtotal</span>
                             <span>{formatMoney(invoice.subtotal)}</span>
@@ -468,7 +479,7 @@ export function InvoiceView({ mode }: { mode: 'sale' | 'purchase' }) {
                                 <span>{formatMoney(invoice.additionalCost)}</span>
                             </div>
                         )}
-                        <div className="flex items-center justify-between gap-4 border-t-2 border-foreground/20 pt-3 text-base font-bold uppercase sm:text-lg">
+                        <div className="receipt-grand-total flex items-center justify-between gap-4 border-t-2 border-foreground/20 pt-3 text-base font-bold uppercase sm:text-lg">
                             <span>Grand total</span>
                             <span className="text-right tabular-nums">{formatMoney(invoice.total)}</span>
                         </div>

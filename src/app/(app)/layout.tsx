@@ -3,7 +3,7 @@ import { Suspense, type ReactNode } from "react";
 import { redirect } from "next/navigation";
 
 import { AppShell } from "@/components/app/app-shell";
-import { getCurrentUser } from "@/lib/auth/session";
+import { getViewerUser } from "@/lib/auth/session";
 import connectDB from "@/lib/db";
 import { User, Settings } from "@/models";
 
@@ -34,7 +34,7 @@ async function AuthenticatedContent({
 }) {
   await connectDB();
 
-  const user = await getCurrentUser();
+  const user = await getViewerUser();
 
   if (!user) {
     const userCount = await User.countDocuments({});

@@ -10,8 +10,6 @@ import { ownerSetupSchema as ownerSchema } from "@/lib/validation/api";
 
 // Helper function to create default infrastructure data
 async function createDefaultData() {
-  console.log('🌱 Creating default infrastructure data...');
-  
   // Create Units (upsert - skip if exists)
   const units = [
     { code: 'KG', name: 'Kilogram', symbol: 'kg' },
@@ -28,7 +26,7 @@ async function createDefaultData() {
       await Unit.create({ _id: randomUUID(), ...unit });
     }
   }
-  console.log(`✓ Created/skipped ${units.length} units`);
+
   
   // Create Categories
   const categories = [
@@ -44,7 +42,7 @@ async function createDefaultData() {
       await Category.create({ _id: randomUUID(), ...cat, isActive: true });
     }
   }
-  console.log(`✓ Created/skipped ${categories.length} categories`);
+
   
   // Create Payment Methods
   const paymentMethods = [
@@ -60,7 +58,7 @@ async function createDefaultData() {
       await PaymentMethod.create({ _id: randomUUID(), ...pm, isEnabled: true });
     }
   }
-  console.log(`✓ Created/skipped ${paymentMethods.length} payment methods`);
+
   
   // Create Role Permissions (one document per role-permission pair)
   const allPermissions = Object.values(Permission);
@@ -115,7 +113,7 @@ async function createDefaultData() {
       }
     }
   }
-  console.log(`✓ Created/skipped role permissions for ${roles.length} roles`);
+
   
   // Create Default Settings (only if not exists)
   const settingsExists = await Settings.findById('shop');
@@ -131,9 +129,6 @@ async function createDefaultData() {
       purchaseInvoicePrefix: 'PO',
       costingMethod: 'WEIGHTED_AVERAGE',
     });
-    console.log('✓ Created default settings');
-  } else {
-    console.log('✓ Settings already exist, skipped');
   }
 }
 
@@ -175,7 +170,7 @@ export async function POST(request: Request) {
       entityId: id,
     });
     
-    console.log('✅ Setup completed successfully!');
+
     
     return NextResponse.json({ 
       user: { 

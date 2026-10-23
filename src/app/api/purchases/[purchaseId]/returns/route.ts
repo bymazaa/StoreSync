@@ -84,8 +84,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ pur
       item: any; quantity: number; baseQuantity: number;
       total: number; inventoryCost: number;
     }> = [];
-    let subtotal = 0;
-    
+
     for (const requested of parsed.data.items) {
       const item = purchaseItems.find((entry) => entry._id === requested.purchaseItemId);
       if (!item) throw new PurchaseReturnError("A selected purchase item does not belong to this invoice.");
@@ -112,7 +111,6 @@ export async function POST(request: Request, { params }: { params: Promise<{ pur
       }
       
       const gross = money(item.unitCost * quantity);
-      subtotal += gross;
       lines.push({ item, quantity, baseQuantity, total: gross, inventoryCost: 0 });
     }
     

@@ -41,10 +41,13 @@ const PurchasePaymentSchema = new Schema<IPurchasePayment>(
       required: true,
       ref: 'User',
     },
+    /* Collection rows are positive; a supplier return that overpays the balance writes one negative
+       refund row, so the schema only caps the magnitude at the same 12-digit ceiling the API regex allows. */
     amount: {
       type: Number,
       required: true,
-      min: 0,
+      min: -999999999999,
+      max: 999999999999,
     },
     paidAt: {
       type: Date,

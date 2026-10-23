@@ -3,7 +3,7 @@ import { Suspense } from "react";
 import { redirect } from "next/navigation";
 
 import { Dashboard } from "@/components/dashboard/dashboard";
-import { getCurrentUser } from "@/lib/auth/session";
+import { getViewerUser } from "@/lib/auth/session";
 
 export default function Home() {
   return (
@@ -22,7 +22,7 @@ export default function Home() {
 }
 
 async function HomeContent() {
-  const user = await getCurrentUser();
+  const user = await getViewerUser();
 
   const permissions = new Set(
     user?.rolePermissions.map((entry) => entry.permission) ?? []

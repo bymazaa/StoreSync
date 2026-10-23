@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { Permission } from "@/types";
 import { authorized } from "@/lib/auth/api-guard";
 import connectDB from "@/lib/db";
-import { Unit, ProductUnit, Product, PurchaseItem, SaleItem, SaleReturnItem, PurchaseReturnItem, AuditLog } from "@/models";
+import { Unit, ProductUnit, Product, PurchaseItem, SaleItem, AuditLog } from "@/models";
 import { invalidBody } from "@/lib/http/api-response";
 import { unitUpdateSchema } from "@/lib/validation/api";
 import { z } from "zod";

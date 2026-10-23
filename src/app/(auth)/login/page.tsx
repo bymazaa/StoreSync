@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { AuthForm } from "@/components/auth/auth-form";
-import { getCurrentUser } from "@/lib/auth/session";
+import { getViewerUser } from "@/lib/auth/session";
 import connectDB from "@/lib/db";
 import { User } from "@/models";
 import { connection } from "next/server";
@@ -13,7 +13,7 @@ export default async function LoginPage() {
   await connection();
   
   await connectDB();
-  const user = await getCurrentUser();
+  const user = await getViewerUser();
   if (user) redirect("/");
   
   const userCount = await User.countDocuments({});

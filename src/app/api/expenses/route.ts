@@ -82,10 +82,8 @@ export async function POST(request: Request) {
         }).lean();
         if (method) {
           normalized.methodId = method._id;
-          console.log("Resolved methodId from", body.methodId, "to", method._id);
         } else {
           normalized.methodId = null;
-          console.log("Could not resolve methodId:", body.methodId, "setting to null");
         }
       }
     }
@@ -94,7 +92,6 @@ export async function POST(request: Request) {
   
   const parsed = expenseSchema.safeParse(body);
   if (!parsed.success) {
-    console.log("Validation errors:", JSON.stringify(parsed.error.issues, null, 2));
     const firstError = parsed.error.issues[0];
     const message = firstError 
       ? `${firstError.path.join(".")}: ${firstError.message}` 

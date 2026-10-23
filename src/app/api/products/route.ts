@@ -17,7 +17,7 @@ export async function GET(request: Request) {
   const includeInactive = searchParams.get("includeInactive") === "true"
     && guard.user.rolePermissions.some((entry) => entry.permission === Permission.MANAGE_PRODUCTS);
   
-  let query: any = {};
+  const query: any = {};
   if (!includeInactive) query.isActive = true;
   
   if (search) {
@@ -85,9 +85,7 @@ export async function POST(request: Request) {
   
   let body: unknown;
   try { body = await request.json(); } catch { return invalidBody(); }
-  
-  console.log("Product POST body:", JSON.stringify(body, null, 2));
-  
+
   // Normalize empty or missing categoryId to null
   if (body && typeof body === "object") {
     const normalized = { ...(body as Record<string, unknown>) };
@@ -99,7 +97,6 @@ export async function POST(request: Request) {
   
   const parsed = productSchema.safeParse(body);
   if (!parsed.success) {
-    console.log("Product validation errors:", JSON.stringify(parsed.error.issues, null, 2));
     const firstError = parsed.error.issues[0];
     const message = firstError 
       ? `${firstError.path.join(".")}: ${firstError.message}` 

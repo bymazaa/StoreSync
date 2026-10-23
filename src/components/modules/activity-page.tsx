@@ -132,8 +132,8 @@ export function ActivityPage() {
             <option value="">Every action</option>
             {actionList.map((value) => <option key={value} value={value}>{actionLabels[value]}</option>)}
           </select>
-          <label className="text-xs text-muted-foreground">From<input type="date" value={from} onChange={(event) => { setFrom(event.target.value); setPage(1); }} className={`${inputClass} mt-1`} /></label>
-          <label className="text-xs text-muted-foreground">To<input type="date" value={to} onChange={(event) => { setTo(event.target.value); setPage(1); }} className={`${inputClass} mt-1`} /></label>
+          <label className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">From<input type="date" value={from} onChange={(event) => { setFrom(event.target.value); setPage(1); }} className={`${inputClass} mt-1.5 font-normal normal-case tracking-normal`} /></label>
+          <label className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">To<input type="date" value={to} onChange={(event) => { setTo(event.target.value); setPage(1); }} className={`${inputClass} mt-1.5 font-normal normal-case tracking-normal`} /></label>
           <Button variant="outline" icon={<Search size={15} />} onClick={() => { setCommittedSearch(search.trim()); setPage(1); }} disabled={busy}>Search</Button>
         </div>
         <div className="mt-3 flex flex-wrap items-center gap-3">
@@ -143,24 +143,26 @@ export function ActivityPage() {
         </div>
       </Panel>
       <Panel title={`${total.toLocaleString()} entries`} description={total === 0 ? "Nothing matches these filters yet." : `Showing ${firstShown}–${lastShown}.`}>
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <thead className="text-xs text-muted-foreground"><tr><th className="px-3 py-3">When</th><th className="px-3 py-3">Who</th><th className="px-3 py-3">Action</th><th className="px-3 py-3">Area / record</th><th className="px-3 py-3">What changed</th><th className="px-3 py-3">IP</th></tr></thead>
-            <tbody className="divide-y divide-border">
+        <div className="overflow-hidden rounded-xl border border-border/70">
+          <div className="overflow-x-auto">
+          <table className="w-full min-w-[980px] text-left text-sm">
+            <thead className="bg-muted/40 text-[11px] uppercase tracking-[0.08em] text-muted-foreground"><tr><th className="px-3 py-2.5 font-semibold">When</th><th className="px-3 py-2.5 font-semibold">Who</th><th className="px-3 py-2.5 font-semibold">Action</th><th className="px-3 py-2.5 font-semibold">Area / record</th><th className="px-3 py-2.5 font-semibold">What changed</th><th className="px-3 py-2.5 font-semibold">IP</th></tr></thead>
+            <tbody className="divide-y divide-border/70">
               {logs.map((log) => (
-                <tr key={log.id} className="align-top">
-                  <td className="whitespace-nowrap px-3 py-3 tabular-nums text-muted-foreground">{formatDateTime(log.createdAt)}</td>
-                  <td className="px-3 py-3 font-medium">{log.actorName}</td>
-                  <td className="px-3 py-3"><span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${toneOf(log.action)}`}>{actionLabel(log.action)}</span></td>
-                  <td className="px-3 py-3">{entityLabel(log.entityType)}{log.entityId && <span className="block text-xs text-muted-foreground" title={log.entityId}>#{log.entityId.slice(0, 8)}</span>}</td>
-                  <td className="max-w-md px-3 py-3 text-xs text-muted-foreground">{log.detail || "—"}</td>
-                  <td className="px-3 py-3 text-xs tabular-nums text-muted-foreground">{log.ipAddress || "—"}</td>
+                <tr key={log.id} className="align-top transition-colors hover:bg-teal-soft/40">
+                  <td className="whitespace-nowrap px-3 py-3 text-xs tabular-nums text-muted-foreground">{formatDateTime(log.createdAt)}</td>
+                  <td className="px-3 py-3 font-semibold text-foreground">{log.actorName}</td>
+                  <td className="px-3 py-3"><span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold ${toneOf(log.action)}`}><span className="size-1.5 rounded-full bg-current" />{actionLabel(log.action)}</span></td>
+                  <td className="px-3 py-3">{entityLabel(log.entityType)}{log.entityId && <span className="mt-0.5 block font-mono text-[11px] tabular-nums text-muted-foreground" title={log.entityId}>#{log.entityId.slice(0, 8)}</span>}</td>
+                  <td className="max-w-md px-3 py-3 text-xs leading-relaxed text-muted-foreground">{log.detail || "—"}</td>
+                  <td className="whitespace-nowrap px-3 py-3 text-xs tabular-nums text-muted-foreground">{log.ipAddress || "—"}</td>
                 </tr>
               ))}
               {logs.length === 0 && !busy && <tr><td colSpan={6}><TableEmpty>No activity matches these filters.</TableEmpty></td></tr>}
               {logs.length === 0 && busy && <tr><td colSpan={6}><div className="space-y-2 py-4">{Array.from({ length: 6 }, (_, index) => <div key={index} className="h-9 animate-pulse rounded-lg bg-muted" />)}</div></td></tr>}
             </tbody>
           </table>
+          </div>
         </div>
         <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
           <p className="flex items-center gap-2 text-xs text-muted-foreground"><History size={14} />Entries are written by the app itself and cannot be edited or deleted from the interface.</p>

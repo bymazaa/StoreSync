@@ -1,7 +1,7 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import connectDB from "@/lib/db";
-import { RefreshSession, User } from "@/models";
+import { RefreshSession } from "@/models";
 import { apiError } from "@/lib/http/api-response";
 import { assertSameOrigin, clearAuthCookies, setAuthCookies } from "@/lib/auth/cookies";
 import {
