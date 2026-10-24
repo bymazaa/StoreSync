@@ -89,7 +89,7 @@ const setupSteps = [
     where: "Sidebar → Settings → panel “Staff accounts”",
     actions: [
       "Enter Full name, Email and a Temporary password of at least 12 characters, choose Role (manager, cashier or stock clerk) and press Create account.",
-      "Open the “Role permissions” panel below: each role has its own checklist — view reports, manage products, adjust stock, create sales, create purchases, complete purchases, collect payments, apply discounts, manage settings, manage users. Tick what that role needs and press Save role permissions for that role.",
+      "Open the “Role permissions” panel below: each role has its own checklist of 12 actions in three groups — Counter (New sale / POS, Payments and due collection, Returns and invoice cancel, Discount on invoice), Stock (Products, units, batches, Raise a purchase, Receive purchase stock, Stock adjustments) and Shop (Expenses and void expense, Reports and statements, Shop settings, Staff accounts and roles). Tick what that role needs, or use Select all / Clear, then press Save role permissions — it stays disabled until something actually changes.",
       "Hand over the password. On first login the staff member opens their own Settings → Change password panel and sets a private one (12+ characters; this signs out their other sessions).",
       "To stop someone keeping the shop, press Disable in the Access column of their row. Accounts are disabled, never deleted, so their sales and adjustments stay traceable.",
     ],

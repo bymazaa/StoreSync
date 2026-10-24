@@ -7,9 +7,9 @@ import { ArrowRight, LoaderCircle, ShoppingBag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { readResponsePayload } from "@/lib/client-api";
 
-type AuthFormProps = { mode: "login" | "setup" };
+type AuthFormProps = { mode: "login" | "setup"; showBrand?: boolean };
 
-export function AuthForm({ mode }: AuthFormProps) {
+export function AuthForm({ mode, showBrand = true }: AuthFormProps) {
   const isSetup = mode === "setup";
   const router = useRouter();
   const [error, setError] = useState("");
@@ -48,11 +48,13 @@ export function AuthForm({ mode }: AuthFormProps) {
   }
 
   return (
-    <div className="w-full max-w-md">
-      <div className="mb-8 flex items-center gap-3">
-        <span className="grid size-11 place-items-center rounded-2xl bg-primary text-primary-foreground shadow-sm"><ShoppingBag size={21} /></span>
-        <span><span className="block text-lg font-bold tracking-tight">StockPilot</span><span className="text-xs text-muted-foreground">Grocery shop management</span></span>
-      </div>
+    <div className="mx-auto w-full max-w-md">
+      {showBrand && (
+        <div className="mb-8 flex items-center gap-3">
+          <span className="grid size-11 place-items-center rounded-2xl bg-primary text-primary-foreground shadow-sm"><ShoppingBag size={21} /></span>
+          <span><span className="block text-lg font-bold tracking-tight">StockPilot</span><span className="text-xs text-muted-foreground">Grocery shop management</span></span>
+        </div>
+      )}
       <div className="rounded-3xl border border-border bg-card p-6 shadow-card sm:p-8">
         <p className="text-xs font-semibold uppercase tracking-[0.14em] text-primary">{isSetup ? "First-time setup" : "Welcome back"}</p>
         <h1 className="mt-2 text-2xl font-semibold tracking-tight">{isSetup ? "Create your owner account" : "Sign in to your shop"}</h1>

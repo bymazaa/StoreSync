@@ -178,7 +178,7 @@ export function AppShell({ user, shopName, countryCode, currencyCode, locale, ti
         </div>
       </aside>
 
-      <div className={cn("min-h-screen transition-[padding] duration-200 lg:pl-[252px]", collapsed && "lg:pl-[76px]")}>
+      <div className={cn("min-h-screen transition-[padding] duration-200", collapsed ? "lg:pl-[76px]" : "lg:pl-[252px]")}>
         <header className="app-shell-header sticky top-0 z-20 flex h-[72px] items-center justify-between border-b border-border bg-background/90 px-4 backdrop-blur-xl sm:px-7 xl:px-10">
           <div className="flex items-center gap-3">
             <button aria-label="Open navigation" type="button" onClick={() => setMenuOpen(true)} className="grid size-9 place-items-center rounded-xl border border-border bg-card text-foreground lg:hidden"><Menu size={18} /></button>

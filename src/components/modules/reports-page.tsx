@@ -1,40 +1,22 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { Printer, Search } from "lucide-react";
-import { apiRequest } from "@/lib/client-api";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { Download, Printer, Search } from "lucide-react";
+import { apiRequest, readResponsePayload, refreshAuthSession } from "@/lib/client-api";
 import { addDateKeyDays, localDateKey } from "@/lib/date-time";
 import { ErrorMessage, inputClass, PageHeader, Panel, selectClass } from "@/components/ui/page";
 import { Button } from "@/components/ui/button";
 import { useShopFormat } from "@/components/app/shop-context";
+import { columnLabel, isNumericColumn, moneyKeys, printable, reportLabel, reportRows, statementCell, statementCellTone, statementSections, statementTotals, statementWidths, type CellTone, type ReportPayload, type ReportType, type Row } from "@/lib/reports/format";
 
-type ReportType = "sales" | "purchases" | "product-sales" | "profit-loss" | "stock" | "due" | "expenses";
-type Row = Record<string, unknown>;
-type Payload = Record<string, unknown> & { type: string; currencyCode?: string; shop?: { name: string; address: string | null; phone: string | null }; summary?: Record<string, string | number>; sales?: Row[]; purchases?: Row[]; products?: Row[]; expenses?: Row[]; customers?: Row[]; suppliers?: Row[]; lowStock?: Row[]; expiringBatches?: Row[] };
+type Payload = ReportPayload;
 const options: { value: ReportType; label: string }[] = [{ value: "sales", label: "Sales" }, { value: "purchases", label: "Purchases" }, { value: "product-sales", label: "Product sales" }, { value: "profit-loss", label: "Profit & loss" }, { value: "stock", label: "Stock valuation" }, { value: "due", label: "Customer & supplier due" }, { value: "expenses", label: "Expenses" }];
 type Preset = "3" | "7" | "15" | "30" | "all" | "custom";
 const presets: { value: Preset; label: string }[] = [{ value: "3", label: "Last 3 days" }, { value: "7", label: "Last 7 days" }, { value: "15", label: "Last 15 days" }, { value: "30", label: "Last 30 days" }, { value: "all", label: "All time" }, { value: "custom", label: "Custom range" }];
 
-const printable = (value: unknown): string => { if (value == null) return "—"; if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") return String(value); return ""; };
-const isInternalField = (key: string) => key.toLowerCase() === "id" || /(?:Id|ID|_id)$/.test(key) || key.toLowerCase().includes("requestid");
-const columnLabel = (key: string) => key.replace(/([a-z0-9])([A-Z])/g, "$1 $2").replaceAll("_", " ").replaceAll("-", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
-const moneyKeys = new Set(["total", "subtotal", "paidAmount", "dueAmount", "discountAmount", "revenue", "grossProfit", "netProfit", "expenses", "costOfGoods", "purchasePrice", "sellingPrice", "amount", "valuation", "customerDue", "supplierDue", "due0to30", "due31to60", "dueOver60"]);
-const quantityKeys = new Set(["quantity", "baseQuantity", "soldQuantity", "stockOnHand", "lowStockThreshold", "count", "rowCount", "invoiceCount", "invoices", "oldestDueDays"]);
-// Row bookkeeping never belongs on a statement a shop hands to someone else, and invoiceNumbers is an
-// unbounded list that would stretch one cell across the page.
-const hiddenColumns = ["createdBy", "createdAt", "updatedAt", "voidedAt", "customer", "supplier", "payments", "items", "returns", "product", "category", "baseUnit", "invoiceNumbers"];
-const isNumericColumn = (key: string) => moneyKeys.has(key) || quantityKeys.has(key);
-const columnRank = (key: string) => { const lower = key.toLowerCase(); if (lower.endsWith("date") || lower.endsWith("at")) return 0; return isNumericColumn(key) ? 2 : 1; };
-// Statements read like bank ledgers: date first, narration next, amounts last and right-aligned.
-const visibleColumns = (rows: Row[]) => rows.length ? Object.keys(rows[0]).filter((key) => !isInternalField(key) && !hiddenColumns.includes(key) && typeof rows[0][key] !== "object").slice(0, 10).sort((a, b) => columnRank(a) - columnRank(b)) : [];
-const serialShare = 4.5;
-// Cutive Mono is a wide face, so every column gets a fixed share of the page and long values wrap inside it.
-const statementWidths = (columns: string[]) => {
-  const numeric = columns.filter(isNumericColumn).length;
-  const text = columns.length - numeric;
-  const unit = numeric + text === 0 ? 0 : (100 - serialShare) / (numeric + text * 1.8);
-  return [`${serialShare}%`, ...columns.map((key) => `${(isNumericColumn(key) ? unit : unit * 1.8).toFixed(2)}%`)];
-};
+const statementFont = '7.2pt "Cutive Mono"';
+// The sample decides which subset the browser fetches: a statement prints figures, codes and separators.
+const statementSample = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz.,-:/()#";
 
 export function ReportsPage() {
   const { formatMoney, formatNumber, formatDateTime, timezone } = useShopFormat();
@@ -44,6 +26,7 @@ export function ReportsPage() {
   const [from, setFrom] = useState(() => addDateKeyDays(today, -30));
   const [to, setTo] = useState(today);
   const [data, setData] = useState<Payload | null>(null); const [error, setError] = useState(""); const [busy, setBusy] = useState(false);
+  const [saving, setSaving] = useState(false); const [saveNote, setSaveNote] = useState("");
   const load = useCallback(async () => {
     setBusy(true); setError("");
     try { const query = new URLSearchParams({ type }); if (from) query.set("from", from); if (to) query.set("to", to); setData(await apiRequest<Payload>(`/api/reports?${query}`)); }
@@ -51,6 +34,8 @@ export function ReportsPage() {
     finally { setBusy(false); }
   }, [type, from, to]);
   useEffect(() => { const timer = window.setTimeout(() => { void load(); }, 0); return () => window.clearTimeout(timer); }, [load]);
+  // Fetched as the page opens, so the print button never waits on the network.
+  useEffect(() => { void document.fonts.load(statementFont, statementSample).catch(() => {}); }, []);
   function applyPreset(value: Preset) {
     setPreset(value);
     if (value === "all") { setFrom(""); setTo(""); return; }
@@ -58,23 +43,51 @@ export function ReportsPage() {
     const end = localDateKey(new Date(), timezone);
     setTo(end); setFrom(addDateKeyDays(end, -Number(value)));
   }
-  const rows = data ? (data.sales ?? data.purchases ?? data.products ?? data.expenses ?? (type === "due" ? [...(data.customers ?? []), ...(data.suppliers ?? [])] : data.lowStock ?? [])) : [];
-  const columns = visibleColumns(rows);
-  const reportLabel = options.find((item) => item.value === type)?.label ?? "Report";
+  const rows = data ? reportRows(type, data) : [];
+  const sections = data ? statementSections(type, data) : [];
+  const label = reportLabel(type);
   const period = !from && !to ? "All time" : `${from || "Start"} → ${to || today}`;
   const generatedAt = data ? formatDateTime(new Date()) : "";
   const contact = [data?.shop?.address, data?.shop?.phone].filter(Boolean).join(" · ");
   const shopName = data?.shop?.name ?? "StockPilot";
+  const currencyCode = data?.currencyCode ?? "";
   const fileStem = `${type}-statement-${!from && !to ? "all-time" : `${from || "start"}-to-${to || today}`}`;
 
   // jsPDF cannot shape Bengali conjuncts, so the PDF comes from the browser's own print pipeline
   // instead — the document title becomes the suggested filename.
-  function printStatement() {
+  async function printStatement() {
+    // Nothing on screen uses the statement face, so the browser would never fetch it before the preview
+    // renders and the paper would silently fall back to the app font.
+    try { await document.fonts.load(statementFont, statementSample); } catch { /* the fallback stack still prints */ }
     const previousTitle = document.title;
     const restore = () => { document.title = previousTitle; window.removeEventListener("afterprint", restore); };
     document.title = fileStem;
     window.addEventListener("afterprint", restore);
     window.print();
+  }
+
+  // The server's Chromium writes the file, so one click saves a PDF with no dialog in the way.
+  async function saveStatement() {
+    setSaving(true); setSaveNote("");
+    try {
+      const query = new URLSearchParams({ type }); if (from) query.set("from", from); if (to) query.set("to", to);
+      const send = () => fetch(`/api/reports/pdf?${query}`, { cache: "no-store" });
+      let response = await send();
+      if (response.status === 401 && await refreshAuthSession()) response = await send();
+      if (!response.ok) {
+        const message = await readResponsePayload(response).then((payload) => payload.error?.message ?? "").catch(() => "");
+        if (response.status === 503) { setSaveNote(message || "The PDF writer is offline on this server — use Print instead."); return; }
+        throw new Error(message || `Statement PDF could not be created (status ${response.status}).`);
+      }
+      const href = URL.createObjectURL(await response.blob());
+      const link = document.createElement("a");
+      link.href = href; link.download = `${fileStem}.pdf`;
+      document.body.append(link); link.click(); link.remove();
+      // Revoking immediately can cancel the save on Safari, so the blob outlives the click.
+      window.setTimeout(() => URL.revokeObjectURL(href), 30_000);
+    }
+    catch (caught) { setSaveNote(caught instanceof Error ? caught.message : "Statement PDF could not be created."); }
+    finally { setSaving(false); }
   }
 
   return (
@@ -87,21 +100,21 @@ export function ReportsPage() {
             {contact ? <p className="report-contact">{contact}</p> : null}
           </div>
           <div className="report-meta">
-            <div><span className="report-meta-label">Statement</span><span>{reportLabel}</span></div>
+            <div><span className="report-meta-label">Statement</span><span>{label}</span></div>
             <div><span className="report-meta-label">Period</span><span className="tabular-nums">{period}</span></div>
             <div><span className="report-meta-label">Entries</span><span className="tabular-nums">{rows.length.toLocaleString()}</span></div>
             <div><span className="report-meta-label">Generated</span><span className="tabular-nums">{generatedAt}</span></div>
-            <div><span className="report-meta-label">Currency</span><span>{data?.currencyCode ?? "—"}</span></div>
+            <div><span className="report-meta-label">Currency</span><span>{currencyCode || "—"}</span></div>
           </div>
         </div>
         <div className="report-title-band">
-          <p className="report-title">{reportLabel} statement</p>
+          <p className="report-title">{label} statement</p>
           <p className="report-period">{from || "Start"} → {to || today}</p>
         </div>
       </div>
 
       {error && <div className="print:hidden"><ErrorMessage>{error}</ErrorMessage></div>}
-      <Panel className="print:hidden" title="Report filters" description="Date ranges follow the shop timezone." action={<div className="flex flex-wrap gap-2"><Button variant="outline" icon={<Printer size={15}/>} onClick={printStatement} disabled={!data || busy}>Statement PDF</Button></div>}>
+      <Panel className="print:hidden" title="Report filters" description="Date ranges follow the shop timezone." action={<div className="flex flex-wrap gap-2"><Button icon={<Download size={15}/>} onClick={() => { void saveStatement(); }} disabled={!data || busy || saving}>{saving ? "Preparing…" : "Statement PDF"}</Button><Button variant="ghost" icon={<Printer size={15}/>} onClick={() => { void printStatement(); }} disabled={!data || busy}>Print</Button></div>}>
         <div className="grid items-end gap-3 sm:grid-cols-2 lg:grid-cols-[minmax(200px,1.2fr)_minmax(150px,1fr)_minmax(140px,0.85fr)_minmax(140px,0.85fr)_auto]">
           <label className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">Report type<select aria-label="Report type" value={type} onChange={(e) => setType(e.target.value as ReportType)} className={`${selectClass} mt-1.5 font-normal normal-case tracking-normal`}>{options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}</select></label>
           <label className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">Period<select aria-label="Period preset" value={preset} onChange={(e) => applyPreset(e.target.value as Preset)} className={`${selectClass} mt-1.5 font-normal normal-case tracking-normal`}>{presets.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}</select></label>
@@ -110,6 +123,7 @@ export function ReportsPage() {
           <Button variant="outline" icon={<Search size={15}/>} onClick={() => void load()} disabled={busy}>{busy ? "Loading…" : "Refresh"}</Button>
         </div>
         {type === "due" && <p className="mt-3 text-xs text-muted-foreground">Aging buckets are counted from each unpaid invoice date.</p>}
+        {saveNote && <div className="mt-3"><ErrorMessage>{saveNote}</ErrorMessage></div>}
       </Panel>
       {data?.summary && <section className="report-summary grid gap-3 sm:grid-cols-2 xl:grid-cols-4">{Object.entries(data.summary).slice(0, 8).map(([key, value]) => {
         const money = moneyKeys.has(key);
@@ -122,36 +136,22 @@ export function ReportsPage() {
           </div>
         );
       })}</section>}
-      {type === "stock" && data && <><Panel className="report-section" title="Low stock" description={`${(data.lowStock ?? []).length} products at or below their reorder threshold.`}><ReportTable rows={data.lowStock ?? []}/></Panel><Panel className="report-section" title="Expiring batches" description={`${(data.expiringBatches ?? []).length} batches expiring within 30 days.`}><ReportTable rows={data.expiringBatches ?? []}/></Panel></>}
-      {type === "due" && data && <><Panel className="report-section" title="Customers with due balances" description={`${(data.customers ?? []).length} customers · grouped by how long each invoice has been unpaid.`}><ReportTable rows={data.customers ?? []}/></Panel><Panel className="report-section" title="Suppliers with due balances" description={`${(data.suppliers ?? []).length} suppliers with unpaid invoices.`}><ReportTable rows={data.suppliers ?? []}/></Panel></>}
-      {type !== "stock" && type !== "due" && <Panel className="report-section" title={`${reportLabel} statement`} description={`${rows.length.toLocaleString()} entries in ${period}.`}><ReportTable rows={rows} columns={columns}/></Panel>}
-      <div className="report-footnote hidden print:flex"><span>StockPilot · {reportLabel} statement · {generatedAt}</span><span>Data from this shop’s own database — verify before external use.</span></div>
+      {sections.map((section) => <Panel key={section.title} className="report-section" title={section.title} description={section.description}><ReportTable rows={section.rows} columns={section.columns}/></Panel>)}
+      <div className="report-footnote hidden print:flex"><span>StockPilot · {label} statement · {generatedAt}</span><span>{currencyCode ? `All amounts in ${currencyCode}. ` : ""}Data from this shop’s own database — verify before external use.</span></div>
     </div>
   );
 }
 
-function ReportTable({ rows, columns: provided }: { rows: Row[]; columns?: string[] }) {
-  const { formatMoney, formatDate, formatDateTime } = useShopFormat();
-  const columns = provided ?? visibleColumns(rows);
+const toneClass: Record<CellTone, string> = { negative: "text-danger", due: "text-amber-strong", lead: "text-foreground", plain: "text-foreground/85" };
+
+function ReportTable({ rows, columns }: { rows: Row[]; columns: string[] }) {
+  const { statement } = useShopFormat();
   const widths = statementWidths(columns);
-  // Only amount columns close with a statement total; quantities mix units and counters mix meanings.
-  const totals = columns.map((key) => {
-    if (!moneyKeys.has(key)) return null;
-    let sum = 0; let counted = 0;
-    for (const row of rows) { const value = Number(row[key]); if (Number.isFinite(value)) { sum += value; counted += 1; } }
-    return counted ? sum : null;
-  });
-  const labelIndex = columns.findIndex((key) => !isNumericColumn(key));
-  const showTotal = rows.length > 1 && totals.some((value) => value !== null);
-  const cell = (key: string, value: unknown) => {
-    if (moneyKeys.has(key)) return formatMoney(printable(value));
-    const raw = printable(value);
-    if (raw === "" || raw === "—") return raw;
-    const lower = key.toLowerCase();
-    // *Date is a calendar day, *At a moment — both must render on the shop's clock, not raw UTC.
-    if (lower.endsWith("date")) return formatDate(raw);
-    if (lower.endsWith("at")) return formatDateTime(raw);
-    return raw;
+  const { totals, labelIndex, showTotal } = statementTotals(columns, rows);
+  const cell = (key: string, value: unknown): ReactNode => {
+    if (!moneyKeys.has(key)) return statementCell(statement, key, value, "screen");
+    // Paper states the currency once in the header, which keeps every ledger column narrow enough to fit.
+    return <><span className="print:hidden">{statementCell(statement, key, value, "screen")}</span><span className="hidden print:inline">{statementCell(statement, key, value, "paper")}</span></>;
   };
-  return <div className="report-table-frame overflow-hidden rounded-xl border border-border/70"><div className="overflow-x-auto"><table className="w-full min-w-[760px] table-fixed text-left text-sm"><colgroup>{widths.map((width, index) => <col key={index} style={{ width }}/>)}</colgroup><thead className="bg-muted/40 text-[11px] uppercase tracking-[0.08em] text-muted-foreground"><tr><th className="px-2 py-2.5 text-right font-semibold">#</th>{columns.map((key) => <th key={key} className={isNumericColumn(key) ? "px-3 py-2.5 text-right font-semibold" : "px-3 py-2.5 font-semibold"}>{columnLabel(key)}</th>)}</tr></thead><tbody className="divide-y divide-border/70">{rows.map((row, index) => <tr key={printable(row.id) || index} className="transition-colors hover:bg-teal-soft/50"><td className="report-serial px-2 py-2.5 text-right tabular-nums text-muted-foreground">{index + 1}</td>{columns.map((key, cellIndex) => <td key={key} className={`${isNumericColumn(key) ? "text-right" : ""} ${cellIndex === 0 ? "font-medium text-foreground" : "text-foreground/85"} px-3 py-2.5 truncate tabular-nums`}>{cell(key, row[key])}</td>)}</tr>)}{rows.length === 0 && <tr><td className="report-empty px-3 py-10 text-center text-sm text-muted-foreground" colSpan={Math.max(columns.length + 1, 2)}>No entries in this period.</td></tr>}</tbody>{showTotal && <tfoot><tr className="border-t-2 border-primary/60 bg-muted/20"><td className="px-2 py-2.5 text-right text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">{labelIndex === -1 ? "Total" : ""}</td>{columns.map((key, index) => <td key={key} className={`${isNumericColumn(key) ? "text-right" : ""} px-3 py-2.5 font-semibold tabular-nums ${index === labelIndex ? "text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground" : totals[index] === null ? "text-muted-foreground" : "text-teal-strong"}`}>{index === labelIndex ? "Total" : totals[index] === null ? "" : formatMoney(String(totals[index]))}</td>)}</tr></tfoot>}</table></div></div>;
+  return <div className="report-table-frame overflow-hidden rounded-xl border border-border/70"><div className="overflow-x-auto"><table className="w-full min-w-[720px] table-fixed text-left text-sm"><colgroup>{widths.map((width, index) => <col key={index} style={{ width }}/>)}</colgroup><thead className="border-b border-border bg-muted/40 text-[11px] uppercase tracking-[0.08em] text-muted-foreground"><tr><th className="px-2 py-3 text-right font-semibold">#</th>{columns.map((key) => <th key={key} className={`${isNumericColumn(key) ? "text-right" : ""} px-4 py-3 font-semibold`}>{columnLabel(key)}</th>)}</tr></thead><tbody className="divide-y divide-border/60">{rows.map((row, index) => <tr key={printable(row.id) || index} className={`${index % 2 === 1 ? "bg-muted/25" : ""} transition-colors hover:bg-teal-soft/50`}><td className="report-serial select-none px-2 py-3 text-right text-[11px] tabular-nums text-muted-foreground/80">{index + 1}</td>{columns.map((key, cellIndex) => <td key={key} className={`${isNumericColumn(key) ? "text-right" : ""} ${cellIndex === 0 ? "font-medium" : ""} ${toneClass[statementCellTone(key, row[key], cellIndex === 0)]} px-4 py-3 tabular-nums`}>{cell(key, row[key])}</td>)}</tr>)}{rows.length === 0 && <tr><td className="report-empty px-4 py-12 text-center text-sm text-muted-foreground" colSpan={Math.max(columns.length + 1, 2)}>No entries in this period.</td></tr>}</tbody>{showTotal && <tfoot><tr className="border-t-2 border-primary/60 bg-muted/20"><td className="px-2 py-3.5 text-right text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">{labelIndex === -1 ? "Total" : ""}</td>{columns.map((key, index) => <td key={key} className={`${isNumericColumn(key) ? "text-right" : ""} px-4 py-3.5 font-semibold tabular-nums ${index === labelIndex ? "text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground" : totals[index] === null ? "text-muted-foreground" : "text-teal-strong"}`}>{index === labelIndex ? "Total" : totals[index] === null ? "" : cell("total", String(totals[index]))}</td>)}</tr></tfoot>}</table></div></div>;
 }

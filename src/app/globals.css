@@ -1,5 +1,10 @@
 @import "tailwindcss";
 
+/* The invoice preview on screen is the paper, so the printed family is applied outside @media print too:
+   the slip and the A4 sheet already show Cutive Mono in the app, and loading the face for the preview is
+   what guarantees the printer gets it instead of a silent fallback. */
+.print-document { font-family: var(--print-font); }
+
 @media print {
   @page { size: A4; margin: 10mm; }
   @page receipt { size: 80mm auto; margin: 0; }
@@ -15,7 +20,7 @@
   .invoice-paper { padding: 0 !important; }
   .print-document > header, .print-document > section.ml-auto, .print-document > section.receipt-return-summary { break-inside: avoid; page-break-inside: avoid; }
   .print-document table { font-variant-numeric: tabular-nums; }
-  .print-document { width: 100%; max-width: none !important; color: #172523 !important; font-family: var(--app-font-sans); font-size: 9pt; line-height: 1.38; }
+  .print-document { width: 100%; max-width: none !important; color: #172523 !important; font-size: 9pt; line-height: 1.38; }
   .print-document, .print-document * { text-transform: uppercase; }
   .invoice-brand-header { border-bottom: 2px solid #0f766e !important; padding-bottom: 2.5mm !important; }
   .invoice-shop-logo { max-height: 12mm; }
@@ -47,15 +52,17 @@
   .label-print-mode .label-sheet { display: block; }
   .label-print-mode .label-sheet svg { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
   @page report { size: A4 landscape; margin: 9mm 10mm; }
-  /* The statement is a bank document: one typewriter face for every value, hairline rules, no fills.
-     Cutive Mono has no Bengali glyphs, so the app's Bengali stack follows it and shapes only what mono cannot. */
-  .report-print { page: report; color: #1b2b28; font-family: "Cutive Mono", var(--app-font-sans); }
+  /* The statement is a bank document: one typewriter face for every value, hairline rules, no fills. The screen
+     keeps the app font, so nothing renders this family before printing — ReportsPage warms it with
+     document.fonts.load() first, or the browser would silently fall back. Cutive Mono has no Bengali glyphs;
+     the app stack follows it and shapes only what mono cannot. */
+  .report-print { page: report; color: #1b2b28; font-family: var(--print-font); }
   .report-print .overflow-x-auto { overflow: visible !important; }
   .report-print thead { display: table-header-group; }
   .report-print tr, .report-print section { break-inside: avoid; page-break-inside: avoid; }
   /* Fixed column shares come from the component, so a wide cell wraps instead of running off the page. */
   .report-print table { width: 100%; min-width: 0 !important; margin: 0; border-collapse: collapse; table-layout: fixed; font-size: 7.2pt; line-height: 1.45; font-variant-numeric: tabular-nums; }
-  .report-print th { padding: 1.1mm 1.4mm; line-height: 1.3; background: transparent !important; color: #5d6b68 !important; font-size: 6.2pt; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; text-align: left; border-bottom: 0.3mm solid #0f766e; vertical-align: bottom; }
+  .report-print th { padding: 1.1mm 1.4mm; line-height: 1.3; background: #cfe1db !important; color: #24352f !important; font-size: 6.2pt; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; text-align: left; border-bottom: 0.3mm solid #0f766e; vertical-align: bottom; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
   .report-print th.text-right, .report-print td.text-right { text-align: right; }
   /* Bengali pre-base matras and conjuncts stack below the baseline, so print rows need extra leading. */
   .report-print td { padding: 1mm 1.4mm; line-height: 1.5; border-bottom: 0.12mm solid #d8e4e1; color: #22322e; vertical-align: top; }
@@ -65,8 +72,8 @@
   .report-print tfoot td { padding-top: 1.3mm; border-top: 0.3mm solid #0f766e; border-bottom: 0; background: transparent !important; color: #0c4a44 !important; font-weight: 700; }
   .report-print tbody tr:nth-child(even) { background: transparent !important; }
   .report-print .report-empty { color: #7c8a86 !important; background: #fff !important; }
-  /* Screen cells clip with an ellipsis; the printed statement must keep every value. */
-  .report-print td.truncate { max-width: none !important; overflow: visible !important; white-space: normal !important; text-overflow: clip !important; overflow-wrap: anywhere; }
+  /* Every printed cell breaks inside its own column share — a figure can wrap, but never run over a neighbour. */
+  .report-print td, .report-print th { overflow-wrap: anywhere; }
   /* The screen table frame and its row dividers are chrome; paper keeps only the printed hairlines. */
   .report-print .report-table-frame { border: 0 !important; border-radius: 0 !important; overflow: visible !important; }
   .report-print tbody tr { border-top: 0 !important; }
@@ -93,13 +100,15 @@
   .report-footnote { justify-content: space-between; gap: 6mm; margin-top: 2.4mm !important; padding-top: 1.2mm; border-top: 0.3mm solid #0f766e; font-size: 6.2pt; letter-spacing: 0.04em; color: #74817e !important; }
 }
 /* 80 mm thermal slip. One rule set styles the on-screen preview and the paper, and every size is in
-   mm/pt/em so the column breaks its lines identically in both. Soft grey ink and hairlines, no fills —
-   the app's greys and pills would come out as smudges on a thermal roll. */
-.receipt-mode .print-document { --spacing: 0.35mm; box-sizing: border-box; width: 76mm; max-width: 76mm; margin: 0 auto; padding: 3.4mm 3.6mm 4mm !important; border: 0.25mm solid #8b9794; border-radius: 0; background: #fff; color: #2b3a36 !important; font-size: 8.6pt; line-height: 1.45; text-align: left; font-variant-numeric: tabular-nums; }
+   mm/pt/em so the column breaks its lines identically in both. Body text stays one dark ink and the
+   hairlines use the shop's teal (#0f9d8a, the light-theme --primary) — never var(--primary), because
+   the dark theme's lighter tint would wash out on white paper. No fills: pills would smudge. No outer
+   frame either: the roll is already 80 mm wide, so side rules read as a cut line, not as design. */
+.receipt-mode .print-document { --spacing: 0.35mm; box-sizing: border-box; width: 76mm; max-width: 76mm; margin: 0 auto; padding: 3.4mm 3.6mm 4mm !important; border: 0; border-radius: 0; background: #fff; color: #2b3a36 !important; font-size: 8.6pt; line-height: 1.45; text-align: left; font-variant-numeric: tabular-nums; }
 .receipt-mode .print-document, .receipt-mode .print-document * { text-transform: none; }
 .receipt-mode .print-document * { font-size: inherit; line-height: inherit; color: #2b3a36 !important; background: transparent !important; border-width: 0 !important; border-radius: 0 !important; box-shadow: none !important; }
 .receipt-mode .print-document header, .receipt-mode .print-document footer, .receipt-mode .print-document > section { margin-left: 0 !important; text-align: left; }
-.receipt-mode .print-document > header { display: block; border-bottom: 0.15mm solid #8b9794 !important; padding-bottom: 2mm; }
+.receipt-mode .print-document > header { display: block; border-bottom: 0.15mm solid #0f9d8a !important; padding-bottom: 2mm; }
 /* Paper is only 80 mm wide, so the sm: row breakpoint never fires and the brand block stacked. Forced back
    into a row: logo left, vertically centred against the shop name, sizes in mm so screen equals roll. */
 .receipt-mode .print-document > header > div:first-child { display: flex; flex-direction: row; align-items: center; gap: 2.5mm; width: 100%; }
@@ -108,11 +117,11 @@
 .receipt-mode .print-document > header > div + div { margin-top: 2mm; }
 .receipt-mode .print-document .invoice-number-block { min-width: 0; text-align: left; }
 .receipt-mode .print-document h2 { font-size: 1em; font-weight: 800; }
-/* Small caps labels carry the hierarchy; only hairlines and the outer frame are ink. */
+/* Small caps labels carry the hierarchy; only the internal hairlines are ink. */
 .receipt-mode .print-document [class~="uppercase"] { text-transform: uppercase; font-size: 0.76em; letter-spacing: 0.1em; font-weight: 700; }
 .receipt-mode .print-document .receipt-shop-name { font-size: 1.35em; font-weight: 800; line-height: 1.25; }
 .receipt-mode .print-document .receipt-doc-no { font-size: 1.1em; font-weight: 700; }
-.receipt-mode .print-document .receipt-grand-total { font-size: 1.18em; font-weight: 800; margin-top: 1.5mm !important; padding-top: 1.5mm !important; border-top: 0.15mm solid #8b9794 !important; }
+.receipt-mode .print-document .receipt-grand-total { font-size: 1.18em; font-weight: 800; margin-top: 1.5mm !important; padding-top: 1.5mm !important; border-top: 0.15mm solid #0f9d8a !important; }
 .receipt-mode .truncate-receipt { display: block; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 /* Screen clamps with an ellipsis; the slip has to keep the value inside its own column instead. */
 .receipt-mode .print-document [class~="truncate"] { max-width: 100% !important; overflow: visible; white-space: normal; text-overflow: clip; }
@@ -121,8 +130,8 @@
 .receipt-mode .print-document > section.grid > div + div { margin-top: 2mm; }
 .receipt-mode .print-document table { width: 100%; min-width: 0 !important; margin-top: 2.5mm; table-layout: fixed; border-collapse: collapse; font-size: 0.88em; }
 .receipt-mode .print-document th, .receipt-mode .print-document td { padding: 1mm 0.4mm; white-space: normal; vertical-align: top; text-align: left; overflow-wrap: break-word; }
-.receipt-mode .print-document th { font-size: 0.9em; letter-spacing: 0.06em; text-transform: uppercase; font-weight: 700; border-bottom: 0.15mm solid #8b9794 !important; }
-.receipt-mode .print-document tbody tr + tr td { border-top: 0.15mm solid #8b9794 !important; }
+.receipt-mode .print-document th { font-size: 0.9em; letter-spacing: 0.06em; text-transform: uppercase; font-weight: 700; border-bottom: 0.15mm solid #0f9d8a !important; }
+.receipt-mode .print-document tbody tr + tr td { border-top: 0.15mm solid #0f9d8a !important; }
 .receipt-mode .print-document th:first-child, .receipt-mode .print-document td:first-child { width: 40%; overflow-wrap: anywhere; }
 .receipt-mode .print-document th:last-child, .receipt-mode .print-document td:last-child { width: 25%; text-align: right; }
 /* A returned-goods slip carries two more columns, so the item name column steps back. */
@@ -131,12 +140,12 @@
 .receipt-mode .receipt-items-returns th:nth-child(3), .receipt-mode .receipt-items-returns td:nth-child(3),
 .receipt-mode .receipt-items-returns th:nth-child(4), .receipt-mode .receipt-items-returns td:nth-child(4) { width: 12%; }
 .receipt-mode .print-document .receipt-item-meta { display: block; font-size: 0.85em; }
-.receipt-mode .print-document .receipt-totals { max-width: none !important; margin-top: 3mm !important; padding-top: 2mm; border-top: 0.15mm solid #8b9794 !important; }
+.receipt-mode .print-document .receipt-totals { max-width: none !important; margin-top: 3mm !important; padding-top: 2mm; border-top: 0.15mm solid #0f9d8a !important; }
 .receipt-mode .receipt-totals > div { display: flex; justify-content: space-between; gap: 3mm; }
 .receipt-mode .receipt-totals > div + div { margin-top: 1mm !important; }
-.receipt-mode .print-document .receipt-return-summary { margin-top: 3.5mm !important; padding-top: 2mm; border-top: 0.15mm solid #8b9794 !important; }
+.receipt-mode .print-document .receipt-return-summary { margin-top: 3.5mm !important; padding-top: 2mm; border-top: 0.15mm solid #0f9d8a !important; }
 .receipt-mode .receipt-return { padding-bottom: 2mm; }
-.receipt-mode .print-document footer { margin-top: 3.5mm !important; padding-top: 2mm; border-top: 0.15mm solid #8b9794 !important; }
+.receipt-mode .print-document footer { margin-top: 3.5mm !important; padding-top: 2mm; border-top: 0.15mm solid #0f9d8a !important; }
 @media screen { .receipt-mode .print-document { box-shadow: 0 0.6mm 2.4mm rgba(15, 37, 35, 0.16); } }
 /* Stickers keep the same look on screen and paper; only the printable sheet is hidden until printed. */
 /* A4 with 8mm margins leaves 194x277mm, so two columns of six fit exactly at 95.5mm x 43mm each. */
@@ -225,6 +234,10 @@
      Bengali faces are named before the generic fallbacks — the shop's data is Bengali on every counter PC. */
   --app-font-sans: "Inter Variable", "Noto Sans Bengali Variable", "Noto Sans Bengali", "Nirmala UI", "Shonar Bangla", "Bangla Sangam MN", "Vrinda", ui-sans-serif, system-ui, "Segoe UI", sans-serif;
   --app-font-mono: ui-monospace, "Cascadia Mono", "SF Mono", "Segoe UI Mono", Menlo, Consolas, monospace;
+  /* Every printed surface — A4 invoice, 80 mm slip and the statement PDF — shares this one typewriter stack,
+     so paper from different screens reads as one document family. Cutive Mono carries latin + latin-ext only,
+     so the Bengali face is named next: money and codes print mono, Bengali names still shape properly. */
+  --print-font: "Cutive Mono", "Noto Sans Bengali Variable", var(--app-font-sans);
 }
 
 @theme inline {

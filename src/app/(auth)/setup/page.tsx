@@ -14,5 +14,5 @@ export default async function SetupPage() {
   await connectDB();
   const userCount = await User.countDocuments({});
   if (userCount !== 0) redirect("/login");
-  return <AuthForm mode="setup" />;
+  return <main className="flex min-h-screen items-center justify-center px-4 py-12"><AuthForm mode="setup" /></main>;
 }

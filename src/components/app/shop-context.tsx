@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, type ReactNode } from "react";
+import { createStatementFormat } from "@/lib/reports/format";
 
 const CurrencyContext = createContext("USD");
 const CountryContext = createContext("US");
@@ -30,21 +31,17 @@ export function useShopPermissions() {
 export function useShopFormat() {
   const currency = useCurrencyCode();
   const { locale, timezone } = useContext(FormattingContext);
+  // The same formatter builds the screen figures and the server-rendered statement PDF.
+  const statement = createStatementFormat({ locale, timezone, currencyCode: currency });
   return {
     locale,
     timezone,
     currency,
-    formatMoney(value: string | number) {
-      return new Intl.NumberFormat(locale, { style: "currency", currency, maximumFractionDigits: 2 }).format(Number(value));
-    },
-    formatNumber(value: string | number, maximumFractionDigits = 2) {
-      return new Intl.NumberFormat(locale, { maximumFractionDigits }).format(Number(value));
-    },
-    formatDate(value: string | Date) {
-      return new Intl.DateTimeFormat(locale, { timeZone: timezone, dateStyle: "medium" }).format(new Date(value));
-    },
-    formatDateTime(value: string | Date) {
-      return new Intl.DateTimeFormat(locale, { timeZone: timezone, dateStyle: "medium", timeStyle: "short" }).format(new Date(value));
-    },
+    statement,
+    formatMoney: statement.money,
+    formatAmount: statement.amount,
+    formatNumber: statement.number,
+    formatDate: statement.date,
+    formatDateTime: statement.dateTime,
   };
 }
