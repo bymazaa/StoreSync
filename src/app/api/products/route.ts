@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { Permission } from "@/types";
 import { authorized, authorizedAny } from "@/lib/auth/api-guard";
 import connectDB from "@/lib/db";
-import { Product, Category, Unit, AuditLog } from "@/models";
+import { Product, Category, Unit, ProductUnit, AuditLog } from "@/models";
 import { invalidBody } from "@/lib/http/api-response";
 import { productSchema } from "@/lib/validation/api";
 import { skuCategoryPrefix } from "@/lib/utils";
@@ -35,7 +35,12 @@ export async function GET(request: Request) {
   
   // Manually populate categoryId, baseUnitId, and units
   const categoryIds = [...new Set(products.filter(p => p.categoryId).map(p => p.categoryId!))];
-  const unitIds = [...new Set(products.map(p => p.baseUnitId))];
+  const productIds = products.map(p => p._id);
+  const allProductUnits = await ProductUnit.find({ productId: { $in: productIds } }).lean();
+
+  // A package unit (Carton, Bag) is almost never any product's base unit, so it has to be pulled into
+  // the same lookup — otherwise unit resolves to null and the POS/purchase unit dropdown loses its options.
+  const unitIds = [...new Set([...products.map(p => p.baseUnitId), ...allProductUnits.map(pu => pu.unitId)])];
   
   const [categories, units] = await Promise.all([
     categoryIds.length > 0 ? Category.find({ _id: { $in: categoryIds } }).select('_id name').lean() : [],
@@ -43,13 +48,7 @@ export async function GET(request: Request) {
   ]);
   
   const categoryMap = new Map(categories.map(c => [c._id, c]));
-  const unitMap = new Map(units.map(u => [u._id, u]));
-  
-  // Fetch product units separately
-  const productIds = products.map(p => p._id);
-  const allProductUnits = await import('@/models').then(m => 
-    m.ProductUnit.find({ productId: { $in: productIds } }).lean()
-  );
+  const unitMap = new Map(units.map(u => [u._id, { id: u._id, code: u.code, name: u.name, symbol: u.symbol }]));
   
   const productUnitsMap = new Map<string, any[]>();
   for (const pu of allProductUnits) {
@@ -62,7 +61,10 @@ export async function GET(request: Request) {
   const productsWithRelations = products.map(product => {
     const productUnits = productUnitsMap.get(product._id) || [];
     const unitsWithDetails = productUnits.map(pu => ({
-      ...pu,
+      id: pu._id,
+      unitId: pu.unitId,
+      // The POS preview multiplies this with prices, so it must stay the decimal string the client expects.
+      conversionToBase: String(pu.conversionToBase),
       unit: unitMap.get(pu.unitId) || null
     }));
     
