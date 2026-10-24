@@ -49,11 +49,16 @@ function ProductEditor({ product, units, categories, onClose, onSaved }: {
       setError("Every package conversion needs a unit and a base-unit amount. Fill the row or remove it.");
       return;
     }
+    // Prices go up only when they actually moved, so the activity log doesn't claim a change on every save.
+    const sellingPrice = toAsciiDigits(String(values.get("sellingPrice") ?? ""));
+    const costPrice = toAsciiDigits(String(values.get("purchasePrice") ?? ""));
     const body = {
       name: values.get("name"), barcode: values.get("barcode") || null,
       brand: values.get("brand") || null, categoryId: values.get("categoryId") || null, baseUnitId,
       lowStockThreshold: values.get("lowStockThreshold"),
       units: filled,
+      ...(product && sellingPrice && sellingPrice !== String(product.sellingPrice) ? { sellingPrice } : {}),
+      ...(product && costPrice && costPrice !== String(product.purchasePrice) ? { purchasePrice: costPrice } : {}),
     };
     try {
       await apiRequest(product ? `/api/products/${product.id}` : "/api/products", {
@@ -68,7 +73,7 @@ function ProductEditor({ product, units, categories, onClose, onSaved }: {
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/45 p-0 sm:items-center sm:p-5" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
       <section role="dialog" aria-modal="true" aria-labelledby="product-editor-title" className="max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-t-3xl border border-border bg-card p-5 shadow-2xl sm:rounded-3xl sm:p-7">
-        <div className="mb-6 flex items-start justify-between gap-3"><div><p className="text-xs font-semibold uppercase tracking-[0.14em] text-primary">Product catalog</p><h2 id="product-editor-title" className="mt-1 text-xl font-semibold">{product ? "Edit product" : "Add product"}</h2><p className="mt-1 text-sm text-muted-foreground">Add product details. Set purchase and selling prices, stock, and tracking when receiving a purchase.</p></div><button type="button" onClick={onClose} aria-label="Close form" className="grid size-9 place-items-center rounded-xl border border-border text-muted-foreground hover:bg-muted"><X size={17} /></button></div>
+        <div className="mb-6 flex items-start justify-between gap-3"><div><p className="text-xs font-semibold uppercase tracking-[0.14em] text-primary">Product catalog</p><h2 id="product-editor-title" className="mt-1 text-xl font-semibold">{product ? "Edit product" : "Add product"}</h2><p className="mt-1 text-sm text-muted-foreground">Prices are per stock unit, so package prices follow them. Received stock, cost and expiry batches are entered on a purchase.</p></div><button type="button" onClick={onClose} aria-label="Close form" className="grid size-9 place-items-center rounded-xl border border-border text-muted-foreground hover:bg-muted"><X size={17} /></button></div>
         <form key={product?.id ?? "new-product"} onSubmit={submit} className="space-y-5">
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="block sm:col-span-2"><span className="mb-1.5 block text-xs font-medium">Product name</span><input name="name" required maxLength={160} defaultValue={product?.name} className={inputClass} placeholder="e.g. Basmati rice" /></label>
@@ -79,6 +84,11 @@ function ProductEditor({ product, units, categories, onClose, onSaved }: {
             <label className="block"><span className="mb-1.5 block text-xs font-medium">Stock unit</span><select name="baseUnitId" required value={baseUnitId} onChange={(event) => { const next = event.target.value; setBaseUnitId(next); setConversions((rows) => rows.filter((row) => row.unitId !== next)); }} className={selectClass}><option value="" disabled>Select a unit</option>{units.map((unit) => <option key={unit.id} value={unit.id}>{unit.name} ({unit.symbol})</option>)}</select></label>
             <label className="block"><span className="mb-1.5 block text-xs font-medium">Low stock alert</span><input name="lowStockThreshold" type="number" min="0" step="0.000001" defaultValue={product?.lowStockThreshold ?? "0"} className={inputClass} /></label>
           </div>
+          {product && <div className="grid gap-4 sm:grid-cols-2">
+            <label className="block"><span className="mb-1.5 block text-xs font-medium">Selling price per {product.baseUnit.symbol}</span><input name="sellingPrice" required inputMode="decimal" defaultValue={String(product.sellingPrice)} className={inputClass} placeholder="0.00" /></label>
+            <label className="block"><span className="mb-1.5 flex items-center gap-1.5 text-xs font-medium">Cost per {product.baseUnit.symbol} <span className="text-muted-foreground">correction only</span></span><input name="purchasePrice" inputMode="decimal" defaultValue={String(product.purchasePrice)} className={inputClass} placeholder="0.00" /></label>
+            <p className="text-[11px] text-muted-foreground sm:col-span-2">The new selling price applies to the next sale; printed invoices keep the price they were sold at. Cost is the average of your purchases and the next purchase recalculates it, so change it only when the last purchase was entered wrong. Package prices follow this base price.</p>
+          </div>}
           <div className="rounded-2xl border border-border p-4"><div className="flex flex-wrap items-center justify-between gap-3"><div><p className="text-sm font-semibold">Package conversions</p><p className="mt-1 text-xs text-muted-foreground">For example, 1 bag = 50 kg. The stock unit is the base unit.</p></div><Button type="button" variant="outline" icon={<Plus size={14} />} onClick={() => setConversions((current) => [...current, { unitId: "", conversionToBase: "1" }])}>Add unit</Button></div>
             {conversions.length > 0 && <div className="mt-4 space-y-3">{conversions.map((conversion, index) => <div key={`${conversion.unitId}-${index}`} className="grid items-end gap-2 sm:grid-cols-[minmax(0,1fr)_140px_auto]"><label className="block"><span className="mb-1 block text-[11px] text-muted-foreground">Package unit</span><select value={conversion.unitId} onChange={(event) => setConversions((rows) => rows.map((row, rowIndex) => rowIndex === index ? { ...row, unitId: event.target.value } : row))} className={selectClass}><option value="">Choose a unit</option>{activeUnits.filter((unit) => !conversions.some((item, itemIndex) => item.unitId === unit.id && itemIndex !== index)).map((unit) => <option key={unit.id} value={unit.id}>{unit.name} ({unit.symbol})</option>)}</select></label><label className="block"><span className="mb-1 block text-[11px] text-muted-foreground">Equals base units</span><input value={conversion.conversionToBase} type="text" inputMode="decimal" onChange={(event) => setConversions((rows) => rows.map((row, rowIndex) => rowIndex === index ? { ...row, conversionToBase: toAsciiDigits(event.target.value) } : row))} className={inputClass} placeholder="50" /></label><button type="button" aria-label="Remove unit" onClick={() => setConversions((rows) => rows.filter((_, rowIndex) => rowIndex !== index))} className="grid size-10 place-items-center rounded-xl text-muted-foreground hover:bg-danger/10 hover:text-danger"><X size={15} /></button></div>)}</div>}
           </div>

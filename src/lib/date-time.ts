@@ -70,5 +70,6 @@ export function reportDateRange(from: string | null, to: string | null, timeZone
   const start = parseBoundary(from, false);
   const end = parseBoundary(to, true);
   if (start && end && start >= end) throw new RangeError("The start date must be on or before the end date.");
-  return start || end ? { ...(start ? { gte: start } : {}), ...(end ? { lt: end } : {}) } : undefined;
+  // Mongo needs the $-prefixed operators; a bare { gte, lt } object fails to cast on every date filter.
+  return start || end ? { ...(start ? { $gte: start } : {}), ...(end ? { $lt: end } : {}) } : undefined;
 }
