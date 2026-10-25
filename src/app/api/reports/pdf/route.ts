@@ -40,7 +40,11 @@ export async function GET(request: Request) {
   try {
     pdf = await htmlToPdf(renderStatementHtml({ type, payload, format, period, generatedAt }, process.cwd()));
   } catch (caught) {
-    if (caught instanceof PdfRenderError) return Response.json({ error: { code: "PDF_UNAVAILABLE", message: caught.message } }, { status: 503 });
+    if (caught instanceof PdfRenderError) {
+      // A connection refusal is not something shop staff can read; the reason is, and Print is the way out.
+      const message = caught.reason === "render-failed" ? caught.message : "The PDF writer is offline on this server — use Print instead.";
+      return Response.json({ error: { code: "PDF_UNAVAILABLE", message } }, { status: 503 });
+    }
     throw caught;
   }
 

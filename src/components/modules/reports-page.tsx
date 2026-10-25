@@ -14,10 +14,6 @@ const options: { value: ReportType; label: string }[] = [{ value: "sales", label
 type Preset = "3" | "7" | "15" | "30" | "all" | "custom";
 const presets: { value: Preset; label: string }[] = [{ value: "3", label: "Last 3 days" }, { value: "7", label: "Last 7 days" }, { value: "15", label: "Last 15 days" }, { value: "30", label: "Last 30 days" }, { value: "all", label: "All time" }, { value: "custom", label: "Custom range" }];
 
-const statementFont = '7.2pt "Cutive Mono"';
-// The sample decides which subset the browser fetches: a statement prints figures, codes and separators.
-const statementSample = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz.,-:/()#";
-
 export function ReportsPage() {
   const { formatMoney, formatNumber, formatDateTime, timezone } = useShopFormat();
   const today = localDateKey(new Date(), timezone);
@@ -34,8 +30,6 @@ export function ReportsPage() {
     finally { setBusy(false); }
   }, [type, from, to]);
   useEffect(() => { const timer = window.setTimeout(() => { void load(); }, 0); return () => window.clearTimeout(timer); }, [load]);
-  // Fetched as the page opens, so the print button never waits on the network.
-  useEffect(() => { void document.fonts.load(statementFont, statementSample).catch(() => {}); }, []);
   function applyPreset(value: Preset) {
     setPreset(value);
     if (value === "all") { setFrom(""); setTo(""); return; }
@@ -55,10 +49,7 @@ export function ReportsPage() {
 
   // jsPDF cannot shape Bengali conjuncts, so the PDF comes from the browser's own print pipeline
   // instead — the document title becomes the suggested filename.
-  async function printStatement() {
-    // Nothing on screen uses the statement face, so the browser would never fetch it before the preview
-    // renders and the paper would silently fall back to the app font.
-    try { await document.fonts.load(statementFont, statementSample); } catch { /* the fallback stack still prints */ }
+  function printStatement() {
     const previousTitle = document.title;
     const restore = () => { document.title = previousTitle; window.removeEventListener("afterprint", restore); };
     document.title = fileStem;
@@ -114,7 +105,7 @@ export function ReportsPage() {
       </div>
 
       {error && <div className="print:hidden"><ErrorMessage>{error}</ErrorMessage></div>}
-      <Panel className="print:hidden" title="Report filters" description="Date ranges follow the shop timezone." action={<div className="flex flex-wrap gap-2"><Button icon={<Download size={15}/>} onClick={() => { void saveStatement(); }} disabled={!data || busy || saving}>{saving ? "Preparing…" : "Statement PDF"}</Button><Button variant="ghost" icon={<Printer size={15}/>} onClick={() => { void printStatement(); }} disabled={!data || busy}>Print</Button></div>}>
+      <Panel className="print:hidden" title="Report filters" description="Date ranges follow the shop timezone." action={<div className="flex flex-wrap gap-2"><Button icon={<Download size={15}/>} onClick={() => { void saveStatement(); }} disabled={!data || busy || saving}>{saving ? "Preparing…" : "Statement PDF"}</Button><Button variant="ghost" icon={<Printer size={15}/>} onClick={printStatement} disabled={!data || busy}>Print</Button></div>}>
         <div className="grid items-end gap-3 sm:grid-cols-2 lg:grid-cols-[minmax(200px,1.2fr)_minmax(150px,1fr)_minmax(140px,0.85fr)_minmax(140px,0.85fr)_auto]">
           <label className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">Report type<select aria-label="Report type" value={type} onChange={(e) => setType(e.target.value as ReportType)} className={`${selectClass} mt-1.5 font-normal normal-case tracking-normal`}>{options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}</select></label>
           <label className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">Period<select aria-label="Period preset" value={preset} onChange={(e) => applyPreset(e.target.value as Preset)} className={`${selectClass} mt-1.5 font-normal normal-case tracking-normal`}>{presets.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}</select></label>

@@ -36,7 +36,7 @@ export const statementColumns = (rows: Row[], preferred: string[]) => {
   const picked = preferred.filter((key) => present.includes(key));
   return (picked.length ? picked : genericColumns(rows)).slice(0, 9);
 };
-// Cutive Mono is a wide face, so every column gets a fixed share of the page and long values wrap inside it.
+// Every column gets a fixed share of the landscape page, so a long value wraps inside its own cell instead of pushing the table off the paper.
 const columnWeight = (key: string) => { const lower = key.toLowerCase(); if (lower.endsWith("date") || lower.endsWith("at")) return 1.6; if (moneyKeys.has(key)) return 1.35; if (quantityKeys.has(key)) return 0.95; return 1.3; };
 const serialShare = 4;
 export const statementWidths = (columns: string[]) => {
