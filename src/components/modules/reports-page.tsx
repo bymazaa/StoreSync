@@ -1,8 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useState, type ReactNode } from "react";
-import { Download, Printer, Search } from "lucide-react";
-import { apiRequest, readResponsePayload, refreshAuthSession } from "@/lib/client-api";
+import { Printer, Search } from "lucide-react";
+import { apiRequest } from "@/lib/client-api";
 import { addDateKeyDays, localDateKey } from "@/lib/date-time";
 import { ErrorMessage, inputClass, PageHeader, Panel, selectClass } from "@/components/ui/page";
 import { Button } from "@/components/ui/button";
@@ -22,7 +22,6 @@ export function ReportsPage() {
   const [from, setFrom] = useState(() => addDateKeyDays(today, -30));
   const [to, setTo] = useState(today);
   const [data, setData] = useState<Payload | null>(null); const [error, setError] = useState(""); const [busy, setBusy] = useState(false);
-  const [saving, setSaving] = useState(false); const [saveNote, setSaveNote] = useState("");
   const load = useCallback(async () => {
     setBusy(true); setError("");
     try { const query = new URLSearchParams({ type }); if (from) query.set("from", from); if (to) query.set("to", to); setData(await apiRequest<Payload>(`/api/reports?${query}`)); }
@@ -47,8 +46,8 @@ export function ReportsPage() {
   const currencyCode = data?.currencyCode ?? "";
   const fileStem = `${type}-statement-${!from && !to ? "all-time" : `${from || "start"}-to-${to || today}`}`;
 
-  // jsPDF cannot shape Bengali conjuncts, so the PDF comes from the browser's own print pipeline
-  // instead — the document title becomes the suggested filename.
+  // The browser's own print pipeline writes the paper, so Bengali conjuncts shape correctly and "Save as
+  // PDF" is the same button — the document title becomes the suggested filename.
   function printStatement() {
     const previousTitle = document.title;
     const restore = () => { document.title = previousTitle; window.removeEventListener("afterprint", restore); };
@@ -57,33 +56,9 @@ export function ReportsPage() {
     window.print();
   }
 
-  // The server's Chromium writes the file, so one click saves a PDF with no dialog in the way.
-  async function saveStatement() {
-    setSaving(true); setSaveNote("");
-    try {
-      const query = new URLSearchParams({ type }); if (from) query.set("from", from); if (to) query.set("to", to);
-      const send = () => fetch(`/api/reports/pdf?${query}`, { cache: "no-store" });
-      let response = await send();
-      if (response.status === 401 && await refreshAuthSession()) response = await send();
-      if (!response.ok) {
-        const message = await readResponsePayload(response).then((payload) => payload.error?.message ?? "").catch(() => "");
-        if (response.status === 503) { setSaveNote(message || "The PDF writer is offline on this server — use Print instead."); return; }
-        throw new Error(message || `Statement PDF could not be created (status ${response.status}).`);
-      }
-      const href = URL.createObjectURL(await response.blob());
-      const link = document.createElement("a");
-      link.href = href; link.download = `${fileStem}.pdf`;
-      document.body.append(link); link.click(); link.remove();
-      // Revoking immediately can cancel the save on Safari, so the blob outlives the click.
-      window.setTimeout(() => URL.revokeObjectURL(href), 30_000);
-    }
-    catch (caught) { setSaveNote(caught instanceof Error ? caught.message : "Statement PDF could not be created."); }
-    finally { setSaving(false); }
-  }
-
   return (
     <div className="report-print space-y-6 print:space-y-0">
-      <div className="print:hidden"><PageHeader eyebrow="Business insights" title="Reports" description="Filter the store's records, then save any report as a bank-style statement PDF."/></div>
+      <div className="print:hidden"><PageHeader eyebrow="Business insights" title="Reports" description="Filter the store's records, then print or save the statement as a PDF from the print dialog."/></div>
       <div className="hidden print:block">
         <div className="report-letterhead">
           <div className="report-letterhead-shop">
@@ -105,7 +80,7 @@ export function ReportsPage() {
       </div>
 
       {error && <div className="print:hidden"><ErrorMessage>{error}</ErrorMessage></div>}
-      <Panel className="print:hidden" title="Report filters" description="Date ranges follow the shop timezone." action={<div className="flex flex-wrap gap-2"><Button icon={<Download size={15}/>} onClick={() => { void saveStatement(); }} disabled={!data || busy || saving}>{saving ? "Preparing…" : "Statement PDF"}</Button><Button variant="ghost" icon={<Printer size={15}/>} onClick={printStatement} disabled={!data || busy}>Print</Button></div>}>
+      <Panel className="print:hidden" title="Report filters" description="Date ranges follow the shop timezone." action={<div className="flex flex-wrap gap-2"><Button variant="ghost" icon={<Printer size={15}/>} onClick={printStatement} disabled={!data || busy}>Print</Button></div>}>
         <div className="grid items-end gap-3 sm:grid-cols-2 lg:grid-cols-[minmax(200px,1.2fr)_minmax(150px,1fr)_minmax(140px,0.85fr)_minmax(140px,0.85fr)_auto]">
           <label className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">Report type<select aria-label="Report type" value={type} onChange={(e) => setType(e.target.value as ReportType)} className={`${selectClass} mt-1.5 font-normal normal-case tracking-normal`}>{options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}</select></label>
           <label className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">Period<select aria-label="Period preset" value={preset} onChange={(e) => applyPreset(e.target.value as Preset)} className={`${selectClass} mt-1.5 font-normal normal-case tracking-normal`}>{presets.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}</select></label>
@@ -114,7 +89,6 @@ export function ReportsPage() {
           <Button variant="outline" icon={<Search size={15}/>} onClick={() => void load()} disabled={busy}>{busy ? "Loading…" : "Refresh"}</Button>
         </div>
         {type === "due" && <p className="mt-3 text-xs text-muted-foreground">Aging buckets are counted from each unpaid invoice date.</p>}
-        {saveNote && <div className="mt-3"><ErrorMessage>{saveNote}</ErrorMessage></div>}
       </Panel>
       {data?.summary && <section className="report-summary grid gap-3 sm:grid-cols-2 xl:grid-cols-4">{Object.entries(data.summary).slice(0, 8).map(([key, value]) => {
         const money = moneyKeys.has(key);

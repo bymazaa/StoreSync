@@ -87,32 +87,6 @@ services:
         fi
         echo "Replica set $$REPLICA_SET_NAME is ready at $$REPLICA_SET_HOST."
 
-  # Headless Chromium for statement PDFs. `pnpm dev` on the host reaches it through PDF_BROWSER_WS
-  # in .env; the port is published on 127.0.0.1 only, because an open CDP port lets any local
-  # process drive the browser.
-  pdf-browser:
-    image: chromedp/headless-shell:stable
-    restart: unless-stopped
-    # The image's own run.sh already starts headless-shell with --no-sandbox and the debugger socket
-    # on 9222; these two are appended to it. --remote-allow-origins is required since Chromium 111,
-    # or the socket answers the app's WebSocket handshake with a 403.
-    command:
-      - --remote-allow-origins=*
-      - --disable-dev-shm-usage
-    ports:
-      - "127.0.0.1:9222:9222"
-    shm_size: 512mb
-    networks:
-      - stockpilot-network
-    healthcheck:
-      test:
-        - CMD-SHELL
-        - bash -c 'exec 3<>/dev/tcp/127.0.0.1/9222' || exit 1
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 20s
-
   mongo-express:
     image: mongo-express:1.0.2-20
     restart: unless-stopped

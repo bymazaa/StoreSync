@@ -88,30 +88,6 @@ services:
         fi
         echo "Replica set $$REPLICA_SET_NAME is ready at $$REPLICA_SET_HOST."
 
-  # Headless Chromium that writes statement PDFs. The app talks to it over CDP only (PDF_BROWSER_WS
-  # below) and never downloads a browser of its own. Kept off every published port: debugging inside
-  # the network is enough, and a bound CDP port would hand anyone on the host full control of Chrome.
-  pdf-browser:
-    image: chromedp/headless-shell:stable
-    restart: unless-stopped
-    # The image's own run.sh already starts headless-shell with --no-sandbox and the debugger socket
-    # on 9222; these two are appended to it. --remote-allow-origins is required since Chromium 111,
-    # or the socket answers the app's WebSocket handshake with a 403.
-    command:
-      - --remote-allow-origins=*
-      - --disable-dev-shm-usage
-    shm_size: 512mb
-    networks:
-      - stockpilot-network
-    healthcheck:
-      test:
-        - CMD-SHELL
-        - bash -c 'exec 3<>/dev/tcp/127.0.0.1/9222' || exit 1
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 20s
-
   app:
     build:
       context: .
@@ -126,16 +102,11 @@ services:
       NODE_ENV: production
       PORT: 3000
       HOSTNAME: 0.0.0.0
-      # Statement PDFs render in the sidecar above. If it is missing or offline the route answers 503
-      # and the Reports page falls back to the browser's own print dialog.
-      PDF_BROWSER_WS: "http://pdf-browser:9222"
       MONGODB_URI: "mongodb://root:stockpilot321@mongodb:27017/stockpilot?authSource=admin&replicaSet=rs0"
       JWT_ACCESS_SECRET: "avQm2xL9pR5kT8wN4yH6cF1zB4aD0lE7uJ9iK2mL"
       JWT_REFRESH_SECRET: "eA8nZ3rW6pY1tK9vC4xH7qP2dF5sB0eU8kG6iR4"
 
     depends_on:
-      pdf-browser:
-        condition: service_started
       mongodb:
         condition: service_healthy
       mongo-init:
