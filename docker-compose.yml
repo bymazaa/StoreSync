@@ -92,6 +92,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        APP_URL: ${APP_URL:-http://localhost:3000}
 
     restart: unless-stopped
 
@@ -102,6 +104,7 @@ services:
       NODE_ENV: production
       PORT: 3000
       HOSTNAME: 0.0.0.0
+      APP_URL: ${APP_URL:-http://localhost:3000}
       MONGODB_URI: "mongodb://root:stockpilot321@mongodb:27017/stockpilot?authSource=admin&replicaSet=rs0"
       JWT_ACCESS_SECRET: "avQm2xL9pR5kT8wN4yH6cF1zB4aD0lE7uJ9iK2mL"
       JWT_REFRESH_SECRET: "eA8nZ3rW6pY1tK9vC4xH7qP2dF5sB0eU8kG6iR4"

@@ -258,6 +258,7 @@ docker-compose build --no-cache
 | `JWT_REFRESH_SECRET` | JWT signing secret for refresh tokens | Yes | - |
 | `NODE_ENV` | Node environment | No | `production` |
 | `PORT` | Application port | No | `3000` |
+| `APP_URL` | Public shop URL used for share/SEO image links | No | `http://localhost:3000` |
 
 *Auto-generated when using full Docker setup
 
