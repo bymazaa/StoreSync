@@ -31,7 +31,7 @@ export function useShopPermissions() {
 export function useShopFormat() {
   const currency = useCurrencyCode();
   const { locale, timezone } = useContext(FormattingContext);
-  // The same formatter builds the screen figures and the server-rendered statement PDF.
+  // The same formatter builds the screen figures and the printed statement.
   const statement = createStatementFormat({ locale, timezone, currencyCode: currency });
   return {
     locale,

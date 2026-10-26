@@ -14,6 +14,7 @@ const PAGE_SIZE = 50;
 
 const actionLabels: Record<string, string> = {
   "auth.password_changed": "Password changed",
+  "auth.password_reset": "Password reset from the server",
   "category.created": "Category created",
   "category.updated": "Category updated",
   "customer.created": "Customer added",
@@ -41,6 +42,7 @@ const actionLabels: Record<string, string> = {
   "unit.created": "Unit created",
   "unit.updated": "Unit changed",
   "user.created": "Staff account created",
+  "user.deleted": "Staff account deleted",
   "user.updated": "Staff account changed",
 };
 
@@ -58,7 +60,7 @@ const entityLabel = (entityType: string) => entityLabels[entityType] ?? entityTy
 
 function toneOf(action: string) {
   if (action.endsWith(".created")) return "bg-teal-soft text-teal-strong";
-  if (action.endsWith(".cancelled") || action.endsWith(".voided")) return "bg-danger/10 text-danger";
+  if (action.endsWith(".cancelled") || action.endsWith(".voided") || action.endsWith(".deleted")) return "bg-danger/10 text-danger";
   if (action.includes("return") || action.endsWith(".adjusted")) return "bg-amber-soft text-amber-strong";
   return "bg-blue-soft text-blue-strong";
 }

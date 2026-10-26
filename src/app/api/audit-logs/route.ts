@@ -30,6 +30,7 @@ function describe(metadata?: Record<string, unknown> | null) {
   if (typeof metadata.dueAmount === "string" && metadata.dueAmount) parts.push(`Due ${metadata.dueAmount}`);
   if (typeof metadata.refundAmount === "string" && metadata.refundAmount) parts.push(`Refund ${metadata.refundAmount}`);
   if (typeof metadata.reason === "string" && metadata.reason) parts.push(`Reason: ${metadata.reason}`);
+  if (typeof metadata.deletedAccount === "string" && metadata.deletedAccount) parts.push(`Removed account ${metadata.deletedAccount}`);
   if (Array.isArray(metadata.changedFields) && metadata.changedFields.length) parts.push(`Changed ${metadata.changedFields.join(", ")}`);
   if (Array.isArray(metadata.permissions) && metadata.permissions.length) parts.push(`${metadata.permissions.length} permissions saved`);
   return parts.join(" · ");
@@ -95,7 +96,8 @@ export async function GET(request: Request) {
       entityType: log.entityType,
       entityId: toId(log.entityId),
       actorId: toId(log.actorId),
-      actorName: names.get(toId(log.actorId)) ?? "System",
+      // A deleted staff account keeps its history, so its rows are labelled rather than dropped.
+      actorName: names.get(toId(log.actorId)) ?? (log.actorId ? "Removed user" : "System"),
       detail: describe(log.metadata as Record<string, unknown> | null),
       ipAddress: log.ipAddress ?? "",
       createdAt: log.createdAt,

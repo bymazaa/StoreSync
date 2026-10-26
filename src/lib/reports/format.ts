@@ -1,5 +1,5 @@
 // One source of truth for a statement: its sections, columns and cells. The screen table and the
-// server-rendered PDF read this file, because staff reconcile the paper against the screen.
+// printed statement read this file, because staff reconcile the paper against the screen.
 
 export type ReportType = "sales" | "purchases" | "product-sales" | "profit-loss" | "stock" | "due" | "expenses";
 export type Row = Record<string, unknown>;

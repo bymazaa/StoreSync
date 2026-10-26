@@ -19,7 +19,7 @@ const covers = [
   { icon: Truck, title: "Purchases & batches", text: "Stock enters through a purchase: quantity, what you paid per unit and the selling price. Completing it moves stock into dated batches." },
   { icon: Boxes, title: "Products & labels", text: "Catalogue with units and pack conversions, categories, low-stock levels, automatic SKUs and A4 barcode sticker sheets for the shelves." },
   { icon: UsersRound, title: "Dues & collections", text: "Customer and supplier ledgers with outstanding balance, 0–30 / 31–60 / 60+ day ageing, and a payment slip that prints on the roll." },
-  { icon: ChartNoAxesCombined, title: "Reports & profit", text: "Sales, purchases, profit & loss, stock valuation, expenses and dues — each one saving as a bank-style statement PDF." },
+  { icon: ChartNoAxesCombined, title: "Reports & profit", text: "Sales, purchases, profit & loss, stock valuation, expenses and dues — each one printing as a bank-style statement." },
   { icon: ShieldCheck, title: "Staff & audit", text: "Owner, manager, cashier and stock clerk, each ticked with the actions they may take, plus an activity log of who changed what." },
   { icon: Printer, title: "Paper", text: "80 mm thermal slips, A4 invoices, payment receipts and shelf stickers. The preview on screen is what the printer gives you." },
   { icon: MapPin, title: "Your shop, your formats", text: "The country you choose sets currency, date, number format and time zone. Invoice prefixes and payment methods stay yours." },
