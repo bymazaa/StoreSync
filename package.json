@@ -10,6 +10,7 @@
         "db:reset": "tsx scripts/reset.ts",
         "db:demo": "tsx scripts/reset.ts --demo",
         "db:password": "tsx scripts/password.ts",
+        "db:staff": "tsx scripts/staff.ts",
         "docker:up": "docker compose up -d",
         "docker:build": "docker compose up -d --build",
         "docker:down": "docker compose down",

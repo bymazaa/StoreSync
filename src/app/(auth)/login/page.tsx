@@ -57,7 +57,7 @@ export default async function LoginPage() {
       <header className="mx-auto flex w-full max-w-6xl items-center gap-3 px-4 py-6 pr-16 sm:px-6">
         <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-primary text-primary-foreground shadow-sm"><ShoppingBag size={21} /></span>
         <span>
-          <span className="block text-lg font-bold tracking-tight">StockPilot</span>
+          <span className="block font-display text-2xl leading-none tracking-[0.06em]">StockPilot</span>
           <span className="text-xs text-muted-foreground">Grocery shop management</span>
         </span>
       </header>
@@ -66,7 +66,7 @@ export default async function LoginPage() {
         <section className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_28rem] lg:items-start">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.14em] text-primary">Built for one shop, on your own server</p>
-            <h1 className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl">The counter, the store-room and the dues — in one system.</h1>
+            <h1 className="mt-3 text-3xl font-bold tracking-[0.02em] sm:text-4xl">The counter, the store-room and the dues — in one system.</h1>
             <p className="mt-4 max-w-xl text-sm leading-6 text-muted-foreground">
               StockPilot keeps a grocery shop straight: bill fast at the counter, watch stock fall as it sells, know exactly
               who owes what, and hand out paper your customers expect. Every staff member sees only the screens their role allows.

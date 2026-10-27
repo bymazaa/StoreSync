@@ -133,7 +133,7 @@ export function AppShell({ user, shopName, countryCode, currencyCode, locale, ti
         <div className={cn("flex items-center justify-between gap-2 px-2", collapsed && "lg:flex-col lg:justify-start lg:gap-4 lg:px-0")}>
           <Link className={cn("flex min-w-0 items-center gap-3", collapsed && "lg:justify-center")} href="/" aria-label={`${APP_META.name} home`} onClick={() => setMenuOpen(false)}>
             <span className="grid size-10 shrink-0 place-items-center rounded-[14px] bg-primary text-primary-foreground shadow-sm"><ShoppingBag size={20} strokeWidth={2.2} /></span>
-            <span className={cn("min-w-0", collapsed && "lg:sr-only")}><span className="block text-[17px] font-bold tracking-tight text-white">{APP_META.name}</span><span className="mt-0.5 block truncate text-[10px] font-medium uppercase tracking-[0.14em] text-white/55">Shop management</span></span>
+            <span className={cn("min-w-0", collapsed && "lg:sr-only")}><span className="block font-display text-[21px] leading-none tracking-[0.06em] text-white">{APP_META.name}</span><span className="mt-0.5 block truncate text-[10px] font-medium uppercase tracking-[0.14em] text-white/55">Shop management</span></span>
           </Link>
           <div className={cn("flex items-center gap-1", collapsed && "lg:flex-col")}>
             <button type="button" aria-pressed={collapsed} title={collapsed ? "Expand sidebar (Ctrl+B)" : "Collapse sidebar (Ctrl+B)"} aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"} onClick={() => setCollapsed((value) => !value)} className="hidden size-8 place-items-center rounded-lg text-sidebar-foreground transition-colors hover:bg-white/10 hover:text-white lg:grid">

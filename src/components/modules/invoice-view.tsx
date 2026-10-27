@@ -602,7 +602,7 @@ export function InvoiceView({ mode }: { mode: 'sale' | 'purchase' }) {
                             {invoice.payments.map((payment, index) => (
                                 <div
                                     key={`${payment.paidAt}-${index}`}
-                                    className="flex flex-col justify-between gap-1 border-b border-border/50 py-3 text-sm last:border-0 sm:flex-row sm:gap-4"
+                                    className="receipt-payment-row flex flex-col justify-between gap-1 border-b border-border/50 py-3 text-sm last:border-0 sm:flex-row sm:gap-4"
                                 >
                                     <span
                                         title={[payment.method.name, payment.reference]

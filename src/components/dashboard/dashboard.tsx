@@ -74,7 +74,7 @@ export function Dashboard() {
       <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-end">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.14em] text-primary">Overview</p>
-          <h1 className="mt-2 text-[26px] font-semibold tracking-tight text-foreground sm:text-[30px]">Today at your shop</h1>
+          <h1 className="mt-2 text-[26px] font-semibold tracking-[0.03em] text-foreground sm:text-[30px]">Today at your shop</h1>
           <p className="mt-1.5 text-sm text-muted-foreground">{data ? formatDate(new Date()) : "A live view of sales, stock and shop activity."}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
