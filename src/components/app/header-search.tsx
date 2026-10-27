@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Boxes, LoaderCircle, Search, ShoppingBag, ShoppingCart, Truck, UsersRound } from "lucide-react";
+import { formatCurrencyMoney } from "@/lib/currency";
 
 type Suggestion = { type: string; id: string; title: string; subtitle: string; href: string; amount?: string };
 type Group = { key: string; label: string; items: Suggestion[] };
@@ -27,7 +28,7 @@ export function HeaderSearch({ currencyCode, locale }: { currencyCode: string; l
 
   const items = useMemo(() => groups.flatMap((group) => group.items), [groups]);
   const indexByKey = useMemo(() => new Map(items.map((item, position) => [`${item.type}-${item.id}`, position])), [items]);
-  const currency = useMemo(() => new Intl.NumberFormat(locale, { style: "currency", currency: currencyCode }), [locale, currencyCode]);
+  const currency = useMemo(() => (value: string | number) => formatCurrencyMoney(locale, currencyCode, Number(value)), [locale, currencyCode]);
 
   useEffect(() => {
     const term = query.trim();
@@ -141,7 +142,7 @@ export function HeaderSearch({ currencyCode, locale }: { currencyCode: string; l
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-[13px] font-semibold text-foreground">{item.title}</span>
                       <span className="block truncate text-[11px] text-muted-foreground">
-                        {item.amount ? `${currency.format(Number(item.amount))}${item.subtitle ? ` · ${item.subtitle}` : ""}` : item.subtitle}
+                        {item.amount ? `${currency(item.amount)}${item.subtitle ? ` · ${item.subtitle}` : ""}` : item.subtitle}
                       </span>
                     </span>
                   </button>

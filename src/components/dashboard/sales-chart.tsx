@@ -3,6 +3,7 @@
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Surface } from "@/components/ui/surface";
 import { useShopFormat } from "@/components/app/shop-context";
+import { formatCurrencyMoney } from "@/lib/currency";
 
 type ChartPoint = { date: string; total: string };
 
@@ -19,8 +20,8 @@ function HeaderStat({ label, value, hint }: { label: string; value: string; hint
 export function SalesChart({ data }: { data: ChartPoint[] }) {
   const { locale, currency } = useShopFormat();
   const dayLabels = new Intl.DateTimeFormat(locale, { weekday: "short", timeZone: "UTC" });
-  const compact = new Intl.NumberFormat(locale, { style: "currency", currency, notation: "compact", maximumFractionDigits: 1 });
-  const money = new Intl.NumberFormat(locale, { style: "currency", currency, maximumFractionDigits: 0 });
+  const compact = (value: number) => formatCurrencyMoney(locale, currency, value, { notation: "compact", maximumFractionDigits: 1 });
+  const money = (value: number) => formatCurrencyMoney(locale, currency, value, { maximumFractionDigits: 0 });
 
   const chartData = data.map((point, index) => ({
     // The API always sends the trailing 7 days, so the final bucket is today.
@@ -36,9 +37,9 @@ export function SalesChart({ data }: { data: ChartPoint[] }) {
       <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-4">
         <div><p className="text-base font-semibold text-foreground">Sales overview</p><p className="mt-1 text-sm text-muted-foreground">Net sales for the last 7 days</p></div>
         <div className="flex flex-wrap items-start gap-x-6 gap-y-2">
-          <HeaderStat label="Week total" value={compact.format(weekTotal)} />
-          <HeaderStat label="Daily avg" value={compact.format(average)} />
-          <HeaderStat label="Best day" value={compact.format(best.sales)} hint={best.day} />
+          <HeaderStat label="Week total" value={compact(weekTotal)} />
+          <HeaderStat label="Daily avg" value={compact(average)} />
+          <HeaderStat label="Best day" value={compact(best.sales)} hint={best.day} />
         </div>
       </div>
       <div className="mt-6 h-[250px] min-w-0 flex-1">
@@ -49,8 +50,8 @@ export function SalesChart({ data }: { data: ChartPoint[] }) {
             </defs>
             <CartesianGrid stroke="var(--chart-grid)" strokeDasharray="3 5" vertical={false} />
             <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fill: "var(--chart-label)", fontSize: 12 }} dy={10} />
-            <YAxis axisLine={false} tickLine={false} tick={{ fill: "var(--chart-label)", fontSize: 11 }} tickFormatter={(value: number) => Math.abs(value) >= 1000 ? `${money.format(value / 1000)}k` : money.format(value)} />
-            <Tooltip contentStyle={{ background: "var(--tooltip-bg)", border: "1px solid var(--border)", borderRadius: 12, color: "var(--foreground)", fontSize: 12 }} formatter={(value) => [money.format(Number(value ?? 0))]} labelStyle={{ color: "var(--muted-foreground)", marginBottom: 4 }} />
+            <YAxis axisLine={false} tickLine={false} tick={{ fill: "var(--chart-label)", fontSize: 11 }} tickFormatter={(value: number) => Math.abs(value) >= 1000 ? `${money(value / 1000)}k` : money(value)} />
+            <Tooltip contentStyle={{ background: "var(--tooltip-bg)", border: "1px solid var(--border)", borderRadius: 12, color: "var(--foreground)", fontSize: 12 }} formatter={(value) => [money(Number(value ?? 0))]} labelStyle={{ color: "var(--muted-foreground)", marginBottom: 4 }} />
             <Area type="monotone" dataKey="sales" stroke="var(--chart-primary)" strokeWidth={2.5} fill="url(#salesFill)" activeDot={{ r: 4, strokeWidth: 0 }} />
           </AreaChart>
         </ResponsiveContainer>

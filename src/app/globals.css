@@ -65,7 +65,10 @@
   .report-print { page: report; color: #101f1b; font-family: var(--app-font-sans); }
   .report-print .overflow-x-auto { overflow: visible !important; }
   .report-print thead { display: table-header-group; }
-  .report-print tr, .report-print section { break-inside: avoid; page-break-inside: avoid; }
+  /* Rows and the summary band never split; the entries section itself is allowed to break so its
+     first rows start on page 1 even for long statements — the panel heading stays glued to them. */
+  .report-print tr, .report-print .report-summary { break-inside: avoid; page-break-inside: avoid; }
+  .report-print .report-section > div:first-child { break-inside: avoid; break-after: avoid; page-break-inside: avoid; page-break-after: avoid; }
   /* Fixed column shares come from the component, so a wide cell wraps instead of running off the page. */
   .report-print table { width: 100%; min-width: 0 !important; margin: 0; border-collapse: collapse; table-layout: fixed; font-size: 7.2pt; line-height: 1.45; font-variant-numeric: tabular-nums; }
   .report-print th { padding: 1.1mm 1.4mm; line-height: 1.3; background: #cfe1db !important; color: #16241f !important; font-size: 6.2pt; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; text-align: left; border-bottom: 0.2mm solid #0f766e; vertical-align: bottom; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
@@ -73,7 +76,9 @@
   /* Bengali pre-base matras and conjuncts stack below the baseline, so print rows need extra leading. */
   .report-print td { padding: 1mm 1.4mm; line-height: 1.5; border-bottom: 0.1mm solid #cddcd8; color: #16241f; vertical-align: top; }
   .report-print .report-serial { color: #7c8985 !important; }
-  /* Amount totals close the statement the way a bank footer does — a rule and a bold figure, no band. */
+  /* Amount totals close the statement the way a bank footer does — a rule and a bold figure, no band.
+     table-footer-group repeats on every printed page, so it prints as a plain row group: once, at the end. */
+  .report-print tfoot { display: table-row-group; }
   .report-print tfoot tr { border-top: 0 !important; background: transparent !important; }
   .report-print tfoot td { padding-top: 1.3mm; border-top: 0.2mm solid #0f766e; border-bottom: 0; background: transparent !important; color: #0c4a44 !important; font-weight: 700; }
   .report-print tbody tr:nth-child(even) { background: transparent !important; }

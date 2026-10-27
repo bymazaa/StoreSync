@@ -1,6 +1,8 @@
 // One source of truth for a statement: its sections, columns and cells. The screen table and the
 // printed statement read this file, because staff reconcile the paper against the screen.
 
+import { formatCurrencyMoney } from "@/lib/currency";
+
 export type ReportType = "sales" | "purchases" | "product-sales" | "profit-loss" | "stock" | "due" | "expenses";
 export type Row = Record<string, unknown>;
 
@@ -55,7 +57,7 @@ export type StatementFormat = {
 export function createStatementFormat(options: { locale: string; timezone: string; currencyCode: string }): StatementFormat {
   const { locale, timezone, currencyCode } = options;
   return {
-    money: (value) => new Intl.NumberFormat(locale, { style: "currency", currency: currencyCode, maximumFractionDigits: 2 }).format(Number(value)),
+    money: (value) => formatCurrencyMoney(locale, currencyCode, Number(value), { maximumFractionDigits: 2 }),
     // Paper states the currency once in the header, which keeps every ledger column narrow enough to fit.
     amount: (value) => new Intl.NumberFormat(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Number(value)),
     number: (value, maximumFractionDigits = 2) => new Intl.NumberFormat(locale, { maximumFractionDigits }).format(Number(value)),
