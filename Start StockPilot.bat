@@ -20,20 +20,22 @@ echo   StockPilot - Shop Server
 echo ==============================================
 echo.
 echo   1. Start StockPilot and open the browser
-echo   2. Show staff list
-echo   3. Reset a password (admin or staff)
-echo   4. Change an account email
-echo   5. Add a staff member
-echo   6. Remove a staff member
-echo   7. Exit
+echo   2. Stop StockPilot
+echo   3. Show staff list
+echo   4. Reset a password (admin or staff)
+echo   5. Change an account email
+echo   6. Add a staff member
+echo   7. Remove a staff member
+echo   8. Exit
 echo.
-choice /c 1234567 /n /m "Choose an option: "
-if errorlevel 7 goto end
-if errorlevel 6 goto remove_staff
-if errorlevel 5 goto add_staff
-if errorlevel 4 goto change_email
-if errorlevel 3 goto reset_password
-if errorlevel 2 goto staff_list
+choice /c 12345678 /n /m "Choose an option: "
+if errorlevel 8 goto end
+if errorlevel 7 goto remove_staff
+if errorlevel 6 goto add_staff
+if errorlevel 5 goto change_email
+if errorlevel 4 goto reset_password
+if errorlevel 3 goto staff_list
+if errorlevel 2 goto stop_app
 goto start_app
 
 rem ------------------------------------------------------------------
@@ -172,6 +174,30 @@ set "DEL_EMAIL="
 set /p "DEL_EMAIL=Account email to remove: "
 if "%DEL_EMAIL%"=="" goto menu
 docker compose exec app pnpm db:staff remove "%DEL_EMAIL%"
+echo.
+pause
+goto menu
+
+:stop_app
+echo.
+docker info >nul 2>&1
+if errorlevel 1 (
+  echo Docker is not running, so StockPilot is already stopped.
+  echo.
+  pause
+  goto menu
+)
+echo Stopping StockPilot...
+docker compose down
+if errorlevel 1 (
+  echo.
+  echo StockPilot could not be stopped cleanly.
+  echo Open a terminal in this folder and run: docker compose down
+  echo to see the error details.
+) else (
+  echo.
+  echo StockPilot is stopped. All shop data is safe on the disk volumes.
+)
 echo.
 pause
 goto menu

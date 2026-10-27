@@ -1,6 +1,36 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="StockPilot">
-  <rect width="64" height="64" rx="14" fill="#0f9d8a"/>
-  <path d="M24 23v-2a8 8 0 0 1 16 0v2" fill="none" stroke="#ffffff" stroke-width="4" stroke-linecap="round"/>
-  <path d="M18 25h28l-2.6 26.6A4 4 0 0 1 39.4 55H24.6a4 4 0 0 1-4-3.4L18 25Z" fill="#ffffff"/>
-  <path d="M25 45.5l5.6-6.4 4.6 3.8 5.9-7.4" fill="none" stroke="#0f9d8a" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Compass wheel: teal outline under the white stroke so the mark stays visible on white surfaces too. -->
+  <g fill="none">
+    <circle cx="32" cy="32" r="20" stroke="#0b6a5e" stroke-width="7"/>
+    <circle cx="32" cy="32" r="20" stroke="#ffffff" stroke-width="4.2"/>
+    <circle cx="32" cy="32" r="7.5" stroke="#0b6a5e" stroke-width="5.4"/>
+    <circle cx="32" cy="32" r="7.5" stroke="#ffffff" stroke-width="3"/>
+  </g>
+  <g stroke="#0b6a5e" stroke-width="6" stroke-linecap="round">
+    <line x1="32" y1="14" x2="32" y2="26"/>
+    <line x1="32" y1="38" x2="32" y2="50"/>
+    <line x1="14" y1="32" x2="26" y2="32"/>
+    <line x1="38" y1="32" x2="50" y2="32"/>
+  </g>
+  <g stroke="#ffffff" stroke-width="3.4" stroke-linecap="round">
+    <line x1="32" y1="14" x2="32" y2="26"/>
+    <line x1="32" y1="38" x2="32" y2="50"/>
+    <line x1="14" y1="32" x2="26" y2="32"/>
+    <line x1="38" y1="32" x2="50" y2="32"/>
+  </g>
+  <g fill="#0b6a5e">
+    <circle cx="32" cy="9.5" r="3.8"/><circle cx="32" cy="54.5" r="3.8"/>
+    <circle cx="9.5" cy="32" r="3.8"/><circle cx="54.5" cy="32" r="3.8"/>
+    <circle cx="16.1" cy="16.1" r="3.8"/><circle cx="47.9" cy="16.1" r="3.8"/>
+    <circle cx="16.1" cy="47.9" r="3.8"/><circle cx="47.9" cy="47.9" r="3.8"/>
+  </g>
+  <g fill="#ffffff">
+    <circle cx="32" cy="9.5" r="2.1"/><circle cx="32" cy="54.5" r="2.1"/>
+    <circle cx="9.5" cy="32" r="2.1"/><circle cx="54.5" cy="32" r="2.1"/>
+    <circle cx="16.1" cy="16.1" r="2.1"/><circle cx="47.9" cy="16.1" r="2.1"/>
+    <circle cx="16.1" cy="47.9" r="2.1"/><circle cx="47.9" cy="47.9" r="2.1"/>
+  </g>
+  <path d="M25.5 38.5 32 32l6.5-6.5" fill="none" stroke="#0b6a5e" stroke-width="6.4" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="32" cy="32" r="4.6" fill="#0b6a5e"/>
+  <circle cx="32" cy="32" r="2.4" fill="#ffffff"/>
 </svg>
