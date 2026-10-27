@@ -356,7 +356,7 @@ export function InvoiceView({ mode }: { mode: 'sale' | 'purchase' }) {
                             </p>
                         </div>
                     </header>
-                    <section className="grid min-w-0 gap-4 border-b border-border py-4 sm:grid-cols-2 sm:gap-6 sm:py-5">
+                    <section className="grid min-w-0 grid-cols-2 gap-4 border-b border-border py-4 sm:gap-6 sm:py-5">
                         <div className="min-w-0 rounded-xl  p-3 sm:p-4">
                             <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
                                 {mode === 'sale' ? 'Customer' : 'Supplier'}
@@ -384,12 +384,12 @@ export function InvoiceView({ mode }: { mode: 'sale' | 'purchase' }) {
                                 </p>
                             )}
                         </div>
-                        <div className="min-w-0 rounded-xl  p-3 sm:p-4 sm:text-right">
+                        <div className="min-w-0 rounded-xl p-3 text-right sm:p-4">
                             <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
                                 Payment status
                             </p>
                             <p
-                                className={`mt-2 inline-flex max-w-full rounded-full px-3 py-1 text-sm font-semibold ${Number(invoice.dueAmount) > 0 ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'}`}
+                                className={`mt-2 inline-block max-w-full text-sm font-semibold ${Number(invoice.dueAmount) > 0 ? 'text-amber-strong' : 'text-success'}`}
                             >
                                 {Number(invoice.dueAmount) > 0 ? 'Balance due' : 'Paid'}
                             </p>

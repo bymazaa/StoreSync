@@ -24,11 +24,10 @@
   .invoice-shop-logo { max-height: 11mm; }
   .invoice-shop-mark { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
   .invoice-number-block { min-width: 44mm; }
-  /* Party + payment status compress into one soft hairline band instead of two padded screen cards. */
-  .print-document > section.grid { gap: 6mm !important; padding: 1.6mm 2.2mm !important; border-bottom: 0.15mm solid #d6e2de !important; background: #f7faf9 !important; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+  /* Party + payment status compress into one hairline band instead of two padded screen cards — no fill on paper. */
+  .print-document > section.grid { gap: 6mm !important; padding: 1.6mm 2.2mm !important; border-bottom: 0.15mm solid #d6e2de !important; }
   .print-document > section.grid > div { padding: 0 !important; border-radius: 0 !important; background: transparent !important; }
   .print-document > section.grid p { margin-top: 0.5mm !important; }
-  .print-document .bg-amber-100, .print-document .bg-emerald-100 { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
   .print-document > section.ml-auto { margin-top: 2.5mm; }
   .print-document > section.ml-auto > * + * { margin-top: 0.7mm !important; }
   .print-document .receipt-grand-total { margin-top: 1.4mm !important; padding-top: 1.4mm !important; border-top: 0.2mm solid #0f766e !important; color: #0c4a44 !important; }

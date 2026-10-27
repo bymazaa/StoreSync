@@ -19,8 +19,8 @@ export const moneyKeys = new Set(["total", "subtotal", "paidAmount", "dueAmount"
 export const quantityKeys = new Set(["quantity", "baseQuantity", "soldQuantity", "receivedQuantity", "availableQuantity", "stockOnHand", "lowStockThreshold", "count", "rowCount", "invoiceCount", "invoices", "oldestDueDays"]);
 // Statements are curated, not scraped: each report prints the columns the shop actually reads.
 export const reportColumns: Record<ReportType, string[]> = {
-  sales: ["soldAt", "invoiceNumber", "status", "subtotal", "discountAmount", "total", "paidAmount", "dueAmount"],
-  purchases: ["purchasedAt", "invoiceNumber", "status", "subtotal", "discountAmount", "additionalCost", "total", "paidAmount", "dueAmount"],
+  sales: ["soldAt", "invoiceNumber", "subtotal", "discountAmount", "total", "paidAmount", "dueAmount"],
+  purchases: ["purchasedAt", "invoiceNumber", "subtotal", "discountAmount", "additionalCost", "total", "paidAmount", "dueAmount"],
   "product-sales": ["productName", "unit", "quantity", "revenue", "costOfGoods", "grossProfit"],
   "profit-loss": ["soldAt", "invoiceNumber", "subtotal", "discountAmount"],
   expenses: ["expenseDate", "title", "category", "amount", "notes"],
