@@ -58,10 +58,19 @@ set /a dtries=0
 :wait_docker
 set /a dtries+=1
 docker info >nul 2>&1
-if not errorlevel 1 exit /b 0
+if not errorlevel 1 goto engine_ready
 if %dtries% geq 90 goto docker_fail
 timeout /t 5 /nobreak >nul
 goto wait_docker
+
+:engine_ready
+call :close_desktop_window
+exit /b 0
+
+rem Closes the Docker Desktop window once the engine is up; the engine keeps running in the tray.
+:close_desktop_window
+powershell -NoProfile -Command "Start-Sleep -Seconds 2; $p = Get-Process 'Docker Desktop' -ErrorAction SilentlyContinue; if ($p) { $null = $p.CloseMainWindow() }"
+exit /b 0
 
 :docker_fail
 echo.

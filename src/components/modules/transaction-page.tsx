@@ -63,6 +63,7 @@ export function TransactionPage({ mode }: { mode: "sale" | "purchase" }) {
   const [contactEmail, setContactEmail] = useState("");
   const [contactName, setContactName] = useState("");
   const [contactAddress, setContactAddress] = useState("");
+  const [addressAutoFilled, setAddressAutoFilled] = useState(false);
   const [lines, setLines] = useState<Line[]>([]);
   const [discountType, setDiscountType] = useState("");
   const [discountValue, setDiscountValue] = useState("0");
@@ -151,7 +152,7 @@ export function TransactionPage({ mode }: { mode: "sale" | "purchase" }) {
       void apiRequest<{ customers: Contact[] }>(`/api/customers?q=${encodeURIComponent(digits)}`).then((result) => {
         if (!active) return;
         const match = result.customers.find((contact) => contact.phoneE164?.replace(/\D/g, "").endsWith(digits.slice(-10)));
-        if (match) { setContactId(match.id); setSelectedContact(match); setContactName(match.name); setContactEmail(match.email ?? ""); setContactAddress(match.address ?? ""); }
+        if (match) { setContactId(match.id); setSelectedContact(match); setContactName(match.name); setContactEmail(match.email ?? ""); setContactAddress(match.address ?? ""); setAddressAutoFilled(true); }
       }).catch(() => {});
     }, 220);
     return () => { active = false; window.clearTimeout(timer); };
@@ -255,15 +256,15 @@ export function TransactionPage({ mode }: { mode: "sale" | "purchase" }) {
     const digits = value.replace(/\D/g, "");
     if (digits.length < 7) return;
     const match = contacts.find((contact) => contact.phoneE164?.replace(/\D/g, "").endsWith(digits.slice(-10)));
-    if (match) { setContactId(match.id); setSelectedContact(match); setContactName(match.name); setContactEmail(match.email ?? ""); setContactAddress(match.address ?? ""); }
-    else if (contactId) { setContactId(""); setSelectedContact(null); setContactName(""); setContactEmail(""); setContactAddress(""); }
+    if (match) { setContactId(match.id); setSelectedContact(match); setContactName(match.name); setContactEmail(match.email ?? ""); setContactAddress(match.address ?? ""); setAddressAutoFilled(true); }
+    else if (contactId) { setContactId(""); setSelectedContact(null); setContactName(""); setContactEmail(""); setContactAddress(""); setAddressAutoFilled(false); }
   }
   function chooseContact(contact: Contact) {
     setContactId(contact.id); setSelectedContact(contact); setContactSearch(""); setContactSearchOpen(false);
-    setContactName(contact.name); setContactPhone(contact.phoneE164 ?? ""); setContactEmail(contact.email ?? ""); setContactAddress(contact.address ?? "");
+    setContactName(contact.name); setContactPhone(contact.phoneE164 ?? ""); setContactEmail(contact.email ?? ""); setContactAddress(contact.address ?? ""); setAddressAutoFilled(true);
   }
   function clearContact() {
-    setContactId(""); setSelectedContact(null); setContactSearch(""); setContactName(""); setContactPhone(""); setContactEmail(""); setContactAddress("");
+    setContactId(""); setSelectedContact(null); setContactSearch(""); setContactName(""); setContactPhone(""); setContactEmail(""); setContactAddress(""); setAddressAutoFilled(false);
   }
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault(); setBusy(true); setError("");
@@ -292,6 +293,7 @@ export function TransactionPage({ mode }: { mode: "sale" | "purchase" }) {
           setContactPhone(existing.phoneE164 ?? "");
           setContactEmail(existing.email ?? "");
           setContactAddress(existing.address ?? "");
+          setAddressAutoFilled(true);
         }
       }
       const common = {
@@ -325,7 +327,7 @@ export function TransactionPage({ mode }: { mode: "sale" | "purchase" }) {
     }
     finally { setBusy(false); }
   }
-  if (invoice) return <div className="space-y-5"><PageHeader eyebrow={isSale ? "Sales / POS" : "Purchasing"} title="Invoice completed" description="The transaction and stock update were saved together."/><Panel title={invoice.invoiceNumber} description={`Total ${formatMoney(invoice.total)} · Due ${formatMoney(invoice.dueAmount)}`}><div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap"><Link className="rounded-xl bg-primary px-4 py-2.5 text-center text-sm font-semibold text-primary-foreground" href={`/${isSale ? "sales" : "purchases"}/${invoice.id}`}>Open printable invoice</Link><Button variant="outline" icon={<Plus size={15}/>} className="sm:w-auto" onClick={() => { setInvoice(null); setLines([]); setPaidAmount("0"); setAdditionalCost("0"); setAllowDue(false); setContactId(""); setContactPhone(""); setContactName(""); setContactAddress(""); setDiscountType(""); setDiscountValue("0"); setPaymentMethodId(""); }}>Create another</Button><p className="flex items-center gap-1.5 self-center text-xs text-muted-foreground"><Key>F2</Key> then start scanning the next customer</p></div></Panel></div>;
+  if (invoice) return <div className="space-y-5"><PageHeader eyebrow={isSale ? "Sales / POS" : "Purchasing"} title="Invoice completed" description="The transaction and stock update were saved together."/><Panel title={invoice.invoiceNumber} description={`Total ${formatMoney(invoice.total)} · Due ${formatMoney(invoice.dueAmount)}`}><div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap"><Link className="rounded-xl bg-primary px-4 py-2.5 text-center text-sm font-semibold text-primary-foreground" href={`/${isSale ? "sales" : "purchases"}/${invoice.id}`}>Open printable invoice</Link><Button variant="outline" icon={<Plus size={15}/>} className="sm:w-auto" onClick={() => { setInvoice(null); setLines([]); setPaidAmount("0"); setAdditionalCost("0"); setAllowDue(false); setContactId(""); setContactPhone(""); setContactName(""); setContactAddress(""); setAddressAutoFilled(false); setDiscountType(""); setDiscountValue("0"); setPaymentMethodId(""); }}>Create another</Button><p className="flex items-center gap-1.5 self-center text-xs text-muted-foreground"><Key>F2</Key> then start scanning the next customer</p></div></Panel></div>;
   const unitOptions = (line: Line) => {
     const product = products.find((item) => item.id === line.productId);
     if (!product) return [];
@@ -373,7 +375,7 @@ export function TransactionPage({ mode }: { mode: "sale" | "purchase" }) {
           <input name="contactName" value={contactName} onChange={(e) => setContactName(e.target.value)} className={inputClass} placeholder={`${isSale ? "Customer" : "Supplier"} name — blank is a walk-in sale`}/>
         </div>
         {selectedContact && <div className="mt-3 flex items-center justify-between rounded-xl border border-primary/20 bg-primary/5 px-3 py-2 text-sm"><span>Selected: <strong>{selectedContact.name}</strong> — details below are theirs, edit only for this invoice.</span><button type="button" onClick={clearContact} className="ml-3 shrink-0 rounded-md p-1 text-muted-foreground hover:bg-muted" aria-label="Clear selected contact"><X size={15}/></button></div>}
-        <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-4"><PhoneInput name="contactPhone" countryCode={countryCode} value={contactPhone} onChange={updateContactPhone} placeholder="Phone (optional)"/><input name="contactEmail" value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} type="email" inputMode="email" className={inputClass} placeholder="Email (optional)"/><AddressInput name="contactAddress" value={contactAddress} onChange={setContactAddress} countryCode={countryCode} placeholder="Search address or type manually" className="sm:col-span-2"/></div>
+        <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-4"><PhoneInput name="contactPhone" countryCode={countryCode} value={contactPhone} onChange={updateContactPhone} placeholder="Phone (optional)"/><input name="contactEmail" value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} type="email" inputMode="email" className={inputClass} placeholder="Email (optional)"/><AddressInput name="contactAddress" value={contactAddress} onChange={(value) => { setAddressAutoFilled(false); setContactAddress(value); }} countryCode={countryCode} placeholder="Search address or type manually" suggestions={!addressAutoFilled} className="sm:col-span-2"/></div>
         {!isSale && <div className="mt-3 grid gap-2 sm:grid-cols-2">
           <label className="block"><span className="mb-1.5 block text-xs font-medium">Supplier invoice number (optional)</span><input name="supplierInvoiceNumber" maxLength={100} className={inputClass} placeholder="Number printed on supplier bill"/></label>
           <label className="block"><span className="mb-1.5 block text-xs font-medium">Additional landed cost</span><input name="additionalCost" type="number" inputMode="decimal" min="0" step="0.01" value={additionalCost} onChange={(e) => setAdditionalCost(e.target.value)} className={inputClass} placeholder="0"/></label>
