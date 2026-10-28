@@ -52,3 +52,6 @@ npm-debug.log*
 tmp
 temp
 *.tmp
+
+# Database backups (kept on the host disk, not needed in the image)
+backups

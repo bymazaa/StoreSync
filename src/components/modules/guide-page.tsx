@@ -119,7 +119,7 @@ const scenarios = [
   { icon: ShoppingBag, when: "More stock arrives from the same supplier", where: "Sidebar → Purchases → New purchase", steps: "Repeat step 5. Costing is recalculated from the new cost, so always enter the real per-unit cost — it drives the profit figure." },
   { icon: Printer, when: "You need paperwork for the owner or an audit", where: "Sidebar → Reports", steps: "Pick the report type, set From and To dates, press Refresh, then Print / Save PDF. Choose “Save as PDF” as the destination; Bengali and English text both save correctly because it prints the page itself." },
   { icon: Hourglass, when: "An item shows as out of stock during a sale", where: "The blocked sale screen", steps: "Press Create a purchase to receive stock from a supplier, complete it, then come back and finish the sale. Selling below zero is not allowed." },
-  { icon: KeyRound, when: "A staff member forgets their password", where: "Sidebar → Settings → panel “Staff accounts”", steps: "Press Reset password in their row, type a new temporary password of at least 12 characters and press Set password. Hand it over in person: it works on their next sign-in and every session they were signed in from is signed out. Only an owner or manager with the staff-accounts permission sees this. The owner’s own account cannot be reset here — that needs the pnpm db:password <email> command on the server." },
+  { icon: KeyRound, when: "A staff member forgets their password", where: "Sidebar → Settings → panel “Staff accounts”", steps: "Press Reset password in their row, type a new temporary password of at least 12 characters and press Set password. Hand it over in person: it works on their next sign-in and every session they were signed in from is signed out. Only an owner or manager with the staff-accounts permission sees this. The owner’s own account cannot be reset here — use option 4 of the Start StockPilot.bat server menu instead." },
 ];
 
 const words = [
@@ -144,6 +144,19 @@ const rules = [
   { icon: Printer, title: "Nothing is deleted after completion", text: "Completed invoices are corrected with returns or cancellation, and expenses with void, so the audit trail always explains the numbers." },
   { icon: BookOpen, title: "Money is exact", text: "Amounts are stored as exact decimals, so totals, dues and profit do not drift with rounding." },
   { icon: MousePointerClick, title: "Your data stays on your own server", text: "StockPilot runs against your own database; there is no external account or third-party copy of shop records." },
+];
+
+const serverMenu = [
+  { key: "1", name: "Start StockPilot and open the browser", text: "Switches the server on and opens the shop. If it asks you to wait, the first start can take a couple of minutes." },
+  { key: "2", name: "Stop StockPilot", text: "Switches the server off cleanly. All shop data stays safe on the disk — nothing is lost." },
+  { key: "3", name: "Show staff list", text: "Prints every staff account with name, email and role, straight from the database." },
+  { key: "4", name: "Reset a password (admin or staff)", text: "Type the account's email and it gives a new password. This is the only way to reset the owner's own password — the app cannot do it." },
+  { key: "5", name: "Change an account email", text: "Moves an account from its old email to a new one — useful when a staff member's address changes." },
+  { key: "6", name: "Add a staff member", text: "Creates an account from the menu: full name, email and role (OWNER, MANAGER, CASHIER or STOCK_CLERK)." },
+  { key: "7", name: "Remove a staff member", text: "Deletes an account by email." },
+  { key: "8", name: "Backup all data to a file", text: "Writes every table and every record into one file inside the backups folder, named stockpilot-date-time.gz. Take one before any big change, and keep copies somewhere outside the shop computer from time to time." },
+  { key: "9", name: "Restore data from a backup", text: "Shows the backups as a numbered list — type the number of the file you want. It asks twice (YES, then the word RESTORE) and automatically saves a safety copy of the current data first. Everything recorded after that backup was made is replaced." },
+  { key: "0", name: "Exit", text: "Closes the menu." },
 ];
 
 export function GuidePage() {
@@ -216,6 +229,18 @@ export function GuidePage() {
           ))}
         </div>
         <Callout icon={ArrowDownToLine} title="The one rule people miss" text="Adding a product does not put stock in the shop. Stock appears only after a purchase is completed — that is what keeps the stock count, the supplier bill and the cost price tied together. For the same reason, Inventory → Adjust stock refuses “Stock in” for a product that has no selling price yet; use a purchase for opening stock and keep adjustments for count corrections." />
+      </Panel>
+
+      <Panel title="Server menu (Start StockPilot.bat)" description="On the shop's own computer there is a file named Start StockPilot.bat. Double-click it to open a small menu — the owner uses it for the jobs that cannot be done from inside the app, straight on the database. Pick a number and answer the questions it asks.">
+        <ol className="space-y-2.5 border-l border-border pl-4">
+          {serverMenu.map((item) => (
+            <li key={item.key} className="relative text-sm leading-6 text-muted-foreground">
+              <span className="absolute -left-[21px] top-1.5 grid size-3.5 place-items-center rounded-full bg-muted text-[8px] font-bold text-foreground tabular-nums">{item.key}</span>
+              <span className="font-semibold text-foreground">{item.name}</span> — {item.text}
+            </li>
+          ))}
+        </ol>
+        <Callout icon={ShieldCheck} title="This menu belongs to the owner" text="It works directly on the database, so it ignores the role permissions of the app. Keep it away from the counter staff." />
       </Panel>
 
       <Panel title="Words made simple" description="Short meanings for the terms you see on screens and invoices.">
