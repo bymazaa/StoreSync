@@ -1,0 +1,29 @@
+export default function LogoMark({ className }: { className?: string }) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" className={className} role="img" aria-label="StockPilot" fill="none">
+      <g stroke="#0a9f94" strokeLinecap="round">
+        <circle cx="32" cy="25" r="11" strokeWidth="3.2" />
+        <line x1="32" y1="15.6" x2="32" y2="22.4" strokeWidth="2.6" />
+        <line x1="18.6" y1="25" x2="29.4" y2="25" strokeWidth="2.6" />
+        <line x1="34.6" y1="25" x2="45.4" y2="25" strokeWidth="2.6" />
+        <line x1="32" y1="27.6" x2="32" y2="35.5" strokeWidth="2.6" />
+        <line x1="24" y1="19.8" x2="20.3" y2="15.2" strokeWidth="3" />
+        <line x1="40" y1="19.8" x2="43.7" y2="15.2" strokeWidth="3" />
+      </g>
+      <g fill="#0a9f94">
+        <circle cx="32" cy="25" r="2.6" />
+        <rect x="14.5" y="36" width="35" height="4.5" rx="2.25" />
+        <path d="M17 40.5 H47 V50.5 A3.5 3.5 0 0 1 43.5 54 H20.5 A3.5 3.5 0 0 1 17 50.5 Z" />
+        <path d="M32 14.4 C 35 12.6, 35.6 8.9, 32.6 6.8 C 29.6 8.9, 30.2 12.6, 32 14.4 Z" />
+      </g>
+      <g fill="#ffffff">
+        <circle cx="32" cy="25" r="1.1" />
+        <rect x="24.6" y="43.5" width="2.8" height="7" rx="1.4" />
+        <rect x="28.6" y="43.5" width="2.8" height="7" rx="1.4" />
+        <rect x="32.6" y="43.5" width="2.8" height="7" rx="1.4" />
+        <rect x="36.6" y="43.5" width="2.8" height="7" rx="1.4" />
+      </g>
+      <path d="M32 13.6 L32 8.4" stroke="#ffffff" strokeWidth="0.9" strokeLinecap="round" />
+    </svg>
+  );
+}

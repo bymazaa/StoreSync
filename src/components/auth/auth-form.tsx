@@ -3,8 +3,9 @@
 import { useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowRight, LoaderCircle, ShoppingBag } from "lucide-react";
+import { ArrowRight, LoaderCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import LogoMark from "@/components/brand/logo-mark";
 import { readResponsePayload } from "@/lib/client-api";
 
 type AuthFormProps = { mode: "login" | "setup"; showBrand?: boolean };
@@ -51,8 +52,8 @@ export function AuthForm({ mode, showBrand = true }: AuthFormProps) {
     <div className="mx-auto w-full max-w-md">
       {showBrand && (
         <div className="mb-8 flex items-center gap-3">
-          <span className="grid size-11 place-items-center rounded-2xl bg-primary text-primary-foreground shadow-sm"><ShoppingBag size={21} /></span>
-          <span><span className="block font-display text-2xl leading-none tracking-[0.06em]">StockPilot</span><span className="text-xs text-muted-foreground">Grocery shop management</span></span>
+          <span className="grid size-11 place-items-center rounded-2xl border border-border bg-white shadow-2xl"><LogoMark className="size-7" /></span>
+          <span><span className="block font-logo text-2xl font-semibold leading-none tracking-[0.06em]">STOCK-PILOT</span><span className="text-xs text-muted-foreground">Grocery shop management</span></span>
         </div>
       )}
       <div className="rounded-3xl border border-border bg-card p-6 shadow-card sm:p-8">

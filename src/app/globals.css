@@ -174,13 +174,22 @@
 @media screen { .label-grid { grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); } }
 @custom-variant dark (&:where(.dark, .dark *));
 
-/* The app face is self-hosted so shop machines never need an internet fetch; Nunito Sans ships
-   as a variable 200-1000 woff2 (latin subset). */
+/* The app face is self-hosted so shop machines never need an internet fetch; Archivo ships
+   as a variable 100-900 woff2 (latin subset). */
 @font-face {
-  font-family: "Nunito Sans";
-  src: url("/fonts/nunito-sans-wght-normal.woff2") format("woff2");
+  font-family: "Archivo";
+  src: url("/fonts/archivo-wght-normal.woff2") format("woff2");
   font-style: normal;
-  font-weight: 200 1000;
+  font-weight: 100 900;
+  font-display: swap;
+}
+
+/* Logo wordmark face: Baloo 2 variable 400-800, self-hosted so shops stay offline. */
+@font-face {
+  font-family: "Baloo 2";
+  src: url("/fonts/baloo2-wght-normal.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 400 800;
   font-display: swap;
 }
 
@@ -202,32 +211,34 @@
   --border: #e6ece9;
   --muted: #f0f4f2;
   --muted-foreground: #74817e;
-  --primary: #0f9d8a;
+  --primary: #0a9f94;
   --primary-foreground: #ffffff;
-  --primary-soft: #e5f4f0;
+  --primary-soft: #e0f5f2;
   --sidebar: #102a43;
   --sidebar-foreground: #e1ebf3;
-  --ring: #14a392;
-  --success: #13866e;
+  --ring: #1ba69b;
+  --success: #0e8a73;
   --danger: #d45151;
-  --teal-soft: #e5f4f0;
-  --teal-strong: #0d897a;
+  --teal-soft: #e0f5f2;
+  --teal-strong: #07857c;
   --blue-soft: #eaf1fb;
   --blue-strong: #4b75ba;
   --amber-soft: #fff3dc;
   --amber-strong: #bd811e;
   --violet-soft: #f0ebfb;
   --violet-strong: #8264bd;
-  --chart-primary: #0f9d8a;
+  --chart-primary: #0a9f94;
   --chart-secondary: #93a9cc;
   --chart-grid: #e9efed;
   --chart-label: #8b9794;
   --tooltip-bg: #ffffff;
-  /* Nunito Sans has no Bengali glyphs and Windows' system-ui (Segoe UI) shows boxes for them, so the local
+  /* Archivo has no Bengali glyphs and Windows' system-ui (Segoe UI) shows boxes for them, so the local
      Bengali faces are named before the generic fallbacks — the shop's data is Bengali on every counter PC. */
-  --app-font-sans: "Nunito Sans", "Noto Sans Bengali Variable", "Noto Sans Bengali", "Nirmala UI", "Shonar Bangla", "Bangla Sangam MN", "Vrinda", ui-sans-serif, system-ui, "Segoe UI", sans-serif;
+  --app-font-sans: "Archivo", "Noto Sans Bengali Variable", "Noto Sans Bengali", "Nirmala UI", "Shonar Bangla", "Bangla Sangam MN", "Vrinda", ui-sans-serif, system-ui, "Segoe UI", sans-serif;
   /* One face for the whole system: headings share the body font, only size and weight differ. */
   --app-font-display: var(--app-font-sans);
+  /* Baloo 2 only carries Latin glyphs, so the wordmark falls back to the app face for anything else. */
+  --app-font-logo: "Baloo 2", var(--app-font-sans);
   --app-font-mono: ui-monospace, "Cascadia Mono", "SF Mono", "Segoe UI Mono", Menlo, Consolas, monospace;
 }
 
@@ -258,6 +269,7 @@
   --shadow-card: 0 4px 18px rgb(24 58 51 / 0.045);
   --font-sans: var(--app-font-sans);
   --font-display: var(--app-font-display);
+  --font-logo: var(--app-font-logo);
   --font-mono: var(--app-font-mono);
 }
 
@@ -269,12 +281,12 @@
   --border: #293733;
   --muted: #202c29;
   --muted-foreground: #9aa9a4;
-  --primary: #54c5b1;
+  --primary: #4fbbab;
   --primary-foreground: #082a26;
   --primary-soft: #183b35;
   --sidebar: #131d1b;
   --sidebar-foreground: #adbbb6;
-  --ring: #54c5b1;
+  --ring: #4fbbab;
   --success: #60c6a6;
   --danger: #f17b79;
   --teal-soft: #183b35;
@@ -300,7 +312,7 @@ body {
 }
 
 @layer base {
-  /* Headings share the Nunito Sans body face — the variable font carries real weights, so
+  /* Headings share the Archivo body face — the variable font carries real weights, so
      font-* utilities never render as synthetic bold. Bengali falls through inside the stack. */
   h1, h2, h3 { font-family: var(--app-font-display); letter-spacing: 0.02em; }
 }

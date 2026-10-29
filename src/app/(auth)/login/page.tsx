@@ -1,9 +1,10 @@
 import { redirect } from "next/navigation";
 import {
-  Boxes, ChartNoAxesCombined, Check, MapPin, Printer, ShieldCheck, ShoppingCart, ShoppingBag,
+  Boxes, ChartNoAxesCombined, Check, MapPin, Printer, ShieldCheck, ShoppingCart,
   Store, Truck, UsersRound, X,
 } from "lucide-react";
 import { AuthForm } from "@/components/auth/auth-form";
+import LogoMark from "@/components/brand/logo-mark";
 import { getViewerUser } from "@/lib/auth/session";
 import connectDB from "@/lib/db";
 import { User } from "@/models";
@@ -55,9 +56,9 @@ export default async function LoginPage() {
   return (
     <div className="min-h-screen">
       <header className="mx-auto flex w-full max-w-6xl items-center gap-3 px-4 py-6 pr-16 sm:px-6">
-        <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-primary text-primary-foreground shadow-sm"><ShoppingBag size={21} /></span>
+        <span className="grid size-11 shrink-0 place-items-center rounded-2xl border border-border bg-white shadow-2xl"><LogoMark className="size-7" /></span>
         <span>
-          <span className="block font-display text-2xl leading-none tracking-[0.06em]">StockPilot</span>
+          <span className="block font-logo text-2xl font-semibold leading-none tracking-[0.06em]">STOCK-PILOT</span>
           <span className="text-xs text-muted-foreground">Grocery shop management</span>
         </span>
       </header>
