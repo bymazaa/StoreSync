@@ -1,11 +1,12 @@
 'use client';
 
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
-import { Printer, Search } from 'lucide-react';
+import { Banknote, FileText, HandCoins, Handshake, Hash, Package, PiggyBank, Printer, ReceiptText, RotateCcw, Search, ShoppingBag, ShoppingCart, Sigma, TrendingUp, Truck, UsersRound, Wallet, type LucideIcon } from 'lucide-react';
 import { apiRequest } from '@/lib/client-api';
 import { addDateKeyDays, localDateKey } from '@/lib/date-time';
-import { ErrorMessage, inputClass, PageHeader, Panel, selectClass } from '@/components/ui/page';
+import { ErrorMessage, PageHeader, Panel, selectClass } from '@/components/ui/page';
 import { Button } from '@/components/ui/button';
+import { DateField } from '@/components/ui/date-field';
 import { useShopFormat } from '@/components/app/shop-context';
 import {
     columnLabel,
@@ -45,16 +46,77 @@ const presets: { value: Preset; label: string }[] = [
     { value: 'custom', label: 'Custom range' },
 ];
 
+// StatCard-style summary tiles: title on top, tinted icon chip, one big number. The gloss line
+// under the number is a <span> on purpose — the print stylesheet sizes .report-summary's first
+// and last <p>, so the value must stay the last paragraph.
+const summaryIcons: Record<string, LucideIcon> = {
+    invoiceCount: FileText,
+    grossSales: ShoppingCart,
+    returns: RotateCcw,
+    returnCount: RotateCcw,
+    revenue: Banknote,
+    costOfGoods: Package,
+    grossProfit: TrendingUp,
+    netProfit: PiggyBank,
+    expenses: Wallet,
+    expenseCount: ReceiptText,
+    grossPurchases: ShoppingBag,
+    total: Sigma,
+    count: Hash,
+    customerDue: HandCoins,
+    supplierDue: Handshake,
+    customersOwed: UsersRound,
+    suppliersOwed: Truck,
+};
+
+const summaryGloss: Record<string, string> = {
+    invoiceCount: 'Invoices this period',
+    grossSales: 'Before returns',
+    returns: 'Refunds & reversals',
+    returnCount: 'Returned invoices',
+    revenue: 'Net of returns',
+    costOfGoods: 'Cost of sold items',
+    grossProfit: 'Revenue − cost of goods',
+    netProfit: 'Profit after expenses',
+    expenses: 'Recorded expenses',
+    expenseCount: 'Expense entries',
+    grossPurchases: 'Before returns',
+    total: 'Net purchases',
+    count: 'Entries this period',
+    customerDue: "Customers' unpaid balance",
+    supplierDue: "Suppliers' unpaid balance",
+    customersOwed: 'Customers with a balance',
+    suppliersOwed: 'Suppliers with a balance',
+};
+
+const summaryTones: Record<string, string> = {
+    returns: 'bg-amber-soft text-amber-strong',
+    costOfGoods: 'bg-violet-soft text-violet-strong',
+    expenses: 'bg-amber-soft text-amber-strong',
+    grossPurchases: 'bg-violet-soft text-violet-strong',
+    customerDue: 'bg-amber-soft text-amber-strong',
+    supplierDue: 'bg-amber-soft text-amber-strong',
+};
+
 export function ReportsPage() {
     const { formatMoney, formatNumber, formatDateTime, timezone } = useShopFormat();
-    const today = localDateKey(new Date(), timezone);
+    // `new Date()` stays out of the render path so the page shell can be prerendered;
+    // the real "today" lands in a mount effect.
+    const [today, setToday] = useState('');
     const [type, setType] = useState<ReportType>('sales');
     const [preset, setPreset] = useState<Preset>('30');
-    const [from, setFrom] = useState(() => addDateKeyDays(today, -30));
-    const [to, setTo] = useState(today);
+    const [from, setFrom] = useState('');
+    const [to, setTo] = useState('');
     const [data, setData] = useState<Payload | null>(null);
     const [error, setError] = useState('');
     const [busy, setBusy] = useState(false);
+    const [generatedAt, setGeneratedAt] = useState('');
+    useEffect(() => {
+        const end = localDateKey(new Date(), timezone);
+        setToday(end);
+        setFrom((previous) => previous || addDateKeyDays(end, -30));
+        setTo((previous) => previous || end);
+    }, [timezone]);
     const load = useCallback(async () => {
         setBusy(true);
         setError('');
@@ -63,6 +125,7 @@ export function ReportsPage() {
             if (from) query.set('from', from);
             if (to) query.set('to', to);
             setData(await apiRequest<Payload>(`/api/reports?${query}`));
+            setGeneratedAt(formatDateTime(new Date()));
         } catch (caught) {
             setError(caught instanceof Error ? caught.message : 'Report could not be loaded.');
         } finally {
@@ -70,11 +133,12 @@ export function ReportsPage() {
         }
     }, [type, from, to]);
     useEffect(() => {
+        if (!today) return;
         const timer = window.setTimeout(() => {
             void load();
         }, 0);
         return () => window.clearTimeout(timer);
-    }, [load]);
+    }, [load, today]);
     function applyPreset(value: Preset) {
         setPreset(value);
         if (value === 'all') {
@@ -91,7 +155,6 @@ export function ReportsPage() {
     const sections = data ? statementSections(type, data) : [];
     const label = reportLabel(type);
     const period = !from && !to ? 'All time' : `${from || 'Start'} → ${to || today}`;
-    const generatedAt = data ? formatDateTime(new Date()) : '';
     const contact = [data?.shop?.address, data?.shop?.phone].filter(Boolean).join(' · ');
     const shopName = data?.shop?.name ?? 'StockPilot';
     const currencyCode = data?.currencyCode ?? '';
@@ -111,7 +174,7 @@ export function ReportsPage() {
     }
 
     return (
-        <div className="report-print space-y-6 print:space-y-0">
+        <div className="report-print space-y-6 print:space-y-0" aria-busy={busy}>
             <div className="print:hidden">
                 <PageHeader
                     eyebrow="Business insights"
@@ -178,7 +241,7 @@ export function ReportsPage() {
                     </div>
                 }
             >
-                <div className="grid items-end gap-3 sm:grid-cols-2 lg:grid-cols-[minmax(200px,1.2fr)_minmax(150px,1fr)_minmax(140px,0.85fr)_minmax(140px,0.85fr)_auto]">
+                <div className="grid items-end gap-3 sm:grid-cols-2 lg:grid-cols-[minmax(0,1.2fr)_repeat(3,minmax(0,1fr))_auto]">
                     <label className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">
                         Report type
                         <select
@@ -211,26 +274,24 @@ export function ReportsPage() {
                     </label>
                     <label className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">
                         From
-                        <input
-                            type="date"
+                        <DateField
                             value={from}
-                            onChange={(e) => {
-                                setFrom(e.target.value);
+                            onChange={(value) => {
+                                setFrom(value);
                                 setPreset('custom');
                             }}
-                            className={`${inputClass} mt-1.5`}
+                            className="mt-1.5"
                         />
                     </label>
                     <label className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">
                         To
-                        <input
-                            type="date"
+                        <DateField
                             value={to}
-                            onChange={(e) => {
-                                setTo(e.target.value);
+                            onChange={(value) => {
+                                setTo(value);
                                 setPreset('custom');
                             }}
-                            className={`${inputClass} mt-1.5`}
+                            className="mt-1.5"
                         />
                     </label>
                     <Button
@@ -248,6 +309,18 @@ export function ReportsPage() {
                     </p>
                 )}
             </Panel>
+            {data && (
+                <div className="report-screen-meta print:hidden" aria-live="polite">
+                    <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+                        <span className="font-semibold text-foreground">{label}</span>
+                        <span aria-hidden="true" className="text-border">·</span>
+                        <span>{period}</span>
+                        <span aria-hidden="true" className="text-border">·</span>
+                        <span>{formatNumber(rows.length)} {rows.length === 1 ? 'entry' : 'entries'}</span>
+                    </div>
+                    {generatedAt && <span className="shrink-0">Updated {generatedAt}</span>}
+                </div>
+            )}
             {data?.summary && (
                 <section className="report-summary grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                     {Object.entries(data.summary)
@@ -259,29 +332,32 @@ export function ReportsPage() {
                                 (typeof value === 'string' &&
                                     value.trim() !== '' &&
                                     Number.isFinite(Number(value)));
+                            const negative = numeric && Number(value) < 0;
                             const shown = money
                                 ? formatMoney(String(value))
                                 : numeric
                                   ? formatNumber(Number(value))
                                   : printable(value);
+                            const Icon = summaryIcons[key] ?? (money ? Banknote : Hash);
+                            const tone = negative
+                                ? 'bg-danger/10 text-danger'
+                                : summaryTones[key] ?? (money ? 'bg-teal-soft text-teal-strong' : 'bg-blue-soft text-blue-strong');
                             return (
-                                <div
-                                    key={key}
-                                    className={`rounded-2xl border bg-card p-4 shadow-card ${money ? 'border-primary/25' : 'border-border'}`}
-                                >
-                                    <p className="flex items-center justify-between gap-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-                                        {columnLabel(key)}
-                                        {money ? (
-                                            <span className="rounded-full bg-teal-soft px-2 py-0.5 text-[9px] font-bold tracking-[0.1em] text-teal-strong print:hidden">
-                                                Amount
-                                            </span>
-                                        ) : null}
-                                    </p>
-                                    <p
-                                        className={`mt-3 text-[26px] leading-none font-semibold tracking-tight tabular-nums ${money ? 'text-teal-strong' : 'text-foreground'}`}
-                                    >
+                                <div key={key} className="rounded-[16px] border border-line bg-card p-5 shadow-2xl shadow-gray-100 dark:shadow-none">
+                                    <div className="flex items-start justify-between gap-4">
+                                        <p className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+                                            {columnLabel(key)}
+                                        </p>
+                                        <span className={`grid size-9 shrink-0 place-items-center rounded-xl print:hidden ${tone}`}>
+                                            <Icon size={17} strokeWidth={1.9} />
+                                        </span>
+                                    </div>
+                                    <p className={`mt-4 text-[clamp(1.5rem,2.2vw,2rem)] font-medium leading-none tracking-[-0.03em] tabular-nums [overflow-wrap:anywhere] ${negative ? 'text-danger' : 'text-foreground'}`}>
                                         {shown}
                                     </p>
+                                    <span className="mt-2 block text-[11px] text-muted-foreground print:hidden">
+                                        {summaryGloss[key] ?? (money ? `All amounts in ${currencyCode}` : period)}
+                                    </span>
                                 </div>
                             );
                         })}
@@ -338,7 +414,7 @@ function ReportTable({ rows, columns }: { rows: Row[]; columns: string[] }) {
     return (
         <div className="report-table-frame overflow-hidden rounded-xl border border-border/70">
             <div className="overflow-x-auto">
-                <table className="w-full min-w-[720px] table-fixed text-left text-sm">
+                <table className="w-full min-w-[640px] table-fixed text-left text-sm">
                     <colgroup>
                         {widths.map((width, index) => (
                             <col key={index} style={{ width }} />
@@ -360,7 +436,7 @@ function ReportTable({ rows, columns }: { rows: Row[]; columns: string[] }) {
                     <tbody className="divide-y divide-border/60">
                         {rows.map((row, index) => (
                             <tr
-                                key={printable(row.id) || index}
+                                key={typeof row.id === 'string' && row.id.length > 0 ? String(row.id) : index}
                                 className={`${index % 2 === 1 ? 'bg-muted/25' : ''} transition-colors hover:bg-teal-soft/50`}
                             >
                                 <td className="report-serial select-none px-2 py-3 text-right text-[11px] tabular-nums text-muted-foreground/80">

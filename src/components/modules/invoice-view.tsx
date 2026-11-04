@@ -6,6 +6,7 @@ import { useParams } from 'next/navigation';
 import { apiRequest } from '@/lib/client-api';
 import { ErrorMessage, PageHeader, Panel } from '@/components/ui/page';
 import { Button } from '@/components/ui/button';
+import { DateField } from '@/components/ui/date-field';
 import { useHasPermission, useShopFormat } from '@/components/app/shop-context';
 import { usesWholeQuantity } from '@/lib/quantity';
 
@@ -268,8 +269,8 @@ export function InvoiceView({ mode }: { mode: 'sale' | 'purchase' }) {
                                 Back
                             </Link>
                             <div className="flex min-h-10 items-center gap-0.5 rounded-xl border border-border p-0.5">
-                                <button type="button" aria-pressed={!receiptPrint} onClick={() => setReceiptPrint(false)} className={`h-9 rounded-[10px] px-3 text-xs font-semibold transition-colors ${receiptPrint ? 'text-muted-foreground hover:bg-muted' : 'bg-teal-soft text-teal-strong'}`}>A4</button>
-                                <button type="button" aria-pressed={receiptPrint} onClick={() => setReceiptPrint(true)} className={`h-9 rounded-[10px] px-3 text-xs font-semibold transition-colors ${receiptPrint ? 'bg-teal-soft text-teal-strong' : 'text-muted-foreground hover:bg-muted'}`}>80 mm</button>
+                                <button type="button" aria-pressed={!receiptPrint} onClick={() => setReceiptPrint(false)} className={`h-9 rounded-lg px-3 text-xs font-semibold transition-colors ${receiptPrint ? 'text-muted-foreground hover:bg-muted' : 'bg-teal-soft text-teal-strong'}`}>A4</button>
+                                <button type="button" aria-pressed={receiptPrint} onClick={() => setReceiptPrint(true)} className={`h-9 rounded-lg px-3 text-xs font-semibold transition-colors ${receiptPrint ? 'bg-teal-soft text-teal-strong' : 'text-muted-foreground hover:bg-muted'}`}>80 mm</button>
                             </div>
                             <Button className="min-h-10 flex-1 text-sm sm:flex-none" variant="outline" onClick={printInvoice}>
                                 Print invoice
@@ -419,7 +420,12 @@ export function InvoiceView({ mode }: { mode: 'sale' | 'purchase' }) {
                                     <tr key={item.id}>
                                         <td className="max-w-52 px-2 py-3 font-medium sm:px-3">
                                             <span title={item.productName} className="block max-w-52 break-words font-semibold">
-                                                {limitText(item.productName, 42)}
+                                                <span className="print:hidden">
+                                                    {limitText(item.productName, 42)}
+                                                </span>
+                                                <span className="hidden print:inline">
+                                                    {item.productName}
+                                                </span>
                                             </span>
                                             <span className="receipt-item-meta mt-0.5 block max-w-52 break-words text-[10px] text-muted-foreground sm:text-xs">
                                                 SKU {limitText(item.skuSnapshot, 24)}
@@ -679,7 +685,12 @@ export function InvoiceView({ mode }: { mode: 'sale' | 'purchase' }) {
                                                     title={item.productName}
                                                     className="max-w-52 px-2 py-2 font-medium sm:px-3"
                                                 >
+                                                    <span className="print:hidden">
                                                     {limitText(item.productName, 42)}
+                                                </span>
+                                                <span className="hidden print:inline">
+                                                    {item.productName}
+                                                </span>
                                                 </td>
                                                 <td className="whitespace-nowrap px-2 py-2 sm:px-3">
                                                     {formatQuantity(item.quantity)}{' '}
@@ -740,21 +751,27 @@ export function InvoiceView({ mode }: { mode: 'sale' | 'purchase' }) {
                                                             />
                                                         </td>
                                                         <td className="whitespace-nowrap px-2 py-2 sm:px-3">
-                                                            <input
-                                                                name={`expiry-${item.id}`}
-                                                                type="date"
-                                                                required={
-                                                                    Boolean(
-                                                                        item.product?.tracksExpiry,
-                                                                    ) &&
-                                                                    Number(
-                                                                        returnQuantities[item.id] ??
-                                                                            0,
-                                                                    ) > 0
-                                                                }
-                                                                disabled={remaining <= 0}
-                                                                className="h-9 w-36 rounded-lg border border-border bg-background px-2 text-sm outline-none transition focus:border-primary"
-                                                            />
+                                                            <span className="block w-36">
+                                                                <DateField
+                                                                    dense
+                                                                    name={`expiry-${item.id}`}
+                                                                    required={
+                                                                        Boolean(
+                                                                            item.product?.tracksExpiry,
+                                                                        ) &&
+                                                                        Number(
+                                                                            returnQuantities[item.id] ??
+                                                                                0,
+                                                                        ) > 0
+                                                                    }
+                                                                    disabled={remaining <= 0}
+                                                                    placeholder={
+                                                                        item.product?.tracksExpiry
+                                                                            ? 'Required'
+                                                                            : 'Optional'
+                                                                    }
+                                                                />
+                                                            </span>
                                                         </td>
                                                     </>
                                                 )}

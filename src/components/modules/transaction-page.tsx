@@ -2,10 +2,11 @@
 
 import { useCallback, useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import Link from "next/link";
-import { Minus, Plus, Search, X } from "lucide-react";
+import { ArrowRight, Minus, Plus, Search, X } from "lucide-react";
 import { apiRequest, jsonBody } from "@/lib/client-api";
 import { ErrorMessage, inputClass, PageHeader, Panel, selectClass } from "@/components/ui/page";
 import { Button } from "@/components/ui/button";
+import { DateField } from "@/components/ui/date-field";
 import { useHasPermission, useShopCountryCode, useShopFormat } from "@/components/app/shop-context";
 import { PhoneInput } from "@/components/ui/phone-input";
 import { AddressInput } from "@/components/ui/address-input";
@@ -17,6 +18,10 @@ type Product = { id: string; name: string; sku: string; barcode: string | null; 
 type Contact = { id: string; name: string; phoneE164: string | null; email: string | null; address: string | null };
 type Method = { id: string; name: string };
 type RecentInvoice = { id: string; invoiceNumber: string; total: string; dueAmount: string; status: string; soldAt?: string; purchasedAt?: string; customer?: { name: string } | null; supplier?: { name: string } | null };
+type InvoiceItem = { id: string; productName: string; skuSnapshot: string; quantity: number; unitPrice?: number; unitCost?: number; lineTotal: number; batchNumber?: string | null; unit?: { name: string; symbol: string } | null };
+type InvoicePayment = { id: string; amount: number; paidAt: string; reference?: string | null; method?: { name: string } | null; collectedBy?: { fullName: string } | null };
+type InvoiceReturn = { id: string; returnNumber: string; total: number };
+type InvoiceDetail = { id: string; invoiceNumber: string; status: string; subtotal: number; discountAmount: number; additionalCost?: number; total: number; paidAmount: number; dueAmount: number; notes?: string | null; supplierInvoiceNumber?: string | null; soldAt?: string; purchasedAt?: string; customer?: { name: string; phoneE164?: string | null } | null; supplier?: { name: string } | null; createdBy?: { fullName: string } | null; items: InvoiceItem[]; payments: InvoicePayment[]; returns?: InvoiceReturn[] };
 type Line = { productId: string; unitId: string; quantity: string; price: string; sellingPrice: string; batchNumber: string; expiresAt: string; trackBatch: boolean; trackExpiry: boolean };
 
 const invoiceStatusTones: Record<string, string> = {
@@ -40,7 +45,13 @@ function Key({ children }: { children: ReactNode }) {
 
 // A radio chip: the shared `name` keeps the group native, so the arrow keys move the selection.
 function Chip({ group, label, checked, disabled, onPick }: { group: string; label: string; checked: boolean; disabled?: boolean; onPick: () => void }) {
-  return <label className={`flex-1 whitespace-nowrap rounded-xl border px-3 py-2 text-center text-sm font-semibold transition-colors ${checked ? "border-primary/40 bg-teal-soft text-teal-strong" : "border-border bg-background text-muted-foreground hover:bg-muted"} ${disabled ? "pointer-events-none opacity-50" : "has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-primary/25"}`}><input type="radio" name={group} checked={checked} disabled={disabled} onChange={onPick} className="sr-only"/>{label}</label>;
+  return <label className={`flex-1 whitespace-nowrap rounded-xl border px-3 py-2 text-center text-sm font-semibold transition-colors ${checked ? "border-primary/40 bg-teal-soft text-teal-strong" : "border-border bg-input text-muted-foreground hover:bg-muted"} ${disabled ? "pointer-events-none opacity-50" : "has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-primary/25"}`}><input type="radio" name={group} checked={checked} disabled={disabled} onChange={onPick} className="sr-only"/>{label}</label>;
+}
+
+// Below the sm breakpoint the party and status columns fold away, so the money cells caption
+// themselves instead of leaving the cashier with two unlabeled numbers.
+function MobileCaption({ children }: { children: ReactNode }) {
+  return <span className="block text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground sm:hidden">{children}</span>;
 }
 
 export function TransactionPage({ mode }: { mode: "sale" | "purchase" }) {
@@ -77,6 +88,10 @@ export function TransactionPage({ mode }: { mode: "sale" | "purchase" }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [invoice, setInvoice] = useState<{ id: string; invoiceNumber: string; total: string; dueAmount: string } | null>(null);
+  const [detailId, setDetailId] = useState<string | null>(null);
+  const [detailNonce, setDetailNonce] = useState(0);
+  const [detail, setDetail] = useState<InvoiceDetail | null>(null);
+  const [detailError, setDetailError] = useState("");
   const pendingTransactionRequests = useRef(new Map<string, string>());
   const searchRef = useRef<HTMLInputElement>(null);
   const contactRef = useRef<HTMLInputElement>(null);
@@ -167,6 +182,7 @@ export function TransactionPage({ mode }: { mode: "sale" | "purchase" }) {
   const amountPaid = !allowDue ? total : paidAmount;
   const enteredPaidCents = decimalCents(amountPaid || "0");
   const duePreview = centsToMoney(totalCents > enteredPaidCents ? totalCents - enteredPaidCents : BigInt(0));
+  const fullyPaid = enteredPaidCents >= totalCents;
   useEffect(() => {
     if (!(allowDue && decimalCents(paidAmount || "0") > totalCents)) return;
     const timer = window.setTimeout(() => setPaidAmount(total), 0);
@@ -236,7 +252,7 @@ export function TransactionPage({ mode }: { mode: "sale" | "purchase" }) {
   }
   useEffect(() => {
     function onKey(event: globalThis.KeyboardEvent) {
-      if (invoice || event.repeat) return;
+      if (invoice || detailId || event.repeat) return;
       if (event.key === "F2") { event.preventDefault(); searchRef.current?.focus(); searchRef.current?.select(); }
       else if (event.key === "F4") { event.preventDefault(); contactRef.current?.focus(); }
       else if (event.key === "F8") { event.preventDefault(); toggleAllowDue(!allowDue); }
@@ -249,6 +265,23 @@ export function TransactionPage({ mode }: { mode: "sale" | "purchase" }) {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   });
+  // A recent row opens a preview of that saved invoice, so the counter never loses the basket
+  // the cashier is still building underneath.
+  useEffect(() => {
+    if (!detailId) return;
+    let active = true;
+    setDetail(null); setDetailError("");
+    void apiRequest<{ sale?: InvoiceDetail; purchase?: InvoiceDetail }>(`/api/${isSale ? "sales" : "purchases"}/${detailId}`)
+      .then((payload) => { if (!active) return; const record = payload.sale ?? payload.purchase; if (!record) { setDetailError("This invoice could not be loaded."); return; } setDetail(record); })
+      .catch((caught) => { if (active) setDetailError(caught instanceof Error ? caught.message : "This invoice could not be loaded."); });
+    return () => { active = false; };
+  }, [detailId, isSale, detailNonce]);
+  useEffect(() => {
+    if (!detailId) return;
+    const onKey = (event: globalThis.KeyboardEvent) => { if (event.key === "Escape") setDetailId(null); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [detailId]);
   function updateContactPhone(value: string) {
     setContactPhone(value);
     if (!isSale) return;
@@ -336,16 +369,16 @@ export function TransactionPage({ mode }: { mode: "sale" | "purchase" }) {
   return <div className="space-y-6"><PageHeader eyebrow={isSale ? "Sales / POS" : "Purchasing"} title={title} description={isSale ? "Search or scan a product, add items and complete the sale." : "Choose a supplier, record received stock and payment."} action={<div className="hidden flex-wrap items-center justify-end gap-x-3 gap-y-2 text-xs text-muted-foreground lg:flex"><span className="flex items-center gap-1.5"><Key>F2</Key>search</span><span className="flex items-center gap-1.5"><Key>F4</Key>customer</span><span className="flex items-center gap-1.5"><Key>F8</Key>allow due</span><span className="flex items-center gap-1.5"><Key>F9</Key>complete</span></div>}/>
     {error && <ErrorMessage>{error}</ErrorMessage>}
     <form ref={formRef} onSubmit={submit} className="space-y-5">
-      <Panel title="Items" description="Scan a barcode or type a name — the arrow keys browse the matches." action={<span className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">{lines.length} {lines.length === 1 ? "line" : "lines"} · {formatMoney(subtotal)}</span>}>
+      <Panel title="Items" description="Scan a barcode or type a name — the arrow keys browse the matches." className="min-w-0" action={<span className="max-w-full break-words text-right text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground [overflow-wrap:anywhere]">{lines.length} {lines.length === 1 ? "line" : "lines"} · {formatMoney(subtotal)}</span>}>
         <div className="relative"><Search size={16} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground"/><input ref={searchRef} aria-label="Search or scan a product" autoComplete="off" role="combobox" aria-expanded={Boolean(query.trim())} aria-controls="product-matches" value={query} onChange={(e) => { setQuery(e.target.value); setSearchResults([]); setOutOfStock(""); }} onKeyDown={searchKeyDown} className={`${inputClass} h-12 pl-10 pr-10 text-[15px]`} placeholder="Scan barcode or search product (F2)"/>{query && <button type="button" onClick={() => { setQuery(""); setSearchResults([]); keepSearchFocused(); }} aria-label="Clear product search" className="absolute right-3 top-1/2 -translate-y-1/2 rounded-md p-1 text-muted-foreground hover:bg-muted"><X size={15}/></button>}
-          {query.trim() && <div id="product-matches" role="listbox" className="absolute z-30 mt-1.5 max-h-72 w-full overflow-y-auto rounded-xl border border-border bg-card shadow-lg">{results.map((product, index) => { const stock = Number(product.stockOnHand); return <button type="button" role="option" aria-selected={index === cursor} key={product.id} onMouseEnter={() => setCursor(index)} onClick={() => addProduct(product)} className={`flex w-full items-center justify-between gap-3 border-b border-border px-4 py-3 text-left text-sm last:border-0 ${index === cursor ? "bg-teal-soft" : "hover:bg-muted"}`}><span className="min-w-0"><span className="block truncate font-medium">{product.name}<span className="ml-2 text-xs text-muted-foreground">{product.sku}</span></span><span className={`mt-0.5 block text-xs ${stock <= 0 ? "font-semibold text-danger" : "text-muted-foreground"}`}>{trimDecimalZeros(product.stockOnHand)} {product.baseUnit.symbol} in stock{stock <= 0 ? " · out of stock" : ""}</span></span><span className="shrink-0 font-semibold tabular-nums">{formatMoney(isSale ? product.sellingPrice : product.purchasePrice)} <span className="text-xs font-normal text-muted-foreground">/ {product.baseUnit.symbol}</span></span></button>; })}{results.length === 0 && <p className="p-4 text-sm text-muted-foreground">No products found — press Enter to search the full catalogue again.</p>}{results.length > 1 && <p className="sticky bottom-0 flex items-center gap-1.5 bg-card px-4 py-2 text-[11px] text-muted-foreground"><Key>↑</Key><Key>↓</Key> browse · <Key>Enter</Key> add · <Key>Esc</Key> clear</p>}</div>}
+          {query.trim() && <div id="product-matches" role="listbox" className="absolute z-30 mt-1.5 max-h-72 w-full overflow-y-auto rounded-xl border border-border bg-card shadow-lg">{results.map((product, index) => { const stock = Number(product.stockOnHand); return <button type="button" role="option" aria-selected={index === cursor} key={product.id} onMouseEnter={() => setCursor(index)} onClick={() => addProduct(product)} className={`flex w-full min-w-0 items-center justify-between gap-3 border-b border-border px-4 py-3 text-left text-sm last:border-0 ${index === cursor ? "bg-teal-soft" : "hover:bg-muted"}`}><span className="min-w-0"><span className="block truncate font-medium">{product.name}<span className="ml-2 text-xs text-muted-foreground">{product.sku}</span></span><span className={`mt-0.5 block text-xs ${stock <= 0 ? "font-semibold text-danger" : "text-muted-foreground"}`}>{trimDecimalZeros(product.stockOnHand)} {product.baseUnit.symbol} in stock{stock <= 0 ? " · out of stock" : ""}</span></span><span className="flex max-w-[46%] shrink-0 flex-col items-end text-right"><span className="max-w-full break-words font-semibold tabular-nums [overflow-wrap:anywhere]">{formatMoney(isSale ? product.sellingPrice : product.purchasePrice)}</span><span className="text-xs font-normal text-muted-foreground">/ {product.baseUnit.symbol}</span></span></button>; })}{results.length === 0 && <p className="p-4 text-sm text-muted-foreground">No products found — press Enter to search the full catalogue again.</p>}{results.length > 1 && <p className="sticky bottom-0 flex items-center gap-1.5 bg-card px-4 py-2 text-[11px] text-muted-foreground"><Key>↑</Key><Key>↓</Key> browse · <Key>Enter</Key> add · <Key>Esc</Key> clear</p>}</div>}
         </div>
         {outOfStock && <div role="alert" className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl border border-danger/30 bg-danger/10 px-3 py-2 text-xs text-danger"><span><strong>{outOfStock}</strong> is out of stock. Receive a purchase before selling it.</span>{canPurchase && <Link href="/purchases" className="font-semibold underline">Create a purchase</Link>}<button type="button" onClick={() => setOutOfStock("")} className="ml-auto rounded-md p-1 hover:bg-danger/10" aria-label="Dismiss stock warning"><X size={14} /></button></div>}
         <div className="mt-4">{lines.length === 0 ? <div className="rounded-xl border border-dashed border-border px-4 py-10 text-center text-sm text-muted-foreground">Nothing added yet. Scan a barcode, or press <Key>F2</Key> and start typing.</div> : <div className="overflow-hidden rounded-xl border border-border/70">
           <div className="hidden bg-muted/40 px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground sm:grid sm:grid-cols-[minmax(0,1fr)_96px_160px_128px_30px] sm:gap-3"><span>Product</span><span>Unit</span><span>Quantity</span><span className="text-right">Price</span><span className="sr-only">Remove</span></div>
           <div className="divide-y divide-border/70">{lines.map((line, index) => { const product = products.find((item) => item.id === line.productId); const units = unitOptions(line); const selectedUnit = units.find((unit) => unit.id === line.unitId); const wholeQuantity = usesWholeQuantity(selectedUnit?.name ?? "", selectedUnit?.symbol ?? ""); const lineTotal = centsToMoney(moneyProductCents(line.price || "0", line.quantity || "0")); return <div key={`${line.productId}-${index}`} className="p-3">
             <div className="grid grid-cols-2 items-center gap-2 sm:grid-cols-[minmax(0,1fr)_96px_160px_128px_30px] sm:gap-3">
-              <div className="col-span-2 min-w-0 sm:col-span-1">{product ? <p className="truncate text-sm font-semibold">{product.name}<span className="ml-2 text-xs font-normal text-muted-foreground">{product.sku}</span></p> : <select required aria-label="Product" value={line.productId} onChange={(e) => { const item = products.find((x) => x.id === e.target.value); if (item) addProduct(item); }} className={selectClass}><option value="">Choose product</option>{products.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select>}{product && <p className="text-xs tabular-nums text-muted-foreground">Line total {formatMoney(lineTotal)}<span className="sm:hidden"> · {trimDecimalZeros(product.stockOnHand)} in stock</span></p>}</div>
+              <div className="col-span-2 min-w-0 sm:col-span-1">{product ? <p className="truncate text-sm font-semibold">{product.name}<span className="ml-2 text-xs font-normal text-muted-foreground">{product.sku}</span></p> : <select required aria-label="Product" value={line.productId} onChange={(e) => { const item = products.find((x) => x.id === e.target.value); if (item) addProduct(item); }} className={selectClass}><option value="">Choose product</option>{products.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select>}{product && <p className="break-words text-xs tabular-nums text-muted-foreground [overflow-wrap:anywhere]">Line total {formatMoney(lineTotal)}<span className="sm:hidden"> · {trimDecimalZeros(product.stockOnHand)} in stock</span></p>}</div>
               {product && <select aria-label="Unit" value={line.unitId} onChange={(e) => { const nextUnit = units.find((unit) => unit.id === e.target.value); const oldUnit = units.find((unit) => unit.id === line.unitId); const convertedPrice = nextUnit && oldUnit ? convertUnitDecimal(line.price, oldUnit.conversion, nextUnit.conversion) : line.price; updateLine(index, { unitId: e.target.value, price: trimDecimalZeros(convertedPrice) }); }} className={selectClass}>{units.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}</select>}
               <div className="flex items-center gap-1">
                 <button type="button" onClick={() => stepQuantity(index, -1)} aria-label={`Reduce ${line.productId} quantity`} className="grid size-8 shrink-0 place-items-center rounded-lg border border-border text-muted-foreground transition-colors hover:bg-muted"><Minus size={13}/></button>
@@ -358,7 +391,7 @@ export function TransactionPage({ mode }: { mode: "sale" | "purchase" }) {
             {!isSale && <div className="mt-2 grid grid-cols-2 gap-2 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto_auto]">
               <input aria-label="Selling price per stock unit" required type="number" inputMode="decimal" min="0.01" step="0.01" value={line.sellingPrice} onChange={(e) => updateLine(index, { sellingPrice: e.target.value })} className={inputClass} placeholder="Selling price / stock unit"/>
               {line.trackBatch && <input required aria-label="Batch number" value={line.batchNumber} onChange={(e) => updateLine(index, { batchNumber: e.target.value })} className={inputClass} placeholder="Batch number"/>}
-              {line.trackExpiry && <input required type="date" aria-label="Expiry date" value={line.expiresAt} onChange={(e) => updateLine(index, { expiresAt: e.target.value })} className={inputClass}/>}
+              {line.trackExpiry && <DateField required ariaLabel="Expiry date" value={line.expiresAt} onChange={(v) => updateLine(index, { expiresAt: v })} placeholder="Pick a date"/>}
               <div className="col-span-2 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-lg bg-muted/60 px-3 py-2 text-xs lg:col-span-4">
                 <label className="flex items-center gap-2"><input type="checkbox" checked={line.trackBatch} disabled={Boolean(product?.tracksBatch)} onChange={(e) => updateLine(index, { trackBatch: e.target.checked, batchNumber: e.target.checked ? line.batchNumber : "" })} className="accent-primary"/>Track batches</label>
                 <label className="flex items-center gap-2"><input type="checkbox" checked={line.trackExpiry} disabled={Boolean(product?.tracksExpiry)} onChange={(e) => updateLine(index, { trackExpiry: e.target.checked, expiresAt: e.target.checked ? line.expiresAt : "" })} className="accent-primary"/>Track expiry</label>
@@ -369,7 +402,7 @@ export function TransactionPage({ mode }: { mode: "sale" | "purchase" }) {
         </div>}</div>
       </Panel>
 
-      <Panel title={isSale ? "Customer" : "Supplier"} description={isSale ? "A phone number that matches an existing customer selects them." : "Search an existing supplier, or enter details below."}>
+      <Panel className="min-w-0" title={isSale ? "Customer" : "Supplier"} description={isSale ? "A phone number that matches an existing customer selects them." : "Search an existing supplier, or enter details below."}>
         <div className="grid gap-3 lg:grid-cols-2">
           <div className="relative"><Search size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"/><input ref={contactRef} aria-label={`Search existing ${isSale ? "customers" : "suppliers"}`} autoComplete="off" value={contactSearch} onFocus={() => setContactSearchOpen(true)} onBlur={() => window.setTimeout(() => setContactSearchOpen(false), 120)} onChange={(event) => { const value = event.target.value; if (contactId) clearContact(); setContactSearch(value); setContactSearchOpen(true); }} className={`${inputClass} pl-9`} placeholder={`Search ${isSale ? "customer" : "supplier"} (F4)`}/>{contactSearchOpen && <div className="absolute z-30 mt-1 max-h-64 w-full overflow-y-auto rounded-xl border border-border bg-card shadow-lg">{contactResults.map((contact) => <button type="button" key={contact.id} onMouseDown={(event) => event.preventDefault()} onClick={() => chooseContact(contact)} className="block w-full border-b border-border px-4 py-3 text-left last:border-0 hover:bg-muted"><span className="block text-sm font-medium">{contact.name}</span><span className="mt-0.5 block text-xs text-muted-foreground">{[contact.phoneE164, contact.email].filter(Boolean).join(" · ") || "No phone or email"}</span></button>)}{contactResults.length === 0 && <p className="p-4 text-sm text-muted-foreground">No matching {isSale ? "customers" : "suppliers"} found.</p>}</div>}</div>
           <input name="contactName" value={contactName} onChange={(e) => setContactName(e.target.value)} className={inputClass} placeholder={`${isSale ? "Customer" : "Supplier"} name — blank is a walk-in sale`}/>
@@ -382,24 +415,175 @@ export function TransactionPage({ mode }: { mode: "sale" | "purchase" }) {
         </div>}
       </Panel>
 
-      <Panel title="Charge" description={`Subtotal ${formatMoney(subtotal)}${!isSale && additionalCents > BigInt(0) ? ` · Landed ${formatMoney(centsToMoney(additionalCents))}` : ""}`}>
-          <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 rounded-xl bg-teal-soft/60 px-4 py-3"><span className="text-xs font-semibold uppercase tracking-[0.1em] text-teal-strong">Total to collect</span><span className="text-[28px] leading-none font-semibold tabular-nums text-teal-strong">{formatMoney(total)}</span></div>
-          {discountCents > BigInt(0) && <p className="mt-1.5 text-right text-xs font-semibold tabular-nums text-amber-strong">− {formatMoney(centsToMoney(discountCents))} discount already counted</p>}
-          <div className={`mt-3 grid gap-3 ${canDiscount ? "lg:grid-cols-3" : "lg:grid-cols-2"}`}>
-            {canDiscount && <div><p className="mb-1.5 text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">Discount</p><div role="radiogroup" aria-label="Discount type" className="flex gap-1.5"><Chip group="discountPick" label="None" checked={discountType === ""} onPick={() => setDiscountType("")}/><Chip group="discountPick" label="%" checked={discountType === "PERCENTAGE"} onPick={() => setDiscountType("PERCENTAGE")}/><Chip group="discountPick" label="Amount" checked={discountType === "FIXED_AMOUNT"} onPick={() => setDiscountType("FIXED_AMOUNT")}/></div><div className="relative mt-2"><input aria-label="Discount value" disabled={!discountType} value={discountValue} onChange={(e) => setDiscountValue(e.target.value)} type="number" inputMode="decimal" min="0" step="0.01" max={discountType === "PERCENTAGE" ? 100 : undefined} className={`${inputClass} ${discountType === "PERCENTAGE" ? "pr-7" : ""}`} placeholder="0"/>{discountType === "PERCENTAGE" && <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">%</span>}</div></div>}
-            <div><p className="mb-1.5 text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">Paid</p><div className="flex items-center gap-2"><input aria-label="Amount paid" value={amountPaid} onChange={(e) => setPaidAmount(e.target.value)} readOnly={!allowDue} type="number" inputMode="decimal" min="0" max={total} step="0.01" className={`${inputClass} min-w-0 flex-1 text-right text-base font-semibold tabular-nums`}/><label className="flex shrink-0 items-center gap-2 text-xs"><input type="checkbox" checked={allowDue} onChange={(e) => toggleAllowDue(e.target.checked)} className="accent-primary"/>Allow due <Key>F8</Key></label></div><p aria-live="polite" className="mt-1.5 text-xs text-muted-foreground">{allowDue ? <>Due: <strong className="tabular-nums text-amber-strong">{formatMoney(duePreview)}</strong> · Enter 0 to leave the full amount due.</> : <>Paid in full — tick <strong>Allow due</strong> to take a part payment.</>}</p></div>
-            <div><p className="mb-1.5 text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">Payment method</p><div role="radiogroup" aria-label="Payment method" className="flex flex-wrap gap-1.5">{methods.map((method) => <Chip key={method.id} group="methodPick" label={method.name} checked={paymentMethodId === method.id} disabled={Number(amountPaid) <= 0} onPick={() => setPaymentMethodId(method.id)}/>)}</div>{Number(amountPaid) <= 0 && <p className="mt-1.5 text-xs text-muted-foreground">A method is chosen once the invoice has a value.</p>}</div>
-          </div>
-          <div className="mt-3 grid gap-3 sm:grid-cols-2"><input name="paymentReference" className={inputClass} placeholder="Reference (optional)"/><textarea name="notes" className={`${inputClass} min-h-16 py-2`} placeholder="Invoice note (optional)"/></div>
-          <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <p className="flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground"><Key>F9</Key> or <Key>Ctrl</Key>+<Key>Enter</Key> completes the invoice · <Key>Tab</Key> moves through the form</p>
-            <Button type="submit" className="w-full sm:w-auto sm:min-w-52" disabled={busy || !lines.length}>{busy ? "Saving invoice…" : `Complete ${isSale ? "sale" : "purchase"}`}</Button>
+      <Panel className="min-w-0" title="Charge" description="Review totals, discounts and payment before completing.">
+          <div className="space-y-4">
+            <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3 rounded-[18px] border border-primary/15 bg-primary-soft/55 p-4">
+              <div className="min-w-0 flex-1">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-teal-strong">Total to collect</p>
+                <p className="mt-1.5 max-w-full break-words text-[clamp(1.75rem,4vw,2.75rem)] font-semibold leading-tight tracking-[-0.04em] tabular-nums text-teal-strong [overflow-wrap:anywhere]">{formatMoney(total)}</p>
+              </div>
+              <div className="flex min-w-0 flex-col items-start gap-1.5 sm:items-end">
+                <span className={`max-w-full break-words rounded-full px-2.5 py-1 text-[11px] font-semibold [overflow-wrap:anywhere] ${fullyPaid ? "bg-success/10 text-success" : "bg-amber-soft text-amber-strong"}`}>{fullyPaid ? "Paid in full" : `Due ${formatMoney(duePreview)}`}</span>
+                {discountCents > BigInt(0) && <p className="text-xs font-semibold tabular-nums text-amber-strong">− {formatMoney(centsToMoney(discountCents))} discount included</p>}
+              </div>
+            </div>
+
+            <div className={`grid gap-3 ${canDiscount ? "2xl:grid-cols-3" : "2xl:grid-cols-2"}`}>
+              {canDiscount && <div className="rounded-xl border border-border/70 bg-background p-3.5"><p className="mb-2.5 text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">Discount</p><div role="radiogroup" aria-label="Discount type" className="grid grid-cols-3 gap-1.5"><Chip group="discountPick" label="None" checked={discountType === ""} onPick={() => setDiscountType("")}/><Chip group="discountPick" label="%" checked={discountType === "PERCENTAGE"} onPick={() => setDiscountType("PERCENTAGE")}/><Chip group="discountPick" label="Amount" checked={discountType === "FIXED_AMOUNT"} onPick={() => setDiscountType("FIXED_AMOUNT")}/></div><div className="relative mt-2.5"><input aria-label="Discount value" disabled={!discountType} value={discountValue} onChange={(e) => setDiscountValue(e.target.value)} type="number" inputMode="decimal" min="0" step="0.01" max={discountType === "PERCENTAGE" ? 100 : undefined} className={`${inputClass} ${discountType === "PERCENTAGE" ? "pr-7" : ""}`} placeholder="0"/>{discountType === "PERCENTAGE" && <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">%</span>}</div><p className="mt-2 text-[11px] leading-4 text-muted-foreground">{discountType ? (discountType === "PERCENTAGE" ? "Enter 1–100 to reduce the subtotal by a percentage." : "Enter the fixed amount to reduce the subtotal.") : "Choose % or Amount to apply a discount."}</p></div>}
+
+              <div className="rounded-xl border border-border/70 bg-background p-3.5"><label className="block"><span className="mb-2.5 block text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">Paid</span><input aria-label="Amount paid" value={amountPaid} onChange={(e) => setPaidAmount(e.target.value)} readOnly={!allowDue} type="number" inputMode="decimal" min="0" max={total} step="0.01" className={allowDue ? `${inputClass} h-12 text-right text-lg font-semibold tabular-nums` : "h-12 w-full rounded-[12px] border border-dashed border-border bg-muted/70 px-3 text-right text-lg font-semibold tabular-nums text-muted-foreground outline-none"}/></label><label className={`mt-2.5 flex items-center justify-between gap-3 rounded-lg p-2.5 text-xs ${allowDue ? "bg-amber-soft/65 text-amber-strong" : "bg-muted/60 text-muted-foreground"}`}><span className="flex items-center gap-2"><input type="checkbox" checked={allowDue} onChange={(e) => toggleAllowDue(e.target.checked)} className="accent-primary"/>Allow due</span><Key>F8</Key></label><p aria-live="polite" className="mt-2 text-xs leading-4 text-muted-foreground">{allowDue ? <>Enter <strong>0</strong> to leave the full amount due.</> : <>Paid in full — enable <strong>Allow due</strong> to take a part payment.</>}</p></div>
+
+              <div className="rounded-xl border border-border/70 bg-background p-3.5"><p className="mb-2.5 text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">Payment method</p><div role="radiogroup" aria-label="Payment method" className="grid gap-1.5 sm:grid-cols-2">{methods.map((method) => <Chip key={method.id} group="methodPick" label={method.name} checked={paymentMethodId === method.id} disabled={Number(amountPaid) <= 0} onPick={() => setPaymentMethodId(method.id)}/>)}</div>{Number(amountPaid) <= 0 ? <p className="mt-2 text-[11px] leading-4 text-muted-foreground">Add an amount before choosing how it was paid.</p> : <p className="mt-2 text-[11px] leading-4 text-muted-foreground">Select the method used for this payment.</p>}</div>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className="block"><span className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">Payment reference</span><input name="paymentReference" className={inputClass} placeholder="Reference (optional)"/></label>
+              <label className="block"><span className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">Invoice note</span><textarea name="notes" className={`${inputClass} min-h-16 py-2`} placeholder="Invoice note (optional)"/></label>
+            </div>
+
+            <div className="rounded-[12px] border border-border/70 bg-muted/35 p-3.5">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <p className="flex flex-wrap items-center gap-1.5 text-[11px] leading-4 text-muted-foreground"><Key>F9</Key> or <Key>Ctrl</Key>+<Key>Enter</Key> completes the invoice · <Key>Tab</Key> moves through the form</p>
+                <Button type="submit" className="w-full sm:w-auto sm:min-w-56" disabled={busy || !lines.length}>{busy ? "Saving invoice…" : `Complete ${isSale ? "sale" : "purchase"}`}</Button>
+              </div>
+            </div>
           </div>
         </Panel>
 
-      <Panel title={`Recent ${isSale ? "sales" : "purchases"}`} description={`Latest ${recent.length.toLocaleString()} invoices — open one for reprinting or a closer review.`}>
-        <div className="overflow-hidden rounded-xl border border-border/70"><div className="overflow-x-auto"><table className="w-full min-w-[420px] text-left text-sm sm:min-w-[900px]"><thead className="bg-muted/40 text-[11px] uppercase tracking-[0.08em] text-muted-foreground"><tr><th className="px-3 py-2.5 font-semibold">Invoice</th><th className="px-3 py-2.5 font-semibold">Date</th><th className="hidden px-3 py-2.5 font-semibold sm:table-cell">{isSale ? "Customer" : "Supplier"}</th><th className="px-3 py-2.5 text-right font-semibold">Total</th><th className="px-3 py-2.5 text-right font-semibold">Due</th><th className="hidden px-3 py-2.5 font-semibold sm:table-cell">Status</th><th className="px-3 py-2.5"><span className="sr-only">Actions</span></th></tr></thead><tbody className="divide-y divide-border/70">{recent.map((item) => { const due = Number(item.dueAmount); return <tr key={item.id} className="align-middle transition-colors hover:bg-teal-soft/40"><td className="px-3 py-3 font-semibold tabular-nums text-foreground">{item.invoiceNumber}{item.status !== "COMPLETED" && <span className={`mt-1 flex w-fit items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-semibold sm:hidden ${invoiceStatusTones[item.status] ?? "bg-muted text-muted-foreground"}`}><span className="size-1.5 rounded-full bg-current" />{item.status.replaceAll("_", " ")}</span>}</td><td className="whitespace-nowrap px-3 py-3 text-xs tabular-nums text-muted-foreground">{formatDateTime(item.soldAt ?? item.purchasedAt ?? "")}</td><td className="hidden px-3 py-3 sm:table-cell">{item.customer?.name ?? item.supplier?.name ?? "Walk-in"}</td><td className="px-3 py-3 text-right font-medium tabular-nums text-foreground">{formatMoney(item.total)}</td><td className={`px-3 py-3 text-right font-semibold tabular-nums ${due > 0 ? "text-amber-strong" : "text-muted-foreground"}`}>{formatMoney(item.dueAmount)}</td><td className="hidden px-3 py-3 sm:table-cell"><span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold ${invoiceStatusTones[item.status] ?? "bg-muted text-muted-foreground"}`}><span className="size-1.5 rounded-full bg-current" />{item.status.replaceAll("_", " ")}</span></td><td className="px-3 py-3"><div className="flex justify-end"><Link className="inline-flex h-8 items-center rounded-lg border border-border px-2.5 text-xs font-semibold text-foreground transition-colors hover:bg-muted" href={`/${isSale ? "sales" : "purchases"}/${item.id}`}>Invoice</Link></div></td></tr>; })}{recent.length === 0 && <tr><td colSpan={7} className="px-3 py-10 text-center text-sm text-muted-foreground">No invoices have been recorded yet.</td></tr>}</tbody></table></div></div>
+      <Panel className="min-w-0" title={`Recent ${isSale ? "sales" : "purchases"}`} description={`Latest ${recent.length.toLocaleString()} invoices — click a row to preview it without leaving the counter.`}>
+        {recent.length === 0 ? (
+          <div className="rounded-[16px] border border-dashed border-border bg-background px-4 py-12 text-center">
+            <p className="text-sm font-semibold text-foreground">No invoices yet</p>
+            <p className="mt-1 text-xs text-muted-foreground">Completed invoices will appear here for quick review.</p>
+          </div>
+        ) : (
+          <>
+            <div className="space-y-2 xl:hidden">
+              {recent.map((item) => {
+                const due = Number(item.dueAmount);
+                const party = item.customer?.name ?? item.supplier?.name ?? "Walk-in customer";
+                return (
+                  <button key={item.id} type="button" onClick={() => setDetailId(item.id)} className="w-full rounded-[16px] border border-border/70 bg-background p-4 text-left transition-[background-color,border-color,box-shadow] hover:border-primary/25 hover:bg-primary-soft/20 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/25">
+                    <span className="flex min-w-0 items-start justify-between gap-3">
+                      <span className="min-w-0">
+                        <span className="block truncate text-sm font-semibold tabular-nums text-foreground">{item.invoiceNumber}</span>
+                        <span className="mt-1 block truncate text-[11px] text-muted-foreground">{formatDateTime(item.soldAt ?? item.purchasedAt ?? "")}</span>
+                      </span>
+                      <span className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-semibold ${invoiceStatusTones[item.status] ?? "bg-muted text-muted-foreground"}`}><span className="size-1.5 rounded-full bg-current" />{item.status.replaceAll("_", " ")}</span>
+                    </span>
+                    <span className="mt-3 grid grid-cols-[minmax(0,1fr)_auto] items-end gap-3 border-t border-border/70 pt-3">
+                      <span className="min-w-0">
+                        <span className="block truncate text-xs font-medium text-foreground">{party}</span>
+                        <span className="mt-1 block text-[10px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">{isSale ? "Customer" : "Supplier"}</span>
+                      </span>
+                      <span className="min-w-0 max-w-[58%] text-right">
+                        <span className="block break-words text-sm font-semibold tabular-nums text-foreground [overflow-wrap:anywhere]">{formatMoney(item.total)}</span>
+                        <span className={`mt-1 block break-words text-[11px] font-medium tabular-nums [overflow-wrap:anywhere] ${due > 0 ? "text-amber-strong" : "text-muted-foreground"}`}>{due > 0 ? `Due ${formatMoney(item.dueAmount)}` : "Fully paid"}</span>
+                      </span>
+                    </span>
+                    <span className="mt-3 flex items-center justify-end gap-1 text-[11px] font-semibold text-primary">View details <ArrowRight size={13} /></span>
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="hidden overflow-hidden rounded-[16px] border border-border/70 bg-background xl:block">
+              <div className="overflow-x-auto">
+                <table className="stock-table w-full min-w-[980px] table-fixed text-left text-sm">
+                  <thead className="bg-muted/45 text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
+                    <tr>
+                      <th className="w-[17%] px-4 py-3 font-semibold">Invoice</th>
+                      <th className="w-[14%] px-4 py-3 font-semibold">Status</th>
+                      <th className="w-[18%] px-4 py-3 font-semibold">{isSale ? "Customer" : "Supplier"}</th>
+                      <th className="w-[16%] px-4 py-3 font-semibold">Date</th>
+                      <th className="w-[13%] px-4 py-3 text-right font-semibold">Total</th>
+                      <th className="w-[12%] px-4 py-3 text-right font-semibold">Due</th>
+                      <th className="w-[10%] px-4 py-3 text-right"><span className="sr-only">Actions</span></th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border/70">
+                    {recent.map((item) => {
+                      const due = Number(item.dueAmount);
+                      return (
+                        <tr key={item.id} className="transition-colors hover:bg-primary-soft/20">
+                          <td className="px-4 py-3">
+                            <button type="button" onClick={() => setDetailId(item.id)} className="block max-w-full truncate text-left text-sm font-semibold tabular-nums text-foreground hover:text-primary">{item.invoiceNumber}</button>
+                          </td>
+                          <td className="px-4 py-3"><span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-semibold whitespace-nowrap ${invoiceStatusTones[item.status] ?? "bg-muted text-muted-foreground"}`}><span className="size-1.5 rounded-full bg-current" />{item.status.replaceAll("_", " ")}</span></td>
+                          <td className="px-4 py-3"><span className="block truncate text-sm font-medium text-foreground" title={item.customer?.name ?? item.supplier?.name ?? undefined}>{item.customer?.name ?? item.supplier?.name ?? "Walk-in customer"}</span></td>
+                          <td className="px-4 py-3 text-xs tabular-nums text-muted-foreground">{formatDateTime(item.soldAt ?? item.purchasedAt ?? "")}</td>
+                          <td className="px-4 py-3 text-right"><span className="ml-auto block max-w-full break-words text-sm font-semibold tabular-nums text-foreground [overflow-wrap:anywhere]">{formatMoney(item.total)}</span></td>
+                          <td className="px-4 py-3 text-right"><span className={`ml-auto block max-w-full break-words text-sm font-semibold tabular-nums [overflow-wrap:anywhere] ${due > 0 ? "text-amber-strong" : "text-muted-foreground"}`}>{due > 0 ? formatMoney(item.dueAmount) : "—"}</span></td>
+                          <td className="px-4 py-3 text-right"><button type="button" aria-label={`Open ${item.invoiceNumber} details`} onClick={() => setDetailId(item.id)} className="group ml-auto inline-flex h-9 items-center gap-1.5 rounded-xl border border-primary bg-primary px-2.5 text-xs font-semibold text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/25">Details<ArrowRight size={13} className="transition-transform group-hover:translate-x-0.5" /></button></td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </>
+        )}
       </Panel>
     </form>
+
+    {detailId && <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto p-4 print:hidden sm:items-center sm:p-6 hide-scrollbar">
+      <button type="button" aria-label="Close invoice details" className="fixed inset-0 bg-slate-950/45 backdrop-blur-[2px]" onClick={() => setDetailId(null)}/>
+      <div role="dialog" aria-modal="true" aria-labelledby="recent-invoice-title" className="relative my-auto flex max-h-[90vh] w-full max-w-xl flex-col overflow-hidden rounded-[16px] border border-line bg-card shadow-2xl">
+        <div className="flex items-center justify-between gap-3 border-b border-line bg-card px-5 py-4 sm:px-6">
+          <div className="min-w-0"><p className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">{isSale ? "Sale invoice" : "Purchase invoice"}</p><h2 id="recent-invoice-title" className="mt-1 truncate text-[21px] font-semibold leading-tight tabular-nums text-foreground">{detail?.invoiceNumber ?? "Loading…"}</h2></div>
+          <div className="flex shrink-0 items-center gap-2">{detail && <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold ${invoiceStatusTones[detail.status] ?? "bg-muted text-muted-foreground"}`}><span className="size-1.5 rounded-full bg-current"/>{detail.status.replaceAll("_", " ")}</span>}<button type="button" onClick={() => setDetailId(null)} aria-label="Close invoice details" className="grid size-9 place-items-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"><X size={18}/></button></div>
+        </div>
+
+        <div className="hide-scrollbar min-h-0 flex-1 overflow-y-auto px-5 py-5 sm:px-6">
+          {detailError && <div className="space-y-4"><ErrorMessage>{detailError}</ErrorMessage><Button variant="outline" className="h-10 px-4" onClick={() => setDetailNonce((count) => count + 1)}>Try again</Button></div>}
+          {!detailError && !detail && <div className="space-y-3" aria-busy="true" aria-label="Loading invoice">{Array.from({ length: 5 }, (_, index) => <div key={index} className="h-10 animate-pulse rounded-lg bg-muted/60"/>)}</div>}
+          {!detailError && detail && <>
+            <div className="grid gap-2.5 sm:grid-cols-2">
+              <div className="min-w-0 rounded-[16px] border border-border/70 bg-background p-3.5">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">{isSale ? "Customer" : "Supplier"}</p>
+                <p className="mt-1.5 break-words text-sm font-semibold text-foreground [overflow-wrap:anywhere]">{detail.customer?.name ?? detail.supplier?.name ?? "Walk-in customer"}</p>
+                {detail.customer?.phoneE164 && <p className="mt-1 text-xs tabular-nums text-muted-foreground">{detail.customer.phoneE164}</p>}
+              </div>
+              <div className="min-w-0 rounded-[16px] border border-border/70 bg-background p-3.5">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">Invoice details</p>
+                <p className="mt-1.5 text-sm font-medium text-foreground">{formatDateTime(detail.soldAt ?? detail.purchasedAt ?? "")}</p>
+                <p className="mt-1 truncate text-xs text-muted-foreground">Recorded by {detail.createdBy?.fullName ?? "Staff"}</p>
+                {detail.supplierInvoiceNumber && <p className="mt-1 break-words text-xs text-muted-foreground [overflow-wrap:anywhere]">Supplier bill {detail.supplierInvoiceNumber}</p>}
+              </div>
+            </div>
+
+            <section className="mt-5"><div className="mb-2 flex items-center justify-between gap-3"><h3 className="text-sm font-semibold text-foreground">Items</h3><span className="text-[11px] font-medium tabular-nums text-muted-foreground">{detail.items.length} {detail.items.length === 1 ? "line" : "lines"}</span></div><div className="divide-y divide-border/70">
+              {detail.items.map((line, index) => <div key={line.id} className="border-b border-dashed border-border/70 py-2.5 last:border-b-0">
+                <div className="flex items-baseline justify-between gap-3"><span className="flex min-w-0 items-baseline gap-2"><span className="shrink-0 text-[11px] font-semibold tabular-nums text-muted-foreground">{index + 1}.</span><span className="min-w-0 truncate text-[15px] font-semibold leading-5 text-foreground" title={line.productName}>{line.productName}</span></span><span className="max-w-[45%] shrink-0 break-words text-right text-[15px] font-semibold tabular-nums text-foreground [overflow-wrap:anywhere]">{formatMoney(line.lineTotal)}</span></div>
+                <div className="mt-1 flex items-baseline justify-between gap-3 text-[11px] leading-4 text-muted-foreground"><span className="min-w-0 truncate">{line.skuSnapshot}{line.batchNumber ? ` · Batch ${line.batchNumber}` : ""}</span><span className="max-w-[52%] shrink-0 break-words text-right tabular-nums [overflow-wrap:anywhere]">{trimDecimalZeros(line.quantity)} {line.unit?.symbol ?? ""} · {formatMoney(line.unitPrice ?? line.unitCost ?? 0)}</span></div>
+              </div>)}
+            </div>
+
+            </section>
+
+            <div className="space-y-2 border-b border-border py-3.5 text-[15px] leading-5">
+              <div className="flex items-baseline justify-between gap-3"><span className="font-semibold text-muted-foreground">Subtotal</span><span className="min-w-0 max-w-[60%] break-words text-right font-bold tabular-nums text-foreground [overflow-wrap:anywhere]">{formatMoney(detail.subtotal)}</span></div>
+              {detail.discountAmount > 0 && <div className="flex items-baseline justify-between gap-3"><span className="text-muted-foreground">Discount</span><span className="min-w-0 max-w-[60%] break-words text-right font-semibold tabular-nums text-amber-strong [overflow-wrap:anywhere]">− {formatMoney(detail.discountAmount)}</span></div>}
+              {!isSale && (detail.additionalCost ?? 0) > 0 && <div className="flex items-baseline justify-between gap-3"><span className="text-muted-foreground">Additional cost</span><span className="min-w-0 max-w-[60%] break-words text-right font-semibold tabular-nums text-foreground [overflow-wrap:anywhere]">{formatMoney(detail.additionalCost ?? 0)}</span></div>}
+              {detail.payments.length ? detail.payments.map((payment) => <div key={payment.id} className="flex items-baseline justify-between gap-3"><span className="min-w-0 truncate text-xs text-muted-foreground" title={`${payment.method?.name ?? "Payment"} · ${formatDateTime(payment.paidAt)}${payment.reference ? ` · ${payment.reference}` : ""} · ${payment.collectedBy?.fullName ?? ""}`}>Paid · {payment.method?.name ?? "Payment"}{payment.reference ? ` · ${payment.reference}` : ""}</span><span className="max-w-[55%] shrink-0 break-words text-right text-[13px] font-semibold tabular-nums text-teal-strong [overflow-wrap:anywhere]">{formatMoney(payment.amount)}</span></div>) : <div className="flex items-baseline justify-between gap-3"><span className="text-muted-foreground">Paid</span><span className="text-[13px] font-semibold tabular-nums text-muted-foreground">No payment yet</span></div>}
+            </div>
+
+            <div className="mt-4 rounded-[18px] border border-primary/15 bg-primary-soft/55 p-4">
+              <div className="flex flex-wrap items-end justify-between gap-3"><p className="text-xs font-semibold uppercase tracking-[0.08em] text-teal-strong">{isSale ? "Total collected" : "Total paid"}</p><p className="min-w-0 max-w-full break-words text-[clamp(1.5rem,6vw,1.625rem)] font-semibold leading-tight tabular-nums text-teal-strong [overflow-wrap:anywhere]">{formatMoney(detail.total)}</p></div>
+              <div className="mt-2.5 flex items-center justify-between gap-3 border-t border-primary/15 pt-2.5">
+                <p className="min-w-0 break-words text-xs leading-5 text-muted-foreground [overflow-wrap:anywhere]">{detail.payments.length} payment{detail.payments.length === 1 ? "" : "s"} · paid {formatMoney(detail.paidAmount)}</p>
+                <span className={`inline-flex max-w-full items-center break-words rounded-full px-2.5 py-1 text-xs font-semibold tabular-nums [overflow-wrap:anywhere] ${Number(detail.dueAmount) > 0 ? "bg-amber-soft text-amber-strong" : "bg-teal-soft text-teal-strong"}`}>{Number(detail.dueAmount) > 0 ? `Due ${formatMoney(detail.dueAmount)}` : "Fully paid"}</span>
+              </div>
+            </div>
+
+            {detail.returns && detail.returns.length > 0 && <p className="mt-3.5 text-xs leading-5 text-muted-foreground">{detail.returns.length.toLocaleString()} return{detail.returns.length === 1 ? "" : "s"} recorded — {detail.returns.map((entry) => `${entry.returnNumber} (${formatMoney(entry.total)})`).join(", ")}.</p>}
+            {detail.notes && <p className="mt-3.5 rounded-[12px] border border-border/70 bg-background p-4 text-[13px] leading-5 text-foreground"><span className="mb-1 block text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">Note</span>{detail.notes}</p>}
+          </>}
+        </div>
+
+        <div className="flex flex-col gap-3 border-t border-line bg-muted/35 px-5 py-4"><p className="text-xs leading-5 text-muted-foreground">Closing this preview keeps the basket you were building · <Key>Esc</Key></p><div className="flex items-center gap-2"><Button variant="outline" className="h-10 flex-1" onClick={() => setDetailId(null)}>Close</Button><Link className="inline-flex h-10 flex-1 items-center justify-center gap-1.5 rounded-[12px] bg-primary px-4 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90" href={`/${isSale ? "sales" : "purchases"}/${detailId}`}>Printable invoice<ArrowRight size={14}/></Link></div></div>
+      </div>
+    </div>}
   </div>;
 }

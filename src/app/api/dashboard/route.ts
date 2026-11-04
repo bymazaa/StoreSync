@@ -52,6 +52,7 @@ export async function GET() {
       lowStockProducts,
       todayExpenses,
       recentSales,
+      customerDueSummary,
     ] = await Promise.all([
       Sale.find({ status: { $in: activeSaleStatuses }, soldAt: { $gte: weekStart, $lt: end } })
         .select("_id invoiceNumber soldAt subtotal discountAmount")
@@ -84,10 +85,14 @@ export async function GET() {
         { $group: { _id: null, totalAmount: { $sum: "$amount" } } }
       ]),
       Sale.find({ status: { $in: activeSaleStatuses } })
-        .select("_id invoiceNumber total soldAt status customerId")
+        .select("_id invoiceNumber total paidAmount dueAmount soldAt status customerId")
         .sort({ soldAt: -1 })
         .limit(6)
         .lean(),
+      Sale.aggregate([
+        { $match: { dueAmount: { $gt: 0 }, status: { $in: [SaleStatus.COMPLETED, SaleStatus.PARTIALLY_RETURNED] } } },
+        { $group: { _id: null, totalDue: { $sum: "$dueAmount" }, invoiceCount: { $sum: 1 } } },
+      ]),
     ]);
 
     const recentSaleCustomerIds = [...new Set(recentSales.map(s => s.customerId).filter(Boolean))];
@@ -149,6 +154,7 @@ export async function GET() {
 
     return NextResponse.json({
       currencyCode: settings?.currencyCode ?? "USD",
+      customerDue: { amount: (customerDueSummary[0]?.totalDue ?? 0).toFixed(2), invoiceCount: customerDueSummary[0]?.invoiceCount ?? 0 },
       today: {
         sales: netSalesToday.toFixed(2),
         purchases: netPurchasesToday.toFixed(2),

@@ -5,6 +5,7 @@ import { ChevronLeft, ChevronRight, History, RefreshCw, Search } from "lucide-re
 import { apiRequest } from "@/lib/client-api";
 import { ErrorMessage, inputClass, PageHeader, Panel, selectClass, TableEmpty } from "@/components/ui/page";
 import { Button } from "@/components/ui/button";
+import { DateField } from "@/components/ui/date-field";
 import { useShopFormat, useShopPermissions } from "@/components/app/shop-context";
 
 type Log = { id: string; action: string; entityType: string; entityId: string; actorId: string; actorName: string; detail: string; ipAddress: string; createdAt: string };
@@ -120,34 +121,52 @@ export function ActivityPage() {
     <div className="space-y-6">
       <PageHeader eyebrow="Records" title="Activity log" description="Every create, update and reversal in this shop — who did it, when, and what changed." />
       {error && <ErrorMessage>{error}</ErrorMessage>}
-      <Panel title="Find an entry" description="Filters use the shop timezone. Leave the date fields empty to search all history.">
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(180px,1fr)_minmax(160px,1fr)_minmax(200px,1fr)_1fr_1fr_auto]">
-          <select aria-label="Staff member" value={actorId} onChange={(event) => { setActorId(event.target.value); setPage(1); }} className={selectClass}>
-            <option value="">Anyone</option>
-            {actors.map((actor) => <option key={actor.id} value={actor.id}>{actor.name}</option>)}
-          </select>
-          <select aria-label="Area" value={entityType} onChange={(event) => { setEntityType(event.target.value); setPage(1); }} className={selectClass}>
-            <option value="">Every area</option>
-            {entityList.map((value) => <option key={value} value={value}>{entityLabels[value]}</option>)}
-          </select>
-          <select aria-label="Action" value={action} onChange={(event) => { setAction(event.target.value); setPage(1); }} className={selectClass}>
-            <option value="">Every action</option>
-            {actionList.map((value) => <option key={value} value={value}>{actionLabels[value]}</option>)}
-          </select>
-          <label className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">From<input type="date" value={from} onChange={(event) => { setFrom(event.target.value); setPage(1); }} className={`${inputClass} mt-1.5 font-normal normal-case tracking-normal`} /></label>
-          <label className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">To<input type="date" value={to} onChange={(event) => { setTo(event.target.value); setPage(1); }} className={`${inputClass} mt-1.5 font-normal normal-case tracking-normal`} /></label>
-          <Button variant="outline" icon={<Search size={15} />} onClick={() => { setCommittedSearch(search.trim()); setPage(1); }} disabled={busy}>Search</Button>
+      <Panel title="Find an entry" description="Filters use the shop timezone. Leave any field empty to include everything.">
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+          <label className="block">
+            <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Who did it</span>
+            <select value={actorId} onChange={(event) => { setActorId(event.target.value); setPage(1); }} className={`${selectClass} mt-1.5`}>
+              <option value="">Anyone</option>
+              {actors.map((actor) => <option key={actor.id} value={actor.id}>{actor.name}</option>)}
+            </select>
+          </label>
+          <label className="block">
+            <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Which area</span>
+            <select value={entityType} onChange={(event) => { setEntityType(event.target.value); setPage(1); }} className={`${selectClass} mt-1.5`}>
+              <option value="">Every area</option>
+              {entityList.map((value) => <option key={value} value={value}>{entityLabels[value]}</option>)}
+            </select>
+          </label>
+          <label className="block">
+            <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Which action</span>
+            <select value={action} onChange={(event) => { setAction(event.target.value); setPage(1); }} className={`${selectClass} mt-1.5`}>
+              <option value="">Every action</option>
+              {actionList.map((value) => <option key={value} value={value}>{actionLabels[value]}</option>)}
+            </select>
+          </label>
+          <label className="block">
+            <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">From date</span>
+            <DateField value={from} onChange={(value) => { setFrom(value); setPage(1); }} className="mt-1.5" />
+          </label>
+          <label className="block">
+            <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">To date</span>
+            <DateField value={to} onChange={(value) => { setTo(value); setPage(1); }} className="mt-1.5" />
+          </label>
         </div>
-        <div className="mt-3 flex flex-wrap items-center gap-3">
-          <input aria-label="Search invoice, reason or record ID" className={`${inputClass} max-w-sm`} placeholder="Invoice number, reason or record ID" value={search} onChange={(event) => setSearch(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") { setCommittedSearch(search.trim()); setPage(1); } }} />
-          {committedSearch && <Button variant="ghost" className="h-9 text-xs" onClick={() => { setSearch(""); setCommittedSearch(""); setPage(1); }}>Clear “{committedSearch}”</Button>}
-          <Button variant="outline" className="h-9 text-xs" icon={<RefreshCw size={14} className={busy ? "animate-spin" : undefined} />} onClick={() => void load()} disabled={busy}>Refresh</Button>
+        <div className="mt-3 flex flex-wrap items-end gap-3">
+          <label className="block">
+            <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Search text</span>
+            <input className={`${inputClass} mt-1.5 max-w-sm`} placeholder="Invoice number, reason or record ID" value={search} onChange={(event) => setSearch(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") { setCommittedSearch(search.trim()); setPage(1); } }} />
+          </label>
+          <Button variant="outline" className="h-10" icon={<Search size={15} />} onClick={() => { setCommittedSearch(search.trim()); setPage(1); }} disabled={busy}>Search</Button>
+          {committedSearch && <Button variant="ghost" className="h-10 text-xs" onClick={() => { setSearch(""); setCommittedSearch(""); setPage(1); }}>Clear “{committedSearch}”</Button>}
+          <Button variant="outline" className="h-10 text-xs" icon={<RefreshCw size={14} className={busy ? "animate-spin" : undefined} />} onClick={() => void load()} disabled={busy}>Refresh</Button>
         </div>
       </Panel>
       <Panel title={`${total.toLocaleString()} entries`} description={total === 0 ? "Nothing matches these filters yet." : `Showing ${firstShown}–${lastShown}.`}>
         <div className="overflow-hidden rounded-xl border border-border/70">
           <div className="overflow-x-auto">
-          <table className="w-full min-w-[980px] text-left text-sm">
+          <table className="stock-table w-full min-w-[980px] text-left text-sm">
             <thead className="bg-muted/40 text-[11px] uppercase tracking-[0.08em] text-muted-foreground"><tr><th className="px-3 py-2.5 font-semibold">When</th><th className="px-3 py-2.5 font-semibold">Who</th><th className="px-3 py-2.5 font-semibold">Action</th><th className="px-3 py-2.5 font-semibold">Area / record</th><th className="px-3 py-2.5 font-semibold">What changed</th><th className="px-3 py-2.5 font-semibold">IP</th></tr></thead>
             <tbody className="divide-y divide-border/70">
               {logs.map((log) => (

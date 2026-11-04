@@ -1,318 +1,1201 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 
 @media print {
-  @page { size: A4; margin: 8mm; }
-  @page receipt { size: 80mm auto; margin: 0; }
-  /* Tailwind sizes/spacing are rem-based, so shrinking the root font scales the whole invoice to one A4 page. */
-  html { font-size: 11px; background: #fff !important; }
-  body { background: #fff !important; color: #111827 !important; }
-  aside, nav, header[role="banner"], .app-shell-header, button, a[href], .print\:hidden { display: none !important; }
-  main, .min-h-screen { padding: 0 !important; }
-  .rounded-2xl, .rounded-3xl { border-radius: 0 !important; box-shadow: none !important; }
-  .bg-card, .bg-background { background: #fff !important; }
-  .invoice-panel { padding: 0 !important; border: 0 !important; background: #fff !important; }
-  .print-document .overflow-x-auto { overflow: visible !important; }
-  .invoice-paper { padding: 0 !important; }
-  .print-document > header, .print-document > section.ml-auto, .print-document > section.receipt-return-summary { break-inside: avoid; page-break-inside: avoid; }
-  .print-document table { font-variant-numeric: tabular-nums; }
-  .print-document { width: 100%; max-width: none !important; color: #0d1a17 !important; font-family: var(--app-font-sans); font-size: 9pt; line-height: 1.38; }
-  .print-document, .print-document * { text-transform: uppercase; }
-  /* Paper must not inherit the dark theme's palette, and shadows have no place on a page. */
-  .print-document { --border: #e6ece9; --muted-foreground: #74817e; --foreground: #152b2a; }
-  .print-document, .print-document * { box-shadow: none !important; }
-  .invoice-brand-header { border-bottom: 0.2mm solid #0f766e !important; padding-bottom: 2mm !important; }
-  .invoice-shop-logo { max-height: 11mm; }
-  .invoice-shop-mark { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
-  .invoice-number-block { min-width: 44mm; }
-  /* Party + payment status compress into one hairline band instead of two padded screen cards — no fill on paper. */
-  .print-document > section.grid { gap: 6mm !important; padding: 1.6mm 2.2mm !important; border-bottom: 0.15mm solid #d6e2de !important; }
-  .print-document > section.grid > div { padding: 0 !important; border-radius: 0 !important; background: transparent !important; }
-  .print-document > section.grid p { margin-top: 0.5mm !important; }
-  .print-document > section.ml-auto { margin-top: 2.5mm; }
-  .print-document > section.ml-auto > * + * { margin-top: 0.7mm !important; }
-  .print-document .receipt-grand-total { margin-top: 1.4mm !important; padding-top: 1.4mm !important; border-top: 0.2mm solid #0f766e !important; color: #0c4a44 !important; }
-  .print-document section h2 { font-size: 7.6pt; font-weight: 700 !important; letter-spacing: 0.08em; color: #0c4a44 !important; }
-  .print-document .receipt-return { padding-bottom: 1.2mm !important; border-bottom: 0.12mm solid #e2eae7 !important; }
-  .print-document .receipt-payment-row { padding-top: 0.8mm !important; padding-bottom: 0.8mm !important; font-size: 8pt; }
-  .print-document > section.mt-6, .print-document > section.mt-7, .print-document > p.mt-5, .print-document > footer { margin-top: 2mm !important; padding-top: 1.6mm !important; }
-  /* Centered auto-width tables keep their browser margin-left offset, which looks indented on an 80 mm roll. */
-  .print-document table { width: 100%; margin: 0; border-collapse: collapse; font-size: 8.2pt; line-height: 1.4; }
-  .print-document thead { display: table-header-group; }
-  .print-document tr, .print-document section, .print-document footer { break-inside: avoid; page-break-inside: avoid; }
-  .print-document th, .print-document td { vertical-align: top; border-bottom: 0.12mm solid #e2eae7; }
-  .print-document th { padding: 1mm 1.6mm; background: #f3f7f6 !important; color: #3a4945 !important; font-size: 6.8pt; font-weight: 700; letter-spacing: 0.05em; border-bottom: 0.2mm solid #0f766e !important; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
-  .print-document td { padding: 1mm 1.6mm; }
-  .print-document footer { color: #4a5855 !important; }
-  /* Paper stays in the body face — the display face is reserved for on-screen headings. */
-  .print-document h1, .print-document h2, .print-document h3, .report-print h1, .report-print h2, .report-print h3 { font-family: var(--app-font-sans) !important; letter-spacing: normal; }
-  /* The slip itself is styled once, for screen and paper together, below the print block. */
-  .receipt-mode { margin: 0 !important; }
-  .receipt-mode > section { margin: 0 !important; padding: 0 !important; border: 0 !important; }
-  .receipt-mode .print-document { page: receipt; }
-  /* Printing the payment slip hides the rest of the contacts page. */
-  .payment-receipt-mode { margin: 0 !important; }
-  .payment-receipt-mode > *:not(.receipt-mode) { display: none !important; }
-  /* Printing the sticker sheet hides the rest of the products page. */
-  @page label { size: A4 portrait; margin: 8mm; }
-  .label-print-mode { page: label; }
-  .label-print-mode > *:not(.label-sheet) { display: none !important; }
-  .label-print-mode .label-sheet { display: block; }
-  .label-print-mode .label-sheet svg { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
-  @page report { size: A4 landscape; margin: 9mm 10mm; }
-  /* The statement is a bank document: hairline rules, no fills, and the same face the shop reads on screen,
+    @page {
+        size: A4;
+        margin: 8mm;
+    }
+    @page receipt {
+        size: 80mm auto;
+        margin: 0;
+    }
+    /* Keep print sizing in physical units so A4 pagination stays predictable. */
+    html {
+        font-size: 12px;
+        background: #fff !important;
+    }
+    body {
+        background: #fff !important;
+        color: #111827 !important;
+    }
+    aside,
+    nav,
+    header[role='banner'],
+    .app-shell-header,
+    button,
+    a[href],
+    .print\:hidden {
+        display: none !important;
+    }
+    main,
+    .min-h-screen {
+        padding: 0 !important;
+    }
+    .rounded-2xl,
+    .rounded-3xl,
+    .rounded-\[16px\] {
+        border-radius: 0 !important;
+        box-shadow: none !important;
+    }
+    .bg-card,
+    .bg-background,
+    .bg-canvas,
+    .bg-input {
+        background: #fff !important;
+    }
+    /* The floating app frame and its outer canvas flatten onto the paper. */
+    .app-shell-canvas,
+    .app-shell-frame {
+        margin: 0 !important;
+        padding: 0 !important;
+        border: 0 !important;
+        border-radius: 0 !important;
+        background: #fff !important;
+        box-shadow: none !important;
+        min-height: 0 !important;
+    }
+    .invoice-panel {
+        padding: 0 !important;
+        border: 0 !important;
+        background: #fff !important;
+    }
+    .print-document .overflow-x-auto {
+        overflow: visible !important;
+    }
+    .invoice-paper {
+        padding: 0 !important;
+    }
+    .print-document > header,
+    .print-document > section.ml-auto {
+        break-inside: avoid;
+        page-break-inside: avoid;
+    }
+    .print-document table {
+        width: 100%;
+        min-width: 0 !important;
+        table-layout: fixed;
+        font-variant-numeric: tabular-nums;
+    }
+    .print-document .receipt-items-returns {
+        font-size: 7.3pt;
+    }
+    .print-document th,
+    .print-document td {
+        overflow-wrap: anywhere;
+    }
+    .print-document tr {
+        break-inside: avoid;
+        page-break-inside: avoid;
+    }
+    .print-document > section.receipt-return-summary,
+    .print-document > section.mt-6 {
+        break-inside: auto;
+        page-break-inside: auto;
+    }
+    .print-document {
+        width: 100%;
+        max-width: none !important;
+        color: #0d1a17 !important;
+        font-family: var(--app-font-sans);
+        font-size: 9.2pt;
+        line-height: 1.45;
+        font-variant-numeric: tabular-nums;
+    }
+    /* Paper must not inherit the dark theme's palette, and shadows have no place on a page. */
+    .print-document {
+        --border: #e6ece9;
+        --muted-foreground: #74817e;
+        --foreground: #152b2a;
+    }
+    .print-document,
+    .print-document * {
+        box-shadow: none !important;
+    }
+    .invoice-brand-header {
+        border-bottom: 0.2mm solid #0f766e !important;
+        padding-bottom: 2mm !important;
+    }
+    .invoice-shop-logo {
+        max-height: 11mm;
+    }
+    .invoice-shop-mark {
+        print-color-adjust: exact;
+        -webkit-print-color-adjust: exact;
+    }
+    .invoice-number-block {
+        min-width: 44mm;
+    }
+    /* Party + payment status compress into one hairline band instead of two padded screen cards — no fill on paper. */
+    .print-document > section.grid {
+        gap: 6mm !important;
+        padding: 1.6mm 2.2mm !important;
+        border-bottom: 0.15mm solid #d6e2de !important;
+    }
+    .print-document > section.grid > div {
+        padding: 0 !important;
+        border-radius: 0 !important;
+        background: transparent !important;
+    }
+    .print-document > section.grid p {
+        margin-top: 0.5mm !important;
+    }
+    .print-document > section.ml-auto {
+        margin-top: 2.5mm;
+    }
+    .print-document > section.ml-auto > * + * {
+        margin-top: 0.7mm !important;
+    }
+    .print-document .receipt-grand-total {
+        margin-top: 1.4mm !important;
+        padding-top: 1.4mm !important;
+        border-top: 0.2mm solid #0f766e !important;
+        color: #0c4a44 !important;
+    }
+    .print-document section h2 {
+        font-size: 7.6pt;
+        font-weight: 700 !important;
+        letter-spacing: 0.08em;
+        color: #0c4a44 !important;
+    }
+    .print-document .receipt-return {
+        padding-bottom: 1.2mm !important;
+        border-bottom: 0.12mm solid #e2eae7 !important;
+    }
+    .print-document .receipt-payment-row {
+        padding-top: 0.8mm !important;
+        padding-bottom: 0.8mm !important;
+        font-size: 8pt;
+    }
+    .print-document > section.mt-6,
+    .print-document > section.mt-7,
+    .print-document > p.mt-5,
+    .print-document > footer {
+        margin-top: 2mm !important;
+        padding-top: 1.6mm !important;
+    }
+    /* Centered auto-width tables keep their browser margin-left offset, which looks indented on an 80 mm roll. */
+    .print-document table {
+        width: 100%;
+        margin: 0;
+        border-collapse: collapse;
+        font-size: 8.2pt;
+        line-height: 1.4;
+    }
+    .print-document thead {
+        display: table-header-group;
+    }
+    .print-document tr,
+    .print-document footer {
+        break-inside: avoid;
+        page-break-inside: avoid;
+    }
+    .print-document th,
+    .print-document td {
+        vertical-align: top;
+        border-bottom: 0.12mm solid #e2eae7;
+    }
+    .print-document th {
+        padding: 1.5mm 1.7mm;
+        background: #f3f7f6 !important;
+        color: #3a4945 !important;
+        font-size: 6.8pt;
+        font-weight: 700;
+        letter-spacing: 0.05em;
+        border-bottom: 0.2mm solid #0f766e !important;
+        print-color-adjust: exact;
+        -webkit-print-color-adjust: exact;
+    }
+    .print-document td {
+        padding: 1.6mm 1.7mm;
+    }
+    .print-document footer {
+        color: #4a5855 !important;
+    }
+    /* Paper stays in the body face — the display face is reserved for on-screen headings. */
+    .print-document h1,
+    .print-document h2,
+    .print-document h3,
+    .report-print h1,
+    .report-print h2,
+    .report-print h3 {
+        font-family: var(--app-font-sans) !important;
+        letter-spacing: normal;
+    }
+    /* The slip itself is styled once, for screen and paper together, below the print block. */
+    .receipt-mode {
+        margin: 0 !important;
+    }
+    .receipt-mode > section {
+        margin: 0 !important;
+        padding: 0 !important;
+        border: 0 !important;
+    }
+    .receipt-mode .print-document {
+        page: receipt;
+    }
+    /* Printing the payment slip hides the rest of the contacts page. */
+    .payment-receipt-mode {
+        margin: 0 !important;
+    }
+    .payment-receipt-mode > *:not(.receipt-mode) {
+        display: none !important;
+    }
+    /* Printing the sticker sheet hides the rest of the products page. */
+    @page label {
+        size: A4 portrait;
+        margin: 8mm;
+    }
+    .label-print-mode {
+        page: label;
+    }
+    .label-print-mode > *:not(.label-sheet) {
+        display: none !important;
+    }
+    .label-print-mode .label-sheet {
+        display: block;
+    }
+    .label-print-mode .label-sheet svg {
+        print-color-adjust: exact;
+        -webkit-print-color-adjust: exact;
+    }
+    @page report {
+        size: A4 landscape;
+        margin: 9mm 10mm;
+    }
+    /* The statement is a bank document: hairline rules, no fills, and the same face the shop reads on screen,
      so the paper never looks like a different product. Tabular figures keep the money columns aligned. */
-  .report-print { page: report; color: #101f1b; font-family: var(--app-font-sans); }
-  .report-print .overflow-x-auto { overflow: visible !important; }
-  .report-print thead { display: table-header-group; }
-  /* Rows and the summary band never split; the entries section itself is allowed to break so its
+    .report-print {
+        page: report;
+        color: #101f1b;
+        font-family: var(--app-font-sans);
+    }
+    .report-print .overflow-x-auto {
+        overflow: visible !important;
+    }
+    .report-print thead {
+        display: table-header-group;
+    }
+    /* Rows and the summary band never split; the entries section itself is allowed to break so its
      first rows start on page 1 even for long statements — the panel heading stays glued to them. */
-  .report-print tr, .report-print .report-summary { break-inside: avoid; page-break-inside: avoid; }
-  .report-print .report-section > div:first-child { break-inside: avoid; break-after: avoid; page-break-inside: avoid; page-break-after: avoid; }
-  /* Fixed column shares come from the component, so a wide cell wraps instead of running off the page. */
-  .report-print table { width: 100%; min-width: 0 !important; margin: 0; border-collapse: collapse; table-layout: fixed; font-size: 7.2pt; line-height: 1.45; font-variant-numeric: tabular-nums; }
-  .report-print th { padding: 1.1mm 1.4mm; line-height: 1.3; background: #cfe1db !important; color: #16241f !important; font-size: 6.2pt; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; text-align: left; border-bottom: 0.2mm solid #0f766e; vertical-align: bottom; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
-  .report-print th.text-right, .report-print td.text-right { text-align: right; }
-  /* Bengali pre-base matras and conjuncts stack below the baseline, so print rows need extra leading. */
-  .report-print td { padding: 1mm 1.4mm; line-height: 1.5; border-bottom: 0.1mm solid #cddcd8; color: #16241f; vertical-align: top; }
-  .report-print .report-serial { color: #7c8985 !important; }
-  /* Amount totals close the statement the way a bank footer does — a rule and a bold figure, no band.
+    .report-print tr,
+    .report-print .report-summary {
+        break-inside: avoid;
+        page-break-inside: avoid;
+    }
+    .report-print .report-section > div:first-child {
+        break-inside: avoid;
+        break-after: avoid;
+        page-break-inside: avoid;
+        page-break-after: avoid;
+    }
+    /* Fixed column shares come from the component, so a wide cell wraps instead of running off the page. */
+    .report-print table {
+        width: 100%;
+        min-width: 0 !important;
+        margin: 0;
+        border-collapse: collapse;
+        table-layout: fixed;
+        font-size: 7.2pt;
+        line-height: 1.45;
+        font-variant-numeric: tabular-nums;
+    }
+    .report-print th {
+        padding: 1.1mm 1.4mm;
+        line-height: 1.3;
+        background: #cfe1db !important;
+        color: #16241f !important;
+        font-size: 6.2pt;
+        font-weight: 700;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        text-align: left;
+        border-bottom: 0.2mm solid #0f766e;
+        vertical-align: bottom;
+        print-color-adjust: exact;
+        -webkit-print-color-adjust: exact;
+    }
+    .report-print th.text-right,
+    .report-print td.text-right {
+        text-align: right;
+    }
+    /* Bengali pre-base matras and conjuncts stack below the baseline, so print rows need extra leading. */
+    .report-print td {
+        padding: 1mm 1.4mm;
+        line-height: 1.5;
+        border-bottom: 0.1mm solid #cddcd8;
+        color: #16241f;
+        vertical-align: top;
+    }
+    .report-print .report-serial {
+        color: #7c8985 !important;
+    }
+    /* Amount totals close the statement the way a bank footer does — a rule and a bold figure, no band.
      table-footer-group repeats on every printed page, so it prints as a plain row group: once, at the end. */
-  .report-print tfoot { display: table-row-group; }
-  .report-print tfoot tr { border-top: 0 !important; background: transparent !important; }
-  .report-print tfoot td { padding-top: 1.3mm; border-top: 0.2mm solid #0f766e; border-bottom: 0; background: transparent !important; color: #0c4a44 !important; font-weight: 700; }
-  .report-print tbody tr:nth-child(even) { background: transparent !important; }
-  .report-print .report-empty { color: #6b7874 !important; background: #fff !important; }
-  /* Every printed cell breaks inside its own column share — a figure can wrap, but never run over a neighbour. */
-  .report-print td, .report-print th { overflow-wrap: anywhere; }
-  /* The screen table frame and its row dividers are chrome; paper keeps only the printed hairlines. */
-  .report-print .report-table-frame { border: 0 !important; border-radius: 0 !important; overflow: visible !important; }
-  .report-print tbody tr { border-top: 0 !important; }
-  .report-letterhead { display: flex; align-items: flex-start; justify-content: space-between; gap: 8mm; padding-bottom: 1.6mm; border-bottom: 0.2mm solid #0f766e; }
-  .report-shop-name { font-size: 12pt; font-weight: 700; letter-spacing: 0.02em; line-height: 1.3; color: #0c4a44 !important; }
-  .report-contact { margin-top: 0.6mm; font-size: 7.6pt; line-height: 1.5; color: #4a5855 !important; }
-  .report-meta { font-size: 7.2pt; color: #24332f !important; text-align: left; }
-  .report-meta > div { display: flex; justify-content: flex-end; gap: 2mm; }
-  .report-meta > div + div { margin-top: 0.4mm; }
-  .report-meta-label { min-width: 20mm; text-align: right; font-size: 6.2pt; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: #75827e !important; }
-  .report-title-band { display: flex; align-items: baseline; justify-content: space-between; gap: 6mm; margin-top: 2mm; }
-  .report-title { font-size: 9.6pt; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #0d1a17 !important; }
-  .report-period { font-size: 7.2pt; color: #4a5855 !important; }
-  .report-print .report-section { margin-top: 2.4mm !important; padding: 2mm 2.4mm !important; border: 0.15mm solid #d6e2de !important; border-radius: 1.4mm !important; background: #fff !important; box-shadow: none !important; }
-  .report-print .report-section h2 { font-size: 8.2pt; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: #0c4a44 !important; }
-  .report-print .report-section p { font-size: 7pt; color: #5a6965 !important; }
-  .report-print .report-section > div:first-child { margin-bottom: 1.5mm !important; padding-bottom: 1.2mm; border-bottom: 0.15mm solid #e6eeeb; }
-  .report-summary { display: grid !important; grid-template-columns: repeat(4, minmax(0, 1fr)) !important; gap: 0 !important; margin-top: 2.4mm !important; border: 0.15mm solid #d6e2de; border-radius: 1.4mm; overflow: hidden; }
-  .report-summary > div { padding: 1.5mm 2mm !important; margin: 0 !important; border: 0 !important; border-left: 0.15mm solid #e6eeeb !important; border-radius: 0 !important; background: #fff !important; }
-  .report-summary > div:nth-child(4n+1) { border-left: 0 !important; }
-  .report-summary > div:nth-child(n+5) { border-top: 0.15mm solid #e6eeeb; }
-  .report-summary p:first-child { font-size: 6pt; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: #6f7c79 !important; }
-  .report-summary p:last-child { margin-top: 0.5mm !important; font-size: 8.4pt; font-weight: 700; color: #0c4a44 !important; }
-  .report-footnote { justify-content: space-between; gap: 6mm; margin-top: 2.4mm !important; padding-top: 1.2mm; border-top: 0.2mm solid #0f766e; font-size: 6.2pt; letter-spacing: 0.04em; color: #66736f !important; }
+    .report-print tfoot {
+        display: table-row-group;
+    }
+    .report-print tfoot tr {
+        border-top: 0 !important;
+        background: transparent !important;
+    }
+    .report-print tfoot td {
+        padding-top: 1.3mm;
+        border-top: 0.2mm solid #0f766e;
+        border-bottom: 0;
+        background: transparent !important;
+        color: #0c4a44 !important;
+        font-weight: 700;
+    }
+    .report-print tbody tr:nth-child(even) {
+        background: transparent !important;
+    }
+    .report-print .report-empty {
+        color: #6b7874 !important;
+        background: #fff !important;
+    }
+    /* Every printed cell breaks inside its own column share — a figure can wrap, but never run over a neighbour. */
+    .report-print td,
+    .report-print th {
+        overflow-wrap: anywhere;
+    }
+    /* The screen table frame and its row dividers are chrome; paper keeps only the printed hairlines. */
+    .report-print .report-table-frame {
+        border: 0 !important;
+        border-radius: 0 !important;
+        overflow: visible !important;
+    }
+    .report-print tbody tr {
+        border-top: 0 !important;
+    }
+    .report-letterhead {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 8mm;
+        padding-bottom: 1.6mm;
+        border-bottom: 0.2mm solid #0f766e;
+    }
+    .report-shop-name {
+        font-size: 12pt;
+        font-weight: 700;
+        letter-spacing: 0.02em;
+        line-height: 1.3;
+        color: #0c4a44 !important;
+    }
+    .report-contact {
+        margin-top: 0.6mm;
+        font-size: 7.6pt;
+        line-height: 1.5;
+        color: #4a5855 !important;
+    }
+    .report-meta {
+        font-size: 7.2pt;
+        color: #24332f !important;
+        text-align: left;
+    }
+    .report-meta > div {
+        display: flex;
+        justify-content: flex-end;
+        gap: 2mm;
+    }
+    .report-meta > div + div {
+        margin-top: 0.4mm;
+    }
+    .report-meta-label {
+        min-width: 20mm;
+        text-align: right;
+        font-size: 6.2pt;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: #75827e !important;
+    }
+    .report-title-band {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 6mm;
+        margin-top: 2mm;
+    }
+    .report-title {
+        font-size: 9.6pt;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: #0d1a17 !important;
+    }
+    .report-period {
+        font-size: 7.2pt;
+        color: #4a5855 !important;
+    }
+    .report-print .report-section {
+        margin-top: 2.4mm !important;
+        padding: 2mm 2.4mm !important;
+        border: 0.15mm solid #d6e2de !important;
+        border-radius: 1.4mm !important;
+        background: #fff !important;
+        box-shadow: none !important;
+    }
+    .report-print .report-section h2 {
+        font-size: 8.2pt;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: #0c4a44 !important;
+    }
+    .report-print .report-section p {
+        font-size: 7pt;
+        color: #5a6965 !important;
+    }
+    .report-print .report-section > div:first-child {
+        margin-bottom: 1.5mm !important;
+        padding-bottom: 1.2mm;
+        border-bottom: 0.15mm solid #e6eeeb;
+    }
+    .report-summary {
+        display: grid !important;
+        grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+        gap: 0 !important;
+        margin-top: 2.4mm !important;
+        border: 0.15mm solid #d6e2de;
+        border-radius: 1.4mm;
+        overflow: hidden;
+    }
+    .report-summary > div {
+        padding: 1.5mm 2mm !important;
+        margin: 0 !important;
+        border: 0 !important;
+        border-left: 0.15mm solid #e6eeeb !important;
+        border-radius: 0 !important;
+        background: #fff !important;
+    }
+    .report-summary > div:nth-child(4n + 1) {
+        border-left: 0 !important;
+    }
+    .report-summary > div:nth-child(n + 5) {
+        border-top: 0.15mm solid #e6eeeb;
+    }
+    .report-summary p:first-child {
+        font-size: 6pt;
+        font-weight: 700;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        color: #6f7c79 !important;
+    }
+    .report-summary p:last-child {
+        margin-top: 0.5mm !important;
+        font-size: 8.4pt;
+        font-weight: 700;
+        color: #0c4a44 !important;
+    }
+    .report-footnote {
+        justify-content: space-between;
+        gap: 6mm;
+        margin-top: 2.4mm !important;
+        padding-top: 1.2mm;
+        border-top: 0.2mm solid #0f766e;
+        font-size: 6.2pt;
+        letter-spacing: 0.04em;
+        color: #66736f !important;
+    }
 }
 /* 80 mm thermal slip. One rule set styles the on-screen preview and the paper, and every size is in
    mm/pt/em so the column breaks its lines identically in both. Body text stays one dark ink and the
    hairlines are light gray (#cbd3d0) — the slip carries no brand color, only ink. No fills: pills
    would smudge. No outer frame either: the roll is already 80 mm wide, so side rules read as a cut
    line, not as design. */
-.receipt-mode .print-document { --spacing: 0.35mm; box-sizing: border-box; width: 76mm; max-width: 76mm; margin: 0 auto; padding: 3.4mm 3.6mm 4mm !important; border: 0; border-radius: 0; background: #fff; color: #1b2825 !important; font-size: 8.6pt; line-height: 1.45; text-align: left; font-variant-numeric: tabular-nums; }
-.receipt-mode .print-document, .receipt-mode .print-document * { text-transform: none; }
-.receipt-mode .print-document * { font-size: inherit; line-height: inherit; color: #1b2825 !important; background: transparent !important; border-width: 0 !important; border-radius: 0 !important; box-shadow: none !important; }
-.receipt-mode .print-document header, .receipt-mode .print-document footer, .receipt-mode .print-document > section { margin-left: 0 !important; text-align: left; }
-.receipt-mode .print-document > header { display: block; border-bottom: 0.1mm solid #cbd3d0 !important; padding-bottom: 1.8mm; }
+.receipt-mode .print-document {
+    --spacing: 0.35mm;
+    box-sizing: border-box;
+    width: 76mm;
+    max-width: 76mm;
+    margin: 0 auto;
+    padding: 3.4mm 3.6mm 4mm !important;
+    border: 0;
+    border-radius: 0;
+    background: #fff;
+    color: #1b2825 !important;
+    font-size: 8.6pt;
+    line-height: 1.45;
+    text-align: left;
+    font-variant-numeric: tabular-nums;
+}
+.receipt-mode .print-document,
+.receipt-mode .print-document * {
+    text-transform: none;
+}
+.receipt-mode .print-document * {
+    font-size: inherit;
+    line-height: inherit;
+    color: #1b2825 !important;
+    background: transparent !important;
+    border-width: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+}
+.receipt-mode .print-document header,
+.receipt-mode .print-document footer,
+.receipt-mode .print-document > section {
+    margin-left: 0 !important;
+    text-align: left;
+}
+.receipt-mode .print-document > header {
+    display: block;
+    border-bottom: 0.1mm solid #cbd3d0 !important;
+    padding-bottom: 1.8mm;
+}
 /* Paper is only 80 mm wide, so the sm: row breakpoint never fires and the brand block stacked. Forced back
    into a row: logo left, vertically centred against the shop name, sizes in mm so screen equals roll. */
-.receipt-mode .print-document > header > div:first-child { display: flex; flex-direction: row; align-items: center; gap: 2.5mm; width: 100%; }
-.receipt-mode .print-document .invoice-shop-logo { height: 10mm; width: auto; max-width: 28mm; }
-.receipt-mode .print-document .invoice-shop-mark { display: grid; place-items: center; height: 10mm; width: 10mm; }
-.receipt-mode .print-document > header > div + div { margin-top: 1.8mm; }
-.receipt-mode .print-document .invoice-number-block { min-width: 0; text-align: left; }
-.receipt-mode .print-document h2 { font-size: 1em; font-weight: 700 !important; letter-spacing: 0; }
+.receipt-mode .print-document > header > div:first-child {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 2.5mm;
+    width: 100%;
+}
+.receipt-mode .print-document .invoice-shop-logo {
+    height: 10mm;
+    width: auto;
+    max-width: 28mm;
+}
+.receipt-mode .print-document .invoice-shop-mark {
+    display: grid;
+    place-items: center;
+    height: 10mm;
+    width: 10mm;
+}
+.receipt-mode .print-document > header > div + div {
+    margin-top: 1.8mm;
+}
+.receipt-mode .print-document .invoice-number-block {
+    min-width: 0;
+    text-align: left;
+}
+.receipt-mode .print-document h2 {
+    font-size: 1em;
+    font-weight: 700 !important;
+    letter-spacing: 0;
+}
 /* Small caps labels carry the hierarchy; only the internal hairlines are ink. */
-.receipt-mode .print-document [class~="uppercase"] { text-transform: uppercase; font-size: 0.76em; letter-spacing: 0.1em; font-weight: 700; }
-.receipt-mode .print-document .receipt-shop-name { font-size: 1.35em; font-weight: 700; line-height: 1.25; }
-.receipt-mode .print-document .receipt-doc-no { font-size: 1.1em; font-weight: 700; }
-.receipt-mode .print-document .receipt-grand-total { font-size: 1.18em; font-weight: 700; margin-top: 1.5mm !important; padding-top: 1.5mm !important; border-top: 0.1mm solid #cbd3d0 !important; }
-.receipt-mode .truncate-receipt { display: block; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.receipt-mode .print-document [class~='uppercase'] {
+    text-transform: uppercase;
+    font-size: 0.76em;
+    letter-spacing: 0.1em;
+    font-weight: 700;
+}
+.receipt-mode .print-document .receipt-shop-name {
+    font-size: 1.35em;
+    font-weight: 700;
+    line-height: 1.25;
+}
+.receipt-mode .print-document .receipt-doc-no {
+    font-size: 1.1em;
+    font-weight: 700;
+}
+.receipt-mode .print-document .receipt-grand-total {
+    font-size: 1.18em;
+    font-weight: 700;
+    margin-top: 1.5mm !important;
+    padding-top: 1.5mm !important;
+    border-top: 0.1mm solid #cbd3d0 !important;
+}
+.receipt-mode .truncate-receipt {
+    display: block;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
 /* Screen clamps with an ellipsis; the slip has to keep the value inside its own column instead. */
-.receipt-mode .print-document [class~="truncate"] { max-width: 100% !important; overflow: visible; white-space: normal; text-overflow: clip; }
-.receipt-mode .print-document > section.grid { display: block; padding: 2.5mm 0 0; background: transparent !important; border-bottom: 0 !important; }
-.receipt-mode .print-document > section.grid > div { text-align: left; }
-.receipt-mode .print-document > section.grid > div + div { margin-top: 1.6mm; }
-.receipt-mode .print-document table { width: 100%; min-width: 0 !important; margin-top: 2.2mm; table-layout: fixed; border-collapse: collapse; font-size: 0.88em; }
-.receipt-mode .print-document th, .receipt-mode .print-document td { padding: 1mm 0.4mm; white-space: normal; vertical-align: top; text-align: left; overflow-wrap: break-word; }
-.receipt-mode .print-document th { font-size: 0.9em; letter-spacing: 0.06em; text-transform: uppercase; font-weight: 700; border-bottom: 0.1mm solid #cbd3d0 !important; }
-.receipt-mode .print-document tbody tr + tr td { border-top: 0.1mm solid #cbd3d0 !important; }
-.receipt-mode .print-document th:first-child, .receipt-mode .print-document td:first-child { width: 40%; overflow-wrap: anywhere; }
-.receipt-mode .print-document th:last-child, .receipt-mode .print-document td:last-child { width: 25%; text-align: right; }
+.receipt-mode .print-document [class~='truncate'] {
+    max-width: 100% !important;
+    overflow: visible;
+    white-space: normal;
+    text-overflow: clip;
+}
+.receipt-mode .print-document > section.grid {
+    display: block;
+    padding: 2.5mm 0 0;
+    background: transparent !important;
+    border-bottom: 0 !important;
+}
+.receipt-mode .print-document > section.grid > div {
+    text-align: left;
+}
+.receipt-mode .print-document > section.grid > div + div {
+    margin-top: 1.6mm;
+}
+.receipt-mode .print-document table {
+    width: 100%;
+    min-width: 0 !important;
+    margin-top: 2.2mm;
+    table-layout: fixed;
+    border-collapse: collapse;
+    font-size: 0.88em;
+}
+.receipt-mode .print-document th,
+.receipt-mode .print-document td {
+    padding: 1mm 0.4mm;
+    white-space: normal;
+    vertical-align: top;
+    text-align: left;
+    overflow-wrap: break-word;
+}
+.receipt-mode .print-document th {
+    font-size: 0.9em;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    font-weight: 700;
+    border-bottom: 0.1mm solid #cbd3d0 !important;
+}
+.receipt-mode .print-document tbody tr + tr td {
+    border-top: 0.1mm solid #cbd3d0 !important;
+}
+.receipt-mode .print-document th:first-child,
+.receipt-mode .print-document td:first-child {
+    width: 40%;
+    overflow-wrap: anywhere;
+}
+.receipt-mode .print-document th:last-child,
+.receipt-mode .print-document td:last-child {
+    width: 25%;
+    text-align: right;
+}
 /* A returned-goods slip carries two more columns, so the item name column steps back. */
-.receipt-mode .receipt-items-returns th:first-child, .receipt-mode .receipt-items-returns td:first-child { width: 28%; }
-.receipt-mode .receipt-items-returns th:nth-child(2), .receipt-mode .receipt-items-returns td:nth-child(2),
-.receipt-mode .receipt-items-returns th:nth-child(3), .receipt-mode .receipt-items-returns td:nth-child(3),
-.receipt-mode .receipt-items-returns th:nth-child(4), .receipt-mode .receipt-items-returns td:nth-child(4) { width: 12%; }
-.receipt-mode .print-document .receipt-item-meta { display: block; font-size: 0.85em; }
-.receipt-mode .print-document .receipt-totals { max-width: none !important; margin-top: 2.6mm !important; padding-top: 1.8mm; border-top: 0.1mm solid #cbd3d0 !important; }
-.receipt-mode .receipt-totals > div { display: flex; justify-content: space-between; gap: 3mm; }
-.receipt-mode .receipt-totals > div + div { margin-top: 0.8mm !important; }
-.receipt-mode .print-document .receipt-return-summary { margin-top: 3mm !important; padding-top: 1.8mm; border-top: 0.1mm solid #cbd3d0 !important; }
-.receipt-mode .receipt-return { padding-bottom: 2mm !important; }
-.receipt-mode .print-document footer { margin-top: 3mm !important; padding-top: 1.8mm; border-top: 0.1mm solid #cbd3d0 !important; }
-@media screen { .receipt-mode .print-document { box-shadow: 0 0.6mm 2.4mm rgba(15, 37, 35, 0.16); } }
+.receipt-mode .receipt-items-returns th:first-child,
+.receipt-mode .receipt-items-returns td:first-child {
+    width: 28%;
+}
+.receipt-mode .receipt-items-returns th:nth-child(2),
+.receipt-mode .receipt-items-returns td:nth-child(2),
+.receipt-mode .receipt-items-returns th:nth-child(3),
+.receipt-mode .receipt-items-returns td:nth-child(3),
+.receipt-mode .receipt-items-returns th:nth-child(4),
+.receipt-mode .receipt-items-returns td:nth-child(4) {
+    width: 12%;
+}
+.receipt-mode .print-document .receipt-item-meta {
+    display: block;
+    font-size: 0.85em;
+}
+.receipt-mode .print-document .receipt-totals {
+    max-width: none !important;
+    margin-top: 2.6mm !important;
+    padding-top: 1.8mm;
+    border-top: 0.1mm solid #cbd3d0 !important;
+}
+.receipt-mode .receipt-totals > div {
+    display: flex;
+    justify-content: space-between;
+    gap: 3mm;
+}
+.receipt-mode .receipt-totals > div + div {
+    margin-top: 0.8mm !important;
+}
+.receipt-mode .print-document .receipt-return-summary {
+    margin-top: 3mm !important;
+    padding-top: 1.8mm;
+    border-top: 0.1mm solid #cbd3d0 !important;
+}
+.receipt-mode .receipt-return {
+    padding-bottom: 2mm !important;
+}
+.receipt-mode .print-document footer {
+    margin-top: 3mm !important;
+    padding-top: 1.8mm;
+    border-top: 0.1mm solid #cbd3d0 !important;
+}
+@media screen {
+    .receipt-mode .print-document {
+        box-shadow: 0 0.6mm 2.4mm rgba(15, 37, 35, 0.16);
+    }
+}
 /* Stickers keep the same look on screen and paper; only the printable sheet is hidden until printed. */
 /* A4 with 8mm margins leaves 194x277mm, so two columns of six fit exactly at 95.5mm x 43mm each. */
-.label-sheet { display: none; }
-.label-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 3mm; }
-.label-item { display: flex; flex-direction: column; justify-content: space-between; gap: 1.5mm; height: 43mm; padding: 3mm 3.5mm; border: 0.25mm dashed #9aa8a4; border-radius: 1.6mm; break-inside: avoid; page-break-inside: avoid; background: #fff; color: #172523; }
-.label-name { font-size: 11pt; font-weight: 700; line-height: 1.2; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
-.label-code { height: 13mm; }
-.label-code-text { font-size: 11pt; font-weight: 700; text-align: center; }
-.label-price { font-size: 17pt; font-weight: 700; color: #0c4a44; white-space: nowrap; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
-.label-price.label-price-sm { font-size: 14pt; }
-.label-price.label-price-xs { font-size: 11pt; }
-.label-sku { flex: none; font-size: 7.5pt; letter-spacing: 0.12em; text-transform: uppercase; color: #4c5b57; font-variant-numeric: tabular-nums; }
-.label-foot { display: flex; align-items: baseline; justify-content: space-between; gap: 3mm; }
+.label-sheet {
+    display: none;
+}
+.label-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 3mm;
+}
+.label-item {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 1.5mm;
+    height: 43mm;
+    padding: 3mm 3.5mm;
+    border: 0.25mm dashed #9aa8a4;
+    border-radius: 1.6mm;
+    break-inside: avoid;
+    page-break-inside: avoid;
+    background: #fff;
+    color: #172523;
+}
+.label-name {
+    font-size: 11pt;
+    font-weight: 700;
+    line-height: 1.2;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    overflow-wrap: anywhere;
+}
+.label-code {
+    height: 13mm;
+}
+.label-code-text {
+    font-size: 11pt;
+    font-weight: 700;
+    text-align: center;
+}
+.label-price {
+    font-size: 17pt;
+    font-weight: 700;
+    color: #0c4a44;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.01em;
+}
+.label-price.label-price-sm {
+    font-size: 14pt;
+}
+.label-price.label-price-xs {
+    font-size: 11pt;
+}
+.label-sku {
+    flex: none;
+    font-size: 7.5pt;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #4c5b57;
+    font-variant-numeric: tabular-nums;
+}
+.label-foot {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 3mm;
+}
 /* On a narrow screen two fixed columns squeeze; paper always gets the exact grid. */
-@media screen { .label-grid { grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); } }
+@media screen {
+    .label-grid {
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    }
+}
 @custom-variant dark (&:where(.dark, .dark *));
 
-/* The app face is self-hosted so shop machines never need an internet fetch; Archivo ships
-   as a variable 100-900 woff2 (latin subset). */
-@font-face {
-  font-family: "Archivo";
-  src: url("/fonts/archivo-wght-normal.woff2") format("woff2");
-  font-style: normal;
-  font-weight: 100 900;
-  font-display: swap;
+/* Custom date fields: the real input keeps form/validation semantics but never receives
+   clicks, so the whole box opens the custom calendar popover (DateField) instead. */
+.date-field-input {
+    position: absolute;
+    inset: 0;
+    height: 100%;
+    width: 100%;
+    opacity: 0;
+    pointer-events: none;
+}
+.date-field-input::-webkit-calendar-picker-indicator {
+    display: none;
 }
 
-/* Logo wordmark face: Baloo 2 variable 400-800, self-hosted so shops stay offline. */
+/* Bengali glyphs and the taka sign are provided by this self-hosted subset. */
 @font-face {
-  font-family: "Baloo 2";
-  src: url("/fonts/baloo2-wght-normal.woff2") format("woff2");
-  font-style: normal;
-  font-weight: 400 800;
-  font-display: swap;
+    font-family: 'Noto Sans Bengali';
+    src: url('/fonts/noto-sans-bengali-wght-normal.woff2') format('woff2');
+    font-style: normal;
+    font-weight: 100 900;
+    font-display: swap;
+    unicode-range: U+0980-09FF, U+200C-200D;
 }
-
-/* Bengali glyphs are self-hosted: Windows' system-ui (Segoe UI) shows boxes for them. */
-@font-face {
-  font-family: "Noto Sans Bengali Variable";
-  src: url("/fonts/noto-sans-bengali-wght-normal.woff2") format("woff2");
-  font-style: normal;
-  font-weight: 100 900;
-  font-display: swap;
-  unicode-range: U+0980-09FF, U+200C-200D;
-}
-
 :root {
-  color-scheme: light;
-  --background: #f6f8f7;
-  --foreground: #152b2a;
-  --card: #ffffff;
-  --border: #e6ece9;
-  --muted: #f0f4f2;
-  --muted-foreground: #74817e;
-  --primary: #0a9f94;
-  --primary-foreground: #ffffff;
-  --primary-soft: #e0f5f2;
-  --sidebar: #102a43;
-  --sidebar-foreground: #e1ebf3;
-  --ring: #1ba69b;
-  --success: #0e8a73;
-  --danger: #d45151;
-  --teal-soft: #e0f5f2;
-  --teal-strong: #07857c;
-  --blue-soft: #eaf1fb;
-  --blue-strong: #4b75ba;
-  --amber-soft: #fff3dc;
-  --amber-strong: #bd811e;
-  --violet-soft: #f0ebfb;
-  --violet-strong: #8264bd;
-  --chart-primary: #0a9f94;
-  --chart-secondary: #93a9cc;
-  --chart-grid: #e9efed;
-  --chart-label: #8b9794;
-  --tooltip-bg: #ffffff;
-  /* Archivo has no Bengali glyphs and Windows' system-ui (Segoe UI) shows boxes for them, so the local
-     Bengali faces are named before the generic fallbacks — the shop's data is Bengali on every counter PC. */
-  --app-font-sans: "Archivo", "Noto Sans Bengali Variable", "Noto Sans Bengali", "Nirmala UI", "Shonar Bangla", "Bangla Sangam MN", "Vrinda", ui-sans-serif, system-ui, "Segoe UI", sans-serif;
-  /* One face for the whole system: headings share the body font, only size and weight differ. */
-  --app-font-display: var(--app-font-sans);
-  /* Baloo 2 only carries Latin glyphs, so the wordmark falls back to the app face for anything else. */
-  --app-font-logo: "Baloo 2", var(--app-font-sans);
-  --app-font-mono: ui-monospace, "Cascadia Mono", "SF Mono", "Segoe UI Mono", Menlo, Consolas, monospace;
+    color-scheme: light;
+    /* White app surface — depth comes from card borders and the sidebar shadow, not gray panels. */
+    --canvas: #ffffff;
+    --background: #ffffff;
+    --foreground: #1a1c1f;
+    --card: #ffffff;
+    --border: #ededed;
+    --line: #f0f0f0;
+    --shell-border: #e8e8ea;
+    /* A whisper of the brand teal, so the nav column reads as its own zone without going gray. */
+    --sidebar: #f4f7f6;
+    --input: #f7f7f8;
+    --table-head: #f7f7f8;
+    --muted: #f1f1f3;
+    --muted-foreground: #6b6b6b;
+    --primary: #0a9f94;
+    --primary-foreground: #ffffff;
+    --primary-soft: #e0f5f2;
+    --ring: #1ba69b;
+    --success: #0e8a73;
+    --danger: #d45151;
+    --teal-soft: #e0f5f2;
+    --teal-strong: #07857c;
+    --blue-soft: #eaf1fb;
+    --blue-strong: #4b75ba;
+    --amber-soft: #fff3dc;
+    --amber-strong: #bd811e;
+    --violet-soft: #f0ebfb;
+    --violet-strong: #8264bd;
+    --chart-primary: #0a9f94;
+    --chart-secondary: #93a9cc;
+    --chart-grid: #e9efed;
+    --chart-label: #8b9794;
+    --tooltip-bg: #ffffff;
+    /* DM Sans is self-hosted at build; system fonts provide language glyph fallbacks. */
+    --app-font-sans:
+        var(--font-dm-sans), 'Noto Sans Bengali', ui-sans-serif, system-ui, 'Segoe UI', sans-serif;
+    --app-font-display: var(--app-font-sans);
+    --app-font-mono:
+        ui-monospace, 'Cascadia Mono', 'SF Mono', 'Segoe UI Mono', Menlo, Consolas, monospace;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-card: var(--card);
-  --color-border: var(--border);
-  --color-muted: var(--muted);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-primary: var(--primary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-primary-soft: var(--primary-soft);
-  --color-sidebar: var(--sidebar);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-ring: var(--ring);
-  --color-success: var(--success);
-  --color-danger: var(--danger);
-  --color-teal-soft: var(--teal-soft);
-  --color-teal-strong: var(--teal-strong);
-  --color-blue-soft: var(--blue-soft);
-  --color-blue-strong: var(--blue-strong);
-  --color-amber-soft: var(--amber-soft);
-  --color-amber-strong: var(--amber-strong);
-  --color-violet-soft: var(--violet-soft);
-  --color-violet-strong: var(--violet-strong);
-  --color-chart-secondary: var(--chart-secondary);
-  --shadow-card: 0 4px 18px rgb(24 58 51 / 0.045);
-  --font-sans: var(--app-font-sans);
-  --font-display: var(--app-font-display);
-  --font-logo: var(--app-font-logo);
-  --font-mono: var(--app-font-mono);
+    --color-background: var(--background);
+    --color-canvas: var(--canvas);
+    --color-foreground: var(--foreground);
+    --color-card: var(--card);
+    --color-border: var(--border);
+    --color-line: var(--line);
+    --color-shell-border: var(--shell-border);
+    --color-sidebar: var(--sidebar);
+    --color-input: var(--input);
+    --color-table-head: var(--table-head);
+    --color-muted: var(--muted);
+    --color-muted-foreground: var(--muted-foreground);
+    --color-primary: var(--primary);
+    --color-primary-foreground: var(--primary-foreground);
+    --color-primary-soft: var(--primary-soft);
+    --color-ring: var(--ring);
+    --color-success: var(--success);
+    --color-danger: var(--danger);
+    --color-teal-soft: var(--teal-soft);
+    --color-teal-strong: var(--teal-strong);
+    --color-blue-soft: var(--blue-soft);
+    --color-blue-strong: var(--blue-strong);
+    --color-amber-soft: var(--amber-soft);
+    --color-amber-strong: var(--amber-strong);
+    --color-violet-soft: var(--violet-soft);
+    --color-violet-strong: var(--violet-strong);
+    --color-chart-secondary: var(--chart-secondary);
+    --shadow-card: 0 1px 2px rgb(0 0 0 / 0.04);
+    --shadow-soft: 0 1px 3px rgb(0 0 0 / 0.06), 0 1px 2px rgb(0 0 0 / 0.04);
+    /* One radius across the whole app: every rounded-* utility (except rounded-full pills and
+     circles) resolves to 8px, so cards, controls and chips stay on the same corner. */
+    --radius-xs: 0.5rem;
+    --radius-sm: 0.5rem;
+    --radius-md: 0.5rem;
+    --radius-lg: 0.5rem;
+    --radius-xl: 0.5rem;
+    --radius-2xl: 0.5rem;
+    --radius-3xl: 0.5rem;
+    --radius-4xl: 0.5rem;
+    --font-sans: var(--app-font-sans);
+    --font-display: var(--app-font-display);
+    --font-logo: var(--app-font-sans);
+    --font-mono: var(--app-font-mono);
 }
 
 .dark {
-  color-scheme: dark;
-  --background: #101918;
-  --foreground: #e5eeeb;
-  --card: #17211f;
-  --border: #293733;
-  --muted: #202c29;
-  --muted-foreground: #9aa9a4;
-  --primary: #4fbbab;
-  --primary-foreground: #082a26;
-  --primary-soft: #183b35;
-  --sidebar: #131d1b;
-  --sidebar-foreground: #adbbb6;
-  --ring: #4fbbab;
-  --success: #60c6a6;
-  --danger: #f17b79;
-  --teal-soft: #183b35;
-  --teal-strong: #70d2bf;
-  --blue-soft: #1d3047;
-  --blue-strong: #9bb7e5;
-  --amber-soft: #3d321e;
-  --amber-strong: #e9b658;
-  --violet-soft: #302742;
-  --violet-strong: #bca4ec;
-  --chart-primary: #55c8b4;
-  --chart-secondary: #839ac0;
-  --chart-grid: #2a3935;
-  --chart-label: #9aa9a4;
-  --tooltip-bg: #17211f;
+    color-scheme: dark;
+    --canvas: #16181a;
+    --background: #16181a;
+    --foreground: #e8eaec;
+    --card: #1d1f21;
+    --border: #2e3032;
+    --line: #26282a;
+    --shell-border: #222426;
+    --sidebar: #191b1d;
+    --input: #222426;
+    --table-head: #212325;
+    --muted: #232527;
+    --muted-foreground: #9ea0a3;
+    --primary: #4fbbab;
+    --primary-foreground: #082a26;
+    --primary-soft: #183b35;
+    --ring: #4fbbab;
+    --success: #60c6a6;
+    --danger: #f17b79;
+    --teal-soft: #183b35;
+    --teal-strong: #70d2bf;
+    --blue-soft: #1d3047;
+    --blue-strong: #9bb7e5;
+    --amber-soft: #3d321e;
+    --amber-strong: #e9b658;
+    --violet-soft: #302742;
+    --violet-strong: #bca4ec;
+    --chart-primary: #55c8b4;
+    --chart-secondary: #839ac0;
+    --chart-grid: #2a3935;
+    --chart-label: #9aa9a4;
+    --tooltip-bg: #17211f;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: var(--app-font-sans);
-  font-optical-sizing: auto;
+    background: var(--canvas);
+    color: var(--foreground);
+    font-family: var(--app-font-sans);
+    font-optical-sizing: auto;
 }
 
-@layer base {
-  /* Headings share the Archivo body face — the variable font carries real weights, so
-     font-* utilities never render as synthetic bold. Bengali falls through inside the stack. */
-  h1, h2, h3 { font-family: var(--app-font-display); letter-spacing: 0.02em; }
+
+
+/* Shared list-table look: light gray header band, muted 13px column labels, hairline row
+   separators and roomy 72px rows. Unlayered so it wins over per-table utility classes —
+   pages only need to add the `stock-table` class to their <table>. */
+.stock-table thead {
+    background: var(--table-head);
+    color: var(--muted-foreground);
+}
+.stock-table thead th {
+    font-size: 13px;
+    font-weight: 500;
+    text-transform: none;
+    letter-spacing: 0;
+    padding-top: 0.875rem;
+    padding-bottom: 0.875rem;
+}
+.stock-table tbody td {
+    height: 72px;
+}
+.stock-table tbody tr + tr {
+    border-top: 1px solid var(--line);
+}
+.stock-table tbody tr:first-child {
+    border-top: 0;
+}
+.stock-table tbody tr:last-child {
+    border-bottom: 0;
+}
+
+/* The invoice list that sits under the POS form carries more rows than a list page, so it
+   trades the shared roomy row for a scan-friendly compact one. */
+.recent-table thead th {
+    padding-top: 0.625rem;
+    padding-bottom: 0.625rem;
+}
+.recent-table tbody td {
+    height: 52px;
+}
+
+/* Row-action buttons ask for h-8/h-9 next to the Button base h-11, and cn() has no
+   tailwind-merge to drop the loser. Unlayered rules beat @layer utilities, so the
+   compact height a caller asked for survives. */
+button.h-8 {
+    height: 2rem;
+}
+button.h-9 {
+    height: 2.25rem;
+}
+button.h-10 {
+    height: 2.5rem;
+}
+button.px-2 {
+    padding-inline: 0.5rem;
+}
+button.px-2\.5 {
+    padding-inline: 0.625rem;
+}
+button.px-3 {
+    padding-inline: 0.75rem;
+}
+
+/* Every enabled button and button-like control shows the pointer cursor. */
+button:not(:disabled),
+[role='button']:not(:disabled) {
+    cursor: pointer;
+}
+a[href],
+summary,
+select:not([multiple]),
+input[type='checkbox']:not(:disabled),
+input[type='radio']:not(:disabled),
+input[type='file']:not(:disabled),
+input[type='button']:not(:disabled),
+input[type='submit']:not(:disabled),
+input[type='reset']:not(:disabled) {
+    cursor: pointer;
+}
+label:has(
+    input[type='checkbox']:not(:disabled),
+    input[type='radio']:not(:disabled),
+    input[type='file']:not(:disabled)
+) {
+    cursor: pointer;
+}
+
+/* The docked sidebar still scrolls on short screens, but the bar itself must stay invisible. */
+.app-shell-nav {
+    scrollbar-width: none;
+}
+.app-shell-nav::-webkit-scrollbar {
+    display: none;
+}
+
+/* Same rule for scrolling bodies inside overlays, so a modal never grows a visible bar. */
+.hide-scrollbar {
+    scrollbar-width: none;
+}
+.hide-scrollbar::-webkit-scrollbar {
+    display: none;
+}
+
+/* Collapsed rail. Unlayered rules beat the width/padding utilities Tailwind puts in
+   @layer utilities, so the rail works at every viewport instead of only lg and above.
+   The nav link keeps its accessible name and tooltip through title={label}. */
+.app-shell-nav[data-collapsed='true'] {
+    width: 84px;
+}
+.app-shell-nav[data-collapsed='true'] .nav-logo-card {
+    flex-direction: column;
+    justify-content: flex-start;
+    gap: 8px;
+    padding: 6px 0;
+}
+.app-shell-nav[data-collapsed='true'] .nav-brand {
+    justify-content: center;
+}
+.app-shell-nav[data-collapsed='true'] .nav-actions {
+    flex-direction: column;
+}
+.app-shell-nav[data-collapsed='true'] .nav-menu,
+.app-shell-nav[data-collapsed='true'] .nav-footer {
+    padding: 4px;
+}
+.app-shell-nav[data-collapsed='true'] .nav-item {
+    justify-content: center;
+    padding-inline: 0;
+}
+.app-shell-nav[data-collapsed='true'] .nav-shop-card {
+    margin-inline: 0;
+    padding: 12px 0 4px;
+}
+.app-shell-nav[data-collapsed='true'] .nav-shop-row {
+    justify-content: center;
+    gap: 0;
+}
+.app-shell-nav[data-collapsed='true'] .nav-wordmark,
+.app-shell-nav[data-collapsed='true'] .nav-section-title,
+.app-shell-nav[data-collapsed='true'] .nav-label,
+.app-shell-nav[data-collapsed='true'] .nav-active-indicator,
+.app-shell-nav[data-collapsed='true'] .nav-shop-meta,
+.app-shell-nav[data-collapsed='true'] .nav-note {
+    display: none;
+}
+
+@media screen {
+    .report-screen-meta {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        min-height: 42px;
+        margin-top: -12px;
+        padding: 0 2px;
+        color: var(--muted-foreground);
+        font-size: 12px;
+    }
+    .report-summary {
+        gap: 14px;
+    }
+    .report-summary > div {
+        min-width: 0;
+        min-height: 132px;
+        padding: 20px !important;
+        border-radius: 16px !important;
+        transition: transform 160ms ease, box-shadow 160ms ease;
+    }
+    .report-summary > div:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 18px 35px -25px rgba(15, 37, 35, 0.34);
+    }
+    .report-summary > div > div:first-child {
+        align-items: center;
+        min-height: 36px;
+    }
+    .report-summary > div > div:first-child > p {
+        max-width: calc(100% - 48px);
+        line-height: 1.4;
+    }
+    .report-summary > div > p:nth-child(2) {
+        margin-top: 18px !important;
+        font-size: clamp(1.5rem, 2vw, 1.9rem) !important;
+        line-height: 1.15;
+        letter-spacing: -0.025em;
+    }
+    .report-summary > div > span:last-child {
+        margin-top: 8px;
+        line-height: 1.45;
+    }
+    .report-table-frame table {
+        min-width: 640px;
+    }
+    .report-table-frame thead th {
+        background: color-mix(in srgb, var(--muted) 72%, var(--card));
+    }
+    .report-table-frame tbody tr {
+        transition: background-color 120ms ease;
+    }
+}
+
+@media screen and (max-width: 639px) {
+    .report-screen-meta {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 4px;
+        margin-top: -14px;
+    }
+    .report-summary > div {
+        min-height: 116px;
+        padding: 16px !important;
+    }
+}
+.product-catalog-action {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+}
+.product-archive-toggle {
+    display: inline-flex;
+    min-height: 40px;
+    align-items: center;
+    gap: 8px;
+    padding: 0 12px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--background);
+    color: var(--muted-foreground);
+    font-size: 12px;
+    white-space: nowrap;
+}
+.product-catalog-frame {
+    background: var(--card);
+}
+.product-catalog-table thead th {
+    padding-inline: 16px;
+    white-space: nowrap;
+}
+.product-catalog-table tbody td {
+    height: auto;
+    padding: 14px 16px;
+    vertical-align: middle;
+}
+.product-catalog-table tbody tr:hover {
+    background: color-mix(in srgb, var(--primary-soft) 52%, transparent);
+}
+@media screen and (min-width: 640px) {
+    .product-catalog-action {
+        width: auto;
+        justify-content: flex-end;
+    }
+}
+.dark .nav-logo-card,
+.dark .nav-footer,
+.dark .app-shell-nav .nav-item:not(:focus-visible) {
+    box-shadow: none !important;
 }

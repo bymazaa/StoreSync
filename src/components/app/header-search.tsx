@@ -95,8 +95,8 @@ export function HeaderSearch({ currencyCode, locale }: { currencyCode: string; l
   const showEmpty = open && !loading && groups.length === 0 && term.length >= 2;
 
   return (
-    <div ref={rootRef} className="relative hidden w-[280px] sm:block xl:w-[350px]">
-      <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+    <div ref={rootRef} className="relative hidden w-[min(38vw,420px)] min-w-[260px] sm:block">
+      <Search size={16} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-primary/80" />
       <input
         ref={inputRef}
         value={query}
@@ -108,18 +108,18 @@ export function HeaderSearch({ currencyCode, locale }: { currencyCode: string; l
         aria-controls="header-search-results"
         aria-autocomplete="list"
         aria-activedescendant={open && items[active] ? `header-search-${items[active].type}-${items[active].id}` : undefined}
-        className="h-10 w-full rounded-xl border border-border bg-card pl-9 pr-14 text-sm text-foreground outline-none placeholder:text-muted-foreground focus:border-primary/50 focus:ring-2 focus:ring-primary/10"
+        className="h-10 w-full rounded-[16px] border border-gray-300/80 bg-card dark:border-gray-700 pl-11 pr-16 text-sm text-foreground shadow-2xl shadow-gray-100 outline-none transition-[border-color,box-shadow,background-color] duration-200 placeholder:text-muted-foreground/80 hover:border-primary/25 focus:border-primary/45 focus:shadow-2xl focus:shadow-gray-100 focus:ring-2 focus:ring-primary/15 dark:shadow-none"
         placeholder="Search products, invoices..."
         aria-label="Search products, invoices, customers and suppliers"
       />
       {loading ? (
-        <LoaderCircle size={14} className="absolute right-3 top-1/2 -translate-y-1/2 animate-spin text-muted-foreground" />
+        <LoaderCircle size={14} className="absolute right-3.5 top-1/2 -translate-y-1/2 animate-spin text-muted-foreground" />
       ) : (
-        <kbd className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 rounded-md border border-border bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">⌘ K</kbd>
+        <kbd className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 rounded-lg border border-line bg-muted px-2 py-1 text-[10px] font-semibold text-muted-foreground">⌘ K</kbd>
       )}
 
       {open && (loading || items.length > 0 || showEmpty) && (
-        <div id="header-search-results" role="listbox" className="absolute left-0 right-0 top-12 z-40 max-h-[70vh] overflow-y-auto rounded-xl border border-border bg-card p-1.5 shadow-xl">
+        <div id="header-search-results" role="listbox" className="absolute left-0 right-0 top-12 z-40 max-h-[70vh] overflow-y-auto rounded-[20px] border border-line bg-card p-2 shadow-2xl shadow-gray-100 dark:shadow-none">
           {showEmpty && <p className="px-3 py-6 text-center text-sm text-muted-foreground">No matches for “{term}”.</p>}
           {groups.map((group) => (
             <div key={group.key} className="py-1">

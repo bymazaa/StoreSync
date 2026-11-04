@@ -4,6 +4,7 @@ import { FormEvent, useCallback, useEffect, useRef, useState } from 'react';
 import { apiRequest, jsonBody } from '@/lib/client-api';
 import { useHasPermission, useShopFormat } from '@/components/app/shop-context';
 import { Button } from '@/components/ui/button';
+import { DateField } from '@/components/ui/date-field';
 import { ErrorMessage, inputClass, PageHeader, Panel, selectClass } from '@/components/ui/page';
 import { localDateKey } from '@/lib/date-time';
 
@@ -30,6 +31,10 @@ export function ExpensesPage() {
     const [voidModalOpen, setVoidModalOpen] = useState(false);
     const [expenseToVoid, setExpenseToVoid] = useState<Expense | null>(null);
     const [voidReason, setVoidReason] = useState('');
+    const [expenseDate, setExpenseDate] = useState('');
+    useEffect(() => {
+        setExpenseDate(localDateKey(new Date(), timezone));
+    }, [timezone]);
     const pendingExpenseRequests = useRef(new Map<string, string>());
     const load = useCallback(async () => {
         if (!canView) return;
@@ -87,6 +92,7 @@ export function ExpensesPage() {
             });
             pendingExpenseRequests.current.delete(fingerprint);
             formElement.reset();
+            setExpenseDate(localDateKey(new Date(), timezone));
             setNotice('Expense recorded.');
             await load();
         } catch (e) {
@@ -162,12 +168,12 @@ export function ExpensesPage() {
                             className={inputClass}
                             placeholder={`Amount (${currency})`}
                         />
-                        <input
+                        <DateField
                             name="expenseDate"
                             required
-                            type="date"
-                            defaultValue={localDateKey(new Date(), timezone)}
-                            className={inputClass}
+                            value={expenseDate}
+                            onChange={setExpenseDate}
+                            placeholder="Pick a date"
                         />
                         <select name="methodId" className={selectClass}>
                             <option value="">Payment method (optional)</option>
@@ -193,9 +199,9 @@ export function ExpensesPage() {
                     title="Recent expenses"
                     description={`${expenses.length.toLocaleString()} entries in this period · voided entries are excluded from profit but stay in the audit log.`}
                 >
-                    <div className="overflow-hidden rounded-xl border border-border/70">
+                    <div className="overflow-hidden rounded-[12px] border border-border/70 bg-background">
                         <div className="overflow-x-auto">
-                            <table className="w-full min-w-[420px] text-left text-sm sm:min-w-[880px]">
+                            <table className="stock-table recent-table w-full min-w-[420px] text-left text-sm sm:min-w-[880px]">
                                 <thead className="bg-muted/40 text-[11px] uppercase tracking-[0.08em] text-muted-foreground">
                                     <tr>
                                         <th className="px-3 py-2.5 font-semibold">Date</th>
@@ -288,7 +294,7 @@ export function ExpensesPage() {
             )}
             {voidModalOpen && expenseToVoid && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/50 p-4">
-                    <div className="my-auto w-full max-w-md rounded-xl bg-background p-5 shadow-lg sm:p-6">
+                    <div className="my-auto w-full max-w-md rounded-xl border border-line bg-card p-5 shadow-lg sm:p-6">
                         <h3 className="text-lg font-semibold">Void Expense</h3>
                         <p className="mt-2 text-sm text-muted-foreground">
                             Are you sure you want to void &ldquo;

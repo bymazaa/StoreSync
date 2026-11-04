@@ -216,6 +216,7 @@ export async function GET(request: Request) {
       const product = productMap.get(item.productId);
       return {
         ...item,
+        id: item.productId,
         unit: product?.baseUnit?.symbol || "",
         quantity: item.quantity.toString(),
         revenue: item.revenue.toFixed(2),

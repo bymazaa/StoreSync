@@ -18,13 +18,13 @@ export function ThemeToggle() {
   if (!mounted) return <div aria-hidden className="h-10 w-[122px] rounded-xl bg-muted" />;
 
   return (
-    <div className="inline-flex items-center rounded-xl border border-border bg-card p-1" aria-label="Appearance">
+    <div className="inline-flex items-center rounded-full border border-line bg-muted p-1 shadow-2xl shadow-gray-100 dark:shadow-none" aria-label="Appearance">
       {themeOptions.map(({ value, label, icon: Icon }) => (
         <button
           key={value}
           aria-label={`${label} theme`}
           aria-pressed={theme === value}
-          className={`grid size-8 place-items-center rounded-lg transition-colors ${theme === value ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:bg-muted hover:text-foreground"}`}
+          className={`grid size-8 place-items-center rounded-full transition-colors ${theme === value ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:bg-card hover:text-foreground"}`}
           onClick={() => setTheme(value)}
           title={label}
           type="button"
