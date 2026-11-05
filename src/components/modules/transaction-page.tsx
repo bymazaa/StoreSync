@@ -289,6 +289,17 @@ export function TransactionPage({ mode }: { mode: "sale" | "purchase" }) {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [detailId]);
+  useEffect(() => {
+    if (!detailId) return;
+    const previousHtmlOverflow = document.documentElement.style.overflow;
+    const previousBodyOverflow = document.body.style.overflow;
+    document.documentElement.style.overflow = "hidden";
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.documentElement.style.overflow = previousHtmlOverflow;
+      document.body.style.overflow = previousBodyOverflow;
+    };
+  }, [detailId]);
   function updateContactPhone(value: string) {
     setContactPhone(value);
     if (!isSale) return;
@@ -535,7 +546,7 @@ export function TransactionPage({ mode }: { mode: "sale" | "purchase" }) {
       </Panel>
     </form>
 
-    {detailId && <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto p-4 print:hidden sm:items-center sm:p-6 hide-scrollbar">
+    {detailId && <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto overscroll-contain p-4 print:hidden sm:items-center sm:p-6 hide-scrollbar">
       <button type="button" aria-label="Close invoice details" className="fixed inset-0 bg-slate-950/45 backdrop-blur-[2px]" onClick={() => setDetailId(null)}/>
       <div role="dialog" aria-modal="true" aria-labelledby="recent-invoice-title" className="relative my-auto flex max-h-[90vh] w-full max-w-xl flex-col overflow-hidden rounded-[16px] border border-line bg-card shadow-2xl">
         <div className="flex items-center justify-between gap-3 border-b border-line bg-card px-5 py-4 sm:px-6">
@@ -543,7 +554,7 @@ export function TransactionPage({ mode }: { mode: "sale" | "purchase" }) {
           <div className="flex shrink-0 items-center gap-2">{detail && <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold ${invoiceStatusTones[detail.status] ?? "bg-muted text-muted-foreground"}`}><span className="size-1.5 rounded-full bg-current"/>{detail.status.replaceAll("_", " ")}</span>}<button type="button" onClick={() => setDetailId(null)} aria-label="Close invoice details" className="grid size-9 place-items-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"><X size={18}/></button></div>
         </div>
 
-        <div className="hide-scrollbar min-h-0 flex-1 overflow-y-auto px-5 py-5 sm:px-6">
+        <div className="hide-scrollbar min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-5 sm:px-6">
           {detailError && <div className="space-y-4"><ErrorMessage>{detailError}</ErrorMessage><Button variant="outline" className="h-10 px-4" onClick={() => setDetailNonce((count) => count + 1)}>Try again</Button></div>}
           {!detailError && !detail && <div className="space-y-3" aria-busy="true" aria-label="Loading invoice">{Array.from({ length: 5 }, (_, index) => <div key={index} className="h-10 animate-pulse rounded-lg bg-muted/60"/>)}</div>}
           {!detailError && detail && <>

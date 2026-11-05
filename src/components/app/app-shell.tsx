@@ -283,7 +283,7 @@ export function AppShell({
                 aria-label="Workspace navigation"
                 data-collapsed={collapsed ? 'true' : 'false'}
                 className={cn(
-                    'app-shell-nav fixed inset-y-0 left-0 z-40 flex w-[272px] flex-col border-r border-shell-border/80 bg-sidebar px-3 py-4 transition-[transform,width] duration-200 lg:sticky lg:top-0 lg:z-auto lg:h-screen lg:shrink-0 lg:translate-x-0 lg:overflow-y-auto',
+                    'app-shell-nav fixed inset-y-0 left-0 z-40 flex w-[272px] flex-col overflow-y-auto border-r border-shell-border/80 bg-sidebar px-3 py-4 transition-[transform,width] duration-200 lg:sticky lg:top-0 lg:z-auto lg:h-screen lg:shrink-0 lg:translate-x-0',
                     !collapsed && 'lg:w-[260px]',
                     menuOpen ? 'translate-x-0' : '-translate-x-full',
                 )}
