@@ -715,7 +715,11 @@
     letter-spacing: 0.06em;
     text-transform: uppercase;
     font-weight: 700;
-    border-bottom: 0.1mm solid #cbd3d0 !important;
+    background: #0a9f94 !important;
+    color: #fff !important;
+    border-bottom: 0 !important;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
 }
 .receipt-mode .print-document tbody tr + tr td {
     border-top: 0.1mm solid #cbd3d0 !important;
