@@ -2,8 +2,9 @@
 
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { apiRequest, jsonBody } from "@/lib/client-api";
+import { notifySuccessToast } from "@/lib/client-notifications";
 import { Button } from "@/components/ui/button";
-import { ErrorMessage, inputClass, PageHeader, Panel } from "@/components/ui/page";
+import { ErrorMessage, inputClass, Notice, PageHeader, Panel } from "@/components/ui/page";
 import { useHasPermission, useShopCountryCode, useShopFormat } from "@/components/app/shop-context";
 import { PhoneInput } from "@/components/ui/phone-input";
 import { AddressInput } from "@/components/ui/address-input";
@@ -20,19 +21,20 @@ export function ContactsPage({ mode, initialSearch = "" }: { mode: "customer" | 
   const endpoint = isCustomer ? "/api/customers" : "/api/suppliers";
   const [items, setItems] = useState<Contact[]>([]); const [selected, setSelected] = useState<Detail | null>(null); const [methods, setMethods] = useState<PaymentMethod[]>([]);
   const [receipt, setReceipt] = useState<PaymentReceipt | null>(null); const [receiptPrint, setReceiptPrint] = useState(false);
-  const [search, setSearch] = useState(initialSearch); const [error, setError] = useState(""); const [busy, setBusy] = useState(false);
+  const [search, setSearch] = useState(initialSearch); const [error, setError] = useState(""); const [notice, setNotice] = useState(""); const [busy, setBusy] = useState(false);
   const [editing, setEditing] = useState<Contact | null>(null);
   const [newPhone, setNewPhone] = useState(""); const [editPhone, setEditPhone] = useState(""); const [newAddress, setNewAddress] = useState(""); const [editAddress, setEditAddress] = useState("");
   const [editAddressAutoFilled, setEditAddressAutoFilled] = useState(false);
   const pendingPaymentRequests = useRef(new Map<string, string>());
+  function showSuccess(message: string) { setNotice(message); notifySuccessToast(message); }
   const load = useCallback(async () => { try { const q = new URLSearchParams(); if (search) q.set("q", search); q.set("includeInactive", "true"); const payload = await apiRequest<Record<string, Contact[]>>(`${endpoint}?${q}`); setItems(payload[isCustomer ? "customers" : "suppliers"] ?? []); setError(""); } catch (e) { setError(e instanceof Error ? e.message : "Contacts could not be loaded."); } }, [endpoint, isCustomer, search]);
   useEffect(() => { const timer = window.setTimeout(() => { void load(); }, 0); return () => window.clearTimeout(timer); }, [load]);
   useEffect(() => { if (!canCollect) return; const timer = window.setTimeout(() => { void apiRequest<{ paymentMethods: PaymentMethod[] }>("/api/payment-methods").then((result) => setMethods(result.paymentMethods)).catch(() => {}); }, 0); return () => window.clearTimeout(timer); }, [canCollect]);
   useEffect(() => { const reset = () => { document.getElementById("receipt-print-page-size")?.remove(); setReceiptPrint(false); }; window.addEventListener("afterprint", reset); return () => window.removeEventListener("afterprint", reset); }, []);
-  async function create(event: FormEvent<HTMLFormElement>) { event.preventDefault(); setBusy(true); setError(""); const formElement = event.currentTarget; const form = new FormData(formElement); try { await apiRequest(endpoint, { method: "POST", body: jsonBody({ name: form.get("name"), phone: newPhone || null, email: form.get("email") || null, address: newAddress || null, notes: form.get("notes") || null }) }); formElement.reset(); setNewPhone(""); setNewAddress(""); await load(); } catch (e) { setError(e instanceof Error ? e.message : "Contact could not be saved."); } finally { setBusy(false); } }
+  async function create(event: FormEvent<HTMLFormElement>) { event.preventDefault(); setBusy(true); setError(""); const formElement = event.currentTarget; const form = new FormData(formElement); try { await apiRequest(endpoint, { method: "POST", body: jsonBody({ name: form.get("name"), phone: newPhone || null, email: form.get("email") || null, address: newAddress || null, notes: form.get("notes") || null }) }); showSuccess(isCustomer ? "Customer created." : "Supplier created."); formElement.reset(); setNewPhone(""); setNewAddress(""); await load(); } catch (e) { setError(e instanceof Error ? e.message : "Contact could not be saved."); } finally { setBusy(false); } }
   async function open(id: string) { try { setSelected(await apiRequest<Detail>(`${endpoint}/${id}`)); } catch (e) { setError(e instanceof Error ? e.message : "Contact history could not be loaded."); } }
-  async function toggle(item: Contact) { setError(""); try { await apiRequest(`${endpoint}/${item.id}`, { method: "PATCH", body: jsonBody({ isActive: !item.isActive }) }); await load(); } catch (e) { setError(e instanceof Error ? e.message : "Contact could not be updated."); } }
-  async function saveEdit(event: FormEvent<HTMLFormElement>) { event.preventDefault(); if (!editing) return; setBusy(true); setError(""); const form = new FormData(event.currentTarget); try { await apiRequest(`${endpoint}/${editing.id}`, { method: "PATCH", body: jsonBody({ name: form.get("name"), phone: editPhone || null, email: form.get("email") || null, address: editAddress || null, notes: form.get("notes") || null }) }); setEditing(null); setEditPhone(""); setEditAddress(""); setEditAddressAutoFilled(false); await load(); if (selected) await open(editing.id); } catch (e) { setError(e instanceof Error ? e.message : "Contact could not be updated."); } finally { setBusy(false); } }
+  async function toggle(item: Contact) { setError(""); try { await apiRequest(`${endpoint}/${item.id}`, { method: "PATCH", body: jsonBody({ isActive: !item.isActive }) }); showSuccess(isCustomer ? (item.isActive ? "Customer archived." : "Customer restored.") : (item.isActive ? "Supplier archived." : "Supplier restored.")); await load(); } catch (e) { setError(e instanceof Error ? e.message : "Contact could not be updated."); } }
+  async function saveEdit(event: FormEvent<HTMLFormElement>) { event.preventDefault(); if (!editing) return; setBusy(true); setError(""); const form = new FormData(event.currentTarget); try { await apiRequest(`${endpoint}/${editing.id}`, { method: "PATCH", body: jsonBody({ name: form.get("name"), phone: editPhone || null, email: form.get("email") || null, address: form.get("address") || null, notes: form.get("notes") || null }) }); showSuccess(isCustomer ? "Customer updated." : "Supplier updated."); setEditing(null); setEditPhone(""); setEditAddress(""); setEditAddressAutoFilled(false); await load(); if (selected) await open(editing.id); } catch (e) { setError(e instanceof Error ? e.message : "Contact could not be updated."); } finally { setBusy(false); } }
   const detail = selected && (selected.customer ?? selected.supplier);
   const history = selected?.customer?.sales ?? selected?.supplier?.purchases ?? [];
   function closeEdit() { setEditing(null); setEditPhone(""); setEditAddress(""); setEditAddressAutoFilled(false); }
@@ -51,6 +53,7 @@ export function ContactsPage({ mode, initialSearch = "" }: { mode: "customer" | 
     try {
       const result = await apiRequest<{ receipt?: PaymentReceipt }>("/api/payments/collect", { method: "POST", body: jsonBody({ ...payload, clientRequestId }) });
       pendingPaymentRequests.current.delete(fingerprint);
+      showSuccess(isCustomer ? "Customer payment recorded." : "Supplier payment recorded.");
       if (result.receipt) { setReceipt(result.receipt); setSelected(null); }
       else await open(detail?.id ?? "");
       await load();
@@ -71,7 +74,7 @@ export function ContactsPage({ mode, initialSearch = "" }: { mode: "customer" | 
     }, 120);
   }
   const receiptPartyLine = [receipt?.shopAddress, receipt?.shopPhone].filter(Boolean).join(" · ");
-  return <div className={`space-y-6 ${receiptPrint ? "payment-receipt-mode" : ""}`}><PageHeader eyebrow="People & account balances" title={isCustomer ? "Customers" : "Suppliers"} description={isCustomer ? "Customer contacts, purchase history and outstanding balances." : "Supplier directory, purchase history and outstanding balances."}/>{error && <ErrorMessage>{error}</ErrorMessage>}
+  return <div className={`space-y-6 ${receiptPrint ? "payment-receipt-mode" : ""}`}><PageHeader eyebrow="People & account balances" title={isCustomer ? "Customers" : "Suppliers"} description={isCustomer ? "Customer contacts, purchase history and outstanding balances." : "Supplier directory, purchase history and outstanding balances."}/>{notice && <Notice>{notice}</Notice>}{error && <ErrorMessage>{error}</ErrorMessage>}
     {receipt && <div className="receipt-mode">
       <p className="mb-3 text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground print:hidden">{receipt.kind === "sale" ? "Payment recorded — receipt" : "Payment recorded — proof of payment"}</p>
       <div className="print-document mx-auto max-w-sm rounded-2xl border border-border bg-card p-5 text-sm">

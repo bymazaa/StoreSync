@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+export { ErrorMessage } from "./error-message";
 
 export function PageHeader({ eyebrow, title, description, action }: { eyebrow?: string; title: string; description?: string; action?: ReactNode }) {
   return <div className="mb-6 flex flex-col justify-between gap-4 sm:flex-row sm:items-end"><div>{eyebrow && <p className="text-xs font-semibold uppercase tracking-[0.08em] text-primary">{eyebrow}</p>}<h1 className="mt-1 text-[28px] font-semibold sm:text-[32px]">{title}</h1>{description && <p className="mt-1.5 text-sm text-muted-foreground">{description}</p>}</div>{action && <div className="flex shrink-0 items-center gap-2">{action}</div>}</div>;
@@ -8,9 +9,6 @@ export function Panel({ title, description, action, children, className = "" }: 
   return <section className={`rounded-[16px] border border-line bg-card p-6 shadow-2xl shadow-gray-100 dark:shadow-none ${className}`}><>{(title || description || action) && <div className="mb-5 flex flex-wrap items-start justify-between gap-3"><div>{title && <h2 className="text-lg font-medium">{title}</h2>}{description && <p className="mt-1 break-words text-sm text-muted-foreground [overflow-wrap:anywhere]">{description}</p>}</div>{action}</div>}{children}</></section>;
 }
 
-export function ErrorMessage({ children }: { children: ReactNode }) {
-  return <p role="alert" className="rounded-xl border border-danger/20 bg-danger/10 px-3.5 py-3 text-sm text-danger">{children}</p>;
-}
 
 export function Notice({ children, tone = "success" }: { children: ReactNode; tone?: "success" | "warning" }) {
   return <p role="status" className={`rounded-xl border px-3.5 py-3 text-sm ${tone === "success" ? "border-success/20 bg-success/10 text-success" : "border-amber-strong/20 bg-amber-soft text-amber-strong"}`}>{children}</p>;

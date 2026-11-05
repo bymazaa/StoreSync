@@ -1,3 +1,4 @@
+import { notifyErrorToast } from "@/lib/client-notifications";
 type ApiPayload = Record<string, unknown> & { error?: { message?: string } };
 let refreshInFlight: Promise<boolean> | null = null;
 
@@ -23,7 +24,14 @@ export function refreshAuthSession() {
 export async function apiRequest<T>(path: string, options: RequestInit = {}): Promise<T> {
   const headers = new Headers(options.headers);
   if (options.body && !headers.has("Content-Type")) headers.set("Content-Type", "application/json");
-  const send = () => fetch(path, { ...options, cache: "no-store", headers });
+  const send = async () => {
+    try {
+      return await fetch(path, { ...options, cache: "no-store", headers });
+    } catch (caught) {
+      notifyErrorToast(caught instanceof Error ? caught.message : "The request could not be completed.");
+      throw caught;
+    }
+  };
   let response = await send();
   const canRefresh = path !== "/api/auth/login" && path !== "/api/auth/refresh" && path !== "/api/setup/owner";
   if (response.status === 401 && canRefresh && await refreshAuthSession()) {
@@ -40,6 +48,7 @@ export async function apiRequest<T>(path: string, options: RequestInit = {}): Pr
   }
   if (!response.ok) {
     const message = payload?.error?.message ?? `Request failed with status ${response.status}.`;
+    notifyErrorToast(message);
     const error = new Error(message) as Error & { payload?: unknown };
     error.payload = payload;
     if (response.status === 401 && canRefresh && typeof window !== "undefined" && window.location.pathname !== "/login") {

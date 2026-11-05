@@ -1,4 +1,5 @@
 "use client";
+import { notifySuccessToast } from "@/lib/client-notifications";
 
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Archive, Barcode, Boxes, LoaderCircle, Pencil, Plus, Printer, Search, X } from "lucide-react";
@@ -179,6 +180,11 @@ export function ProductsPage({ initialSearch = "" }: { initialSearch?: string })
   const labelProduct = products.find((product) => product.id === labelProductId) ?? null;
   const labelTotal = Math.min(120, Math.max(1, Math.round(Number(labelCount) || 1)));
 
+  function showSuccess(message: string) {
+    setNotice(message);
+    notifySuccessToast(message);
+  }
+
   function printLabels() {
     if (!labelProduct) return;
     printedTitle.current = document.title;
@@ -192,7 +198,7 @@ export function ProductsPage({ initialSearch = "" }: { initialSearch?: string })
     setBusyId(product.id); setError(""); setNotice("");
     try {
       await apiRequest(`/api/products/${product.id}`, { method: "PATCH", body: jsonBody({ isActive: !product.isActive }) });
-      setNotice(product.isActive ? "Product archived." : "Product restored.");
+      showSuccess(product.isActive ? "Product archived." : "Product restored.");
       await load();
     } catch (caught) { setError(caught instanceof Error ? caught.message : "Product could not be updated."); }
     finally { setBusyId(""); }
@@ -209,7 +215,7 @@ export function ProductsPage({ initialSearch = "" }: { initialSearch?: string })
       });
       if (!categoryId) setCategoryFormVersion((version) => version + 1);
       setEditingCategory(null);
-      setNotice(categoryId ? "Category updated." : "Category created.");
+      showSuccess(categoryId ? "Category updated." : "Category created.");
       await load();
     }
     catch (caught) { setError(caught instanceof Error ? caught.message : "Category could not be created."); }
@@ -224,19 +230,19 @@ export function ProductsPage({ initialSearch = "" }: { initialSearch?: string })
     try {
       await apiRequest(unitId ? `/api/units/${unitId}` : "/api/units", { method: unitId ? "PATCH" : "POST", body: jsonBody(body) });
       if (!unitId) setUnitFormVersion((version) => version + 1);
-      setNotice(unitId ? "Unit updated." : "Unit created.");
+      showSuccess(unitId ? "Unit updated." : "Unit created.");
       setEditingUnit(null);
       await load();
     }
     catch (caught) { setError(caught instanceof Error ? caught.message : "Unit could not be saved."); }
   }
   async function toggleUnit(unit: Unit) {
-    try { await apiRequest(`/api/units/${unit.id}`, { method: "PATCH", body: jsonBody({ isActive: unit.isActive === false }) }); setNotice(unit.isActive === false ? "Unit restored." : "Unit archived."); await load(); }
+    try { await apiRequest(`/api/units/${unit.id}`, { method: "PATCH", body: jsonBody({ isActive: unit.isActive === false }) }); showSuccess(unit.isActive === false ? "Unit restored." : "Unit archived."); await load(); }
     catch (caught) { setError(caught instanceof Error ? caught.message : "Unit could not be updated."); }
   }
 
   async function toggleCategory(category: Category) {
-    try { await apiRequest(`/api/categories/${category.id}`, { method: "PATCH", body: jsonBody({ isActive: category.isActive === false }) }); setNotice(category.isActive === false ? "Category restored." : "Category archived."); await load(); }
+    try { await apiRequest(`/api/categories/${category.id}`, { method: "PATCH", body: jsonBody({ isActive: category.isActive === false }) }); showSuccess(category.isActive === false ? "Category restored." : "Category archived."); await load(); }
     catch (caught) { setError(caught instanceof Error ? caught.message : "Category could not be updated."); }
   }
 
@@ -260,6 +266,6 @@ export function ProductsPage({ initialSearch = "" }: { initialSearch?: string })
       {labelProduct && <div className="mt-4 overflow-x-auto"><StickerSheet product={labelProduct} count={Math.min(labelTotal, LABELS_PER_PAGE)} priceLabel={formatMoney(labelProduct.sellingPrice)} /></div>}
     </Panel>}
     {labelProduct && <div className="label-sheet"><StickerSheet product={labelProduct} count={labelTotal} priceLabel={formatMoney(labelProduct.sellingPrice)} /></div>}
-    {editorOpen && <ProductEditor key={editing?.id ?? "new"} product={editing} units={units} categories={categories} onClose={() => setEditorOpen(false)} onSaved={() => { setEditorOpen(false); setNotice(editing ? "Product updated." : "Product created."); void load(); }} />}
+    {editorOpen && <ProductEditor key={editing?.id ?? "new"} product={editing} units={units} categories={categories} onClose={() => setEditorOpen(false)} onSaved={() => { setEditorOpen(false); showSuccess(editing ? "Product updated." : "Product created."); void load(); }} />}
   </div>;
 }

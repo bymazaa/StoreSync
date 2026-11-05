@@ -26,6 +26,7 @@ import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { Button } from '@/components/ui/button';
+import { ErrorToastViewport } from '@/components/ui/error-toast';
 import { ShopProvider } from '@/components/app/shop-context';
 import { HeaderSearch } from '@/components/app/header-search';
 import LogoMark from '@/components/brand/logo-mark';
@@ -126,6 +127,7 @@ export function AppShell({
     const [profileOpen, setProfileOpen] = useState(false);
     const [logoutOpen, setLogoutOpen] = useState(false);
     const [loggingOut, setLoggingOut] = useState(false);
+    const [logoutError, setLogoutError] = useState("");
     const pathname = usePathname();
     const router = useRouter();
     const initials = user.fullName
@@ -203,10 +205,22 @@ export function AppShell({
     }, []);
 
     async function logout() {
+        if (loggingOut) return;
         setLoggingOut(true);
-        await fetch('/api/auth/logout', { method: 'POST' });
-        router.replace('/login');
-        router.refresh();
+        setLogoutError('');
+        try {
+            const response = await fetch('/api/auth/logout', { method: 'POST' });
+            if (!response.ok) throw new Error('Could not sign out. Please try again.');
+            setLogoutOpen(false);
+            setProfileOpen(false);
+            setMenuOpen(false);
+            router.replace('/login');
+            router.refresh();
+        } catch (caught) {
+            setLogoutError(caught instanceof Error ? caught.message : 'Could not sign out. Please try again.');
+        } finally {
+            setLoggingOut(false);
+        }
     }
 
     useEffect(() => {
@@ -257,6 +271,7 @@ export function AppShell({
 
     return (
         <div className="app-shell-canvas flex min-h-screen bg-canvas text-foreground">
+            <ErrorToastViewport />
             {menuOpen && (
                 <button
                     aria-label="Close navigation"
@@ -268,20 +283,20 @@ export function AppShell({
                 aria-label="Workspace navigation"
                 data-collapsed={collapsed ? 'true' : 'false'}
                 className={cn(
-                    'app-shell-nav fixed inset-y-0 left-0 z-40 flex w-[272px] flex-col border-r border-shell-border/80 bg-gradient-to-b from-primary/10 via-sidebar to-canvas px-3 py-4 transition-[transform,width] duration-200 lg:sticky lg:top-0 lg:z-auto lg:h-screen lg:shrink-0 lg:translate-x-0 lg:overflow-y-auto',
+                    'app-shell-nav fixed inset-y-0 left-0 z-40 flex w-[272px] flex-col border-r border-shell-border/80 bg-sidebar px-3 py-4 transition-[transform,width] duration-200 lg:sticky lg:top-0 lg:z-auto lg:h-screen lg:shrink-0 lg:translate-x-0 lg:overflow-y-auto',
                     !collapsed && 'lg:w-[260px]',
                     menuOpen ? 'translate-x-0' : '-translate-x-full',
                 )}
             >
-                <div className="nav-logo-card flex items-center justify-between gap-2 rounded-[20px] border border-shell-border/70 bg-card/85 px-2.5 py-3 shadow-2xl shadow-gray-100 backdrop-blur-sm dark:shadow-none">
+                <div className="nav-logo-card flex items-center justify-between gap-2 px-1 py-2">
                     <Link
                         className="nav-brand flex min-w-0 items-center gap-2.5 rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
                         href="/"
                         aria-label={`${APP_META.name} home`}
                         onClick={() => setMenuOpen(false)}
                     >
-                        <span className="grid size-10 shrink-0 place-items-center rounded-[14px] bg-gradient-to-br from-primary/15 to-primary/5 text-primary ring-1 ring-primary/15">
-                            <LogoMark className="size-6" />
+                        <span className="nav-logo-emblem grid size-10 shrink-0 place-items-center text-primary">
+                            <LogoMark className="size-9" />
                         </span>
                         <span className="nav-wordmark min-w-0">
                             <span className="block font-sans text-[17px] font-semibold leading-none tracking-[0.04em] text-foreground">
@@ -293,18 +308,6 @@ export function AppShell({
                         </span>
                     </Link>
                     <div className="nav-actions flex items-center gap-1">
-                        <button
-                            type="button"
-                            aria-pressed={collapsed}
-                            title={
-                                collapsed ? 'Expand sidebar (Ctrl+B)' : 'Collapse sidebar (Ctrl+B)'
-                            }
-                            aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-                            onClick={() => setCollapsed((value) => !value)}
-                            className="grid size-8 place-items-center rounded-lg bg-card text-muted-foreground ring-1 ring-shell-border transition-colors hover:bg-primary-soft hover:text-primary hover:ring-primary/20"
-                        >
-                            {collapsed ? <PanelLeftOpen size={17} /> : <PanelLeftClose size={17} />}
-                        </button>
                         <button
                             type="button"
                             aria-label="Close navigation"
@@ -444,6 +447,7 @@ export function AppShell({
                                     <button
                                         onClick={() => {
                                             setProfileOpen(false);
+                                            setLogoutError("");
                                             setLogoutOpen(true);
                                         }}
                                         className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-danger hover:bg-danger/10"
@@ -480,9 +484,7 @@ export function AppShell({
                         type="button"
                         aria-label="Cancel sign out"
                         className="absolute inset-0 bg-slate-950/50 backdrop-blur-sm transition-opacity"
-                        onClick={() => {
-                            if (!loggingOut) setLogoutOpen(false);
-                        }}
+                        onClick={() => { if (!loggingOut) setLogoutOpen(false); }}
                     />
                     <div
                         role="dialog"
@@ -515,6 +517,11 @@ export function AppShell({
                         <p id="logout-description" className="mt-2 text-sm leading-relaxed text-muted-foreground">
                             You will need your email and password to get back into this workspace.
                         </p>
+                        {logoutError && (
+                            <p role="alert" className="mt-4 rounded-xl border border-danger/20 bg-danger/10 px-3 py-2.5 text-sm text-danger">
+                                {logoutError}
+                            </p>
+                        )}
                         <div className="mt-5 flex items-center gap-3 rounded-2xl border border-line bg-background/70 px-4 py-3">
                             <span className="grid size-8 shrink-0 place-items-center rounded-xl bg-primary/10 text-xs font-semibold text-primary">
                                 {shopName.trim().charAt(0).toUpperCase() || 'S'}
