@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
-import { Activity, ArrowRight, BarChart3, Boxes, CircleAlert, PackagePlus, Receipt, RefreshCw, ShoppingBag, Wallet } from "lucide-react";
+import { Activity, ArrowRight, BarChart3, Boxes, CircleAlert, PackagePlus, Receipt, RefreshCw, ShoppingBag, TrendingUp, Wallet } from "lucide-react";
 import { InventoryPanel } from "@/components/dashboard/inventory-panel";
 import { RecentActivity } from "@/components/dashboard/recent-activity";
 import { SalesChart } from "@/components/dashboard/sales-chart";
@@ -95,43 +95,58 @@ export function Dashboard() {
       ) : null}
 
       {!data && loading ? (
-        <div className="mt-7 grid gap-5 xl:grid-cols-3" aria-label="Loading dashboard" aria-busy="true">
-          <div className="grid gap-4 sm:grid-cols-2 xl:col-span-3 xl:grid-cols-4">{Array.from({ length: 4 }, (_, index) => <div key={index} className="h-36 animate-pulse rounded-[16px] border border-border bg-card" />)}</div>
-          <div className="h-[340px] animate-pulse rounded-[16px] border border-border bg-card xl:col-span-2" />
-          <div className="h-[340px] animate-pulse rounded-[16px] border border-border bg-card" />
+        <div className="mt-5 grid gap-4 xl:grid-cols-3" aria-label="Loading dashboard" aria-busy="true">
+          <div className="grid gap-3 sm:grid-cols-2 xl:col-span-3 xl:grid-cols-4">{Array.from({ length: 4 }, (_, index) => <div key={index} className="h-32 animate-pulse rounded-[16px] border border-border bg-card" />)}</div>
+          <div className="h-[310px] animate-pulse rounded-[16px] border border-border bg-card xl:col-span-2" />
+          <div className="h-[310px] animate-pulse rounded-[16px] border border-border bg-card" />
         </div>
       ) : null}
 
       {data ? (
         <>
-          <section aria-label="Today's financial figures" className="mt-7 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <section aria-label="Today's financial figures" className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             <StatCard title="Today's net sales" value={formatMoney(data.today.sales)} description="After recorded customer returns" icon={Wallet} tone="teal" trend={salesTrend} />
             <StatCard title="Today's net purchases" value={formatMoney(data.today.purchases)} description="After recorded supplier returns" icon={ShoppingBag} tone="blue" />
             <StatCard title="Customer dues" value={formatMoney(data.customerDue.amount)} description={`${formatNumber(data.customerDue.invoiceCount, 0)} unpaid invoices`} icon={CircleAlert} tone="amber" />
             <StatCard title="Estimated profit" value={formatMoney(data.today.profitEstimate)} description="Net sales − cost of goods − expenses" icon={Activity} tone="violet" />
           </section>
 
-          <section className="mt-5 grid items-stretch gap-5 xl:grid-cols-3">
+          <section className="mt-4 grid items-stretch gap-4 xl:grid-cols-3">
             <div className="min-w-0 xl:col-span-2"><SalesChart data={data.salesChart} /></div>
             <div className="min-w-0"><InventoryPanel inventory={data.lowStock} activeProducts={formatNumber(data.today.activeProducts, 0)} /></div>
           </section>
 
-          <section className="mt-5 grid items-stretch gap-5 xl:grid-cols-3">
+          <section className="mt-4 grid items-stretch gap-4 xl:grid-cols-3">
             <div className="min-w-0 xl:col-span-2"><RecentActivity sales={data.recentSales} /></div>
             <div className="flex min-w-0 flex-col gap-5">
-              <Surface className="flex h-full flex-col p-5 sm:p-6">
-                <p className="text-lg font-medium text-foreground">Profit snapshot</p>
-                <p className="mt-1 text-sm text-muted-foreground">How today’s sales converted</p>
-                <div className="mt-4 flex items-end justify-between gap-3">
-                  <p className="text-[clamp(2rem,3vw,2.5rem)] font-medium leading-none tracking-[-0.03em] tabular-nums text-foreground">{formatMoney(data.today.profitEstimate)}</p>
-                  <span className={`shrink-0 rounded-full px-2 py-1 text-[11px] font-semibold tabular-nums ${margin !== null && margin >= 0 ? "bg-violet-soft text-violet-strong" : "bg-danger/10 text-danger"}`}>{margin === null ? "No sales yet" : `${formatNumber(margin, 1)}% margin`}</span>
+              <Surface className="relative flex h-full flex-col overflow-hidden p-0">
+                <div aria-hidden="true" className="pointer-events-none absolute -right-20 -top-24 size-64 rounded-full bg-violet-soft/50 blur-3xl dark:bg-violet-soft/20" />
+                <div className="relative flex items-center justify-between gap-3 border-b border-border/70 px-5 py-4 sm:px-6">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <span className="grid size-10 shrink-0 place-items-center rounded-[14px] bg-violet-soft text-violet-strong"><TrendingUp size={18} /></span>
+                    <div className="min-w-0">
+                      <p className="text-base font-semibold text-foreground">Profit snapshot</p>
+                      <p className="mt-0.5 text-xs text-muted-foreground">How today’s sales converted</p>
+                    </div>
+                  </div>
+                  <span className="shrink-0 rounded-full border border-border/70 bg-background/80 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Today</span>
                 </div>
-                <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-muted"><span className="block h-full rounded-full bg-violet-strong" style={{ width: `${margin === null ? 0 : Math.min(100, Math.max(0, margin))}%` }} /></div>
-                <dl className="mt-5 space-y-3 border-t border-border pt-4 text-sm">
-                  <div className="flex items-center justify-between gap-3"><dt className="text-muted-foreground">Net sales</dt><dd className="font-semibold tabular-nums text-foreground">{formatMoney(data.today.sales)}</dd></div>
-                  <div className="flex items-center justify-between gap-3"><dt className="text-muted-foreground">Cost of goods + expenses</dt><dd className="font-semibold tabular-nums text-foreground">{formatMoney(netSales - profit)}</dd></div>
-                  <div className="flex items-center justify-between gap-3"><dt className="text-muted-foreground">Net purchases</dt><dd className="font-semibold tabular-nums text-foreground">{formatMoney(data.today.purchases)}</dd></div>
-                </dl>
+                <div className="relative flex-1 p-5 sm:p-6">
+                  <div className="rounded-[18px] border border-violet-strong/15 bg-violet-soft/35 p-4 dark:bg-violet-soft/20 sm:p-5">
+                    <p className="text-xs font-medium text-muted-foreground">Estimated profit</p>
+                    <div className="mt-2 flex flex-wrap items-end justify-between gap-3">
+                      <p className="break-words text-[clamp(1.8rem,3vw,2.35rem)] font-semibold leading-none tracking-[-0.035em] tabular-nums text-foreground [overflow-wrap:anywhere]">{formatMoney(data.today.profitEstimate)}</p>
+                      <span className={`shrink-0 rounded-full px-2.5 py-1.5 text-[11px] font-semibold tabular-nums ${margin !== null && margin >= 0 ? "bg-violet-soft text-violet-strong" : "bg-danger/10 text-danger"}`}>{margin === null ? "No sales yet" : `${formatNumber(margin, 1)}% margin`}</span>
+                    </div>
+                    <div className="mt-4 h-2 overflow-hidden rounded-full bg-background/80"><span className="block h-full rounded-full bg-violet-strong transition-[width] duration-500" style={{ width: `${margin === null ? 0 : Math.min(100, Math.max(0, margin))}%` }} /></div>
+                    <div className="mt-2 flex justify-between gap-3 text-[10px] text-muted-foreground"><span>Profit margin</span><span>{margin === null ? "Waiting for sales" : `${formatNumber(Math.min(100, Math.max(0, margin)), 1)}% of net sales`}</span></div>
+                  </div>
+                  <dl className="mt-5 space-y-0 text-sm">
+                    <div className="flex items-center justify-between gap-3 border-b border-border/70 py-3 first:pt-0"><dt className="text-muted-foreground">Net sales</dt><dd className="font-semibold tabular-nums text-foreground">{formatMoney(data.today.sales)}</dd></div>
+                    <div className="flex items-center justify-between gap-3 border-b border-border/70 py-3"><dt className="max-w-[60%] text-muted-foreground">Cost of goods + expenses</dt><dd className="text-right font-semibold tabular-nums text-foreground">{formatMoney(netSales - profit)}</dd></div>
+                    <div className="flex items-center justify-between gap-3 pt-3"><dt className="text-muted-foreground">Net purchases</dt><dd className="font-semibold tabular-nums text-foreground">{formatMoney(data.today.purchases)}</dd></div>
+                  </dl>
+                </div>
               </Surface>
 
               <Surface className="p-5 sm:p-6">

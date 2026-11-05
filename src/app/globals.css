@@ -895,7 +895,7 @@
     --line: #f0f0f0;
     --shell-border: #e8e8ea;
     /* A whisper of the brand teal, so the nav column reads as its own zone without going gray. */
-    --sidebar: #f4f7f6;
+    --sidebar: #eef2f0;
     --input: #f7f7f8;
     --table-head: #f7f7f8;
     --muted: #f1f1f3;
@@ -968,6 +968,7 @@
     --radius-3xl: 0.5rem;
     --radius-4xl: 0.5rem;
     --font-sans: var(--app-font-sans);
+    --font-brand: var(--font-righteous);
     --font-display: var(--app-font-display);
     --font-logo: var(--app-font-sans);
     --font-mono: var(--app-font-mono);
@@ -1045,14 +1046,13 @@ body {
     border-bottom: 0;
 }
 
-/* The invoice list that sits under the POS form carries more rows than a list page, so it
-   trades the shared roomy row for a scan-friendly compact one. */
+/* Keep invoice rows compact while leaving enough height to scan names and amounts comfortably. */
 .recent-table thead th {
     padding-top: 0.625rem;
     padding-bottom: 0.625rem;
 }
 .recent-table tbody td {
-    height: 48px;
+    height: 54px;
 }
 
 /* Row-action buttons ask for h-8/h-9 next to the Button base h-11, and cn() has no
@@ -1107,31 +1107,79 @@ label:has(
 /* The docked sidebar still scrolls on short screens, but the bar itself must stay invisible. */
 .app-shell-nav {
     scrollbar-width: none;
+    box-shadow: 6px 0 22px rgb(37 65 59 / 0.12);
+    background-image: linear-gradient(
+        155deg,
+        color-mix(in srgb, var(--primary-soft) 82%, var(--sidebar)),
+        var(--sidebar) 46%,
+        color-mix(in srgb, var(--primary-soft) 48%, var(--sidebar))
+    );
+}
+.dark .app-shell-nav {
+    box-shadow: none;
 }
 .app-shell-nav::-webkit-scrollbar {
     display: none;
 }
-
-/* Product editor keeps a slim, brand-colored scrollbar for long forms. */
+.app-shell-canvas {
+    background-color: var(--canvas);
+    background-image:
+        radial-gradient(
+            ellipse at 92% 0%,
+            color-mix(in srgb, var(--primary-soft) 55%, transparent),
+            transparent 34rem
+        ),
+        radial-gradient(
+            ellipse at 300px 0%,
+            color-mix(in srgb, var(--primary-soft) 76%, transparent),
+            transparent 36rem
+        );
+}
+.settings-panel {
+    padding: 1.25rem;
+    border-radius: 1.25rem;
+    box-shadow: 0 8px 24px rgb(25 55 50 / 0.045);
+}
+.settings-panel > div:first-child {
+    margin-bottom: 1.1rem;
+    padding-bottom: 0.85rem;
+    border-bottom: 1px solid var(--line);
+}
+.settings-panel > div:first-child h2 {
+    font-size: 1rem;
+    font-weight: 650;
+    letter-spacing: -0.02em;
+}
+.settings-panel > div:first-child p {
+    max-width: 56rem;
+    line-height: 1.55;
+}
+@media (min-width: 640px) {
+    .settings-panel {
+        padding: 1.5rem;
+    }
+}
+.dark .settings-panel {
+    box-shadow: none;
+}
 .product-modal-scrollbar {
     scrollbar-width: thin;
-    scrollbar-color: var(--primary) var(--primary-soft);
+    scrollbar-color: color-mix(in srgb, var(--muted-foreground) 48%, transparent) transparent;
 }
 .product-modal-scrollbar::-webkit-scrollbar {
-    width: 4px;
+    width: 1px;
 }
 .product-modal-scrollbar::-webkit-scrollbar-track {
-    border-radius: 999px;
-    background: var(--primary-soft);
+    background: transparent;
 }
 .product-modal-scrollbar::-webkit-scrollbar-thumb {
-    border: 1px solid var(--card);
     border-radius: 999px;
-    background: var(--primary);
+    background: color-mix(in srgb, var(--muted-foreground) 48%, transparent);
 }
 .product-modal-scrollbar::-webkit-scrollbar-thumb:hover {
-    background: color-mix(in srgb, var(--primary) 82%, var(--foreground));
+    background: var(--muted-foreground);
 }
+
 /* Same rule for scrolling bodies inside overlays, so a modal never grows a visible bar. */
 .hide-scrollbar {
     scrollbar-width: none;

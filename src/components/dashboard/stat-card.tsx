@@ -31,17 +31,17 @@ const trendIcons = { up: ArrowUpRight, down: ArrowDownRight, flat: Minus };
 export function StatCard({ title, value, description, icon: Icon, tone, trend }: StatCardProps) {
   const TrendIcon = trend ? trendIcons[trend.direction] : null;
   return (
-    <Surface className="flex h-full flex-col p-6">
-      <div className="flex items-start justify-between gap-4">
-        <p className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">{title}</p>
-        <span className={`grid size-9 shrink-0 place-items-center rounded-2xl ${tones[tone]}`}><Icon size={17} strokeWidth={1.9} /></span>
+    <Surface className="flex h-full min-w-0 flex-col p-4 sm:p-5">
+      <div className="flex items-center justify-between gap-3">
+        <p title={title} className="min-w-0 truncate text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">{title}</p>
+        <span className={`grid size-8 shrink-0 place-items-center rounded-xl ${tones[tone]}`}><Icon size={16} strokeWidth={1.9} /></span>
       </div>
-      <p className="mt-5 text-[clamp(2rem,3vw,2.5rem)] font-medium leading-none tracking-[-0.03em] text-foreground tabular-nums [overflow-wrap:anywhere]">{value}</p>
-      <div className="mt-auto flex flex-wrap items-center justify-between gap-2 pt-5">
-        <p className="text-[13px] text-muted-foreground">{description}</p>
+      <p title={value} className="mt-3 min-w-0 text-[clamp(1rem,2vw,1.65rem)] font-semibold leading-tight tracking-[-0.035em] text-foreground tabular-nums [overflow-wrap:anywhere]">{value}</p>
+      <div className="mt-2 flex min-w-0 flex-wrap items-center justify-between gap-x-2 gap-y-1">
+        <p className="min-w-0 flex-1 text-[11px] leading-4 text-muted-foreground">{description}</p>
         {trend && TrendIcon ? (
-          <span className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-1 text-[11px] font-semibold tabular-nums ${trendStyles[trend.direction]}`}>
-            <TrendIcon size={12} strokeWidth={2.2} />{trend.label}
+          <span className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-1 text-[10px] font-semibold tabular-nums ${trendStyles[trend.direction]}`}>
+            <TrendIcon size={11} strokeWidth={2.2} />{trend.label}
           </span>
         ) : null}
       </div>

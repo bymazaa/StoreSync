@@ -46,7 +46,8 @@ export async function POST(request: Request) {
       entityId: id,
     });
     
-    return NextResponse.json({ paymentMethod }, { status: 201 });
+    const paymentMethodData = paymentMethod.toObject();
+    return NextResponse.json({ paymentMethod: { ...paymentMethodData, id: paymentMethodData._id } }, { status: 201 });
   } catch (error: any) {
     if (error.code === 11000) {
       return NextResponse.json({ error: { code: "CONFLICT", message: "That payment method code already exists." } }, { status: 409 });
@@ -86,6 +87,9 @@ export async function PATCH(request: Request) {
     }
     
     const updated = await PaymentMethod.findByIdAndUpdate(id, data, { returnDocument: "after", runValidators: true }).lean();
+    if (!updated) {
+      return NextResponse.json({ error: { code: "NOT_FOUND", message: "Payment method was not found." } }, { status: 404 });
+    }
     
     await AuditLog.create({
       _id: crypto.randomUUID(),
@@ -96,7 +100,7 @@ export async function PATCH(request: Request) {
       metadata: { changedFields: Object.keys(data) },
     });
     
-    return NextResponse.json({ paymentMethod: updated });
+    return NextResponse.json({ paymentMethod: { ...updated, id: updated._id } });
   } catch (error: any) {
     if (error.code === 11000) {
       return NextResponse.json({ error: { code: "CONFLICT", message: "That payment method code already exists." } }, { status: 409 });

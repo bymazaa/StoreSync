@@ -1,7 +1,12 @@
 import { redirect } from "next/navigation";
 import {
-  Boxes, ChartNoAxesCombined, Check, MapPin, Printer, ShieldCheck, ShoppingCart,
-  Store, Truck, UsersRound, X,
+  ArrowDownRight,
+  Boxes,
+  ChartNoAxesCombined,
+  Check,
+  ShieldCheck,
+  ShoppingCart,
+  Store,
 } from "lucide-react";
 import { AuthForm } from "@/components/auth/auth-form";
 import LogoMark from "@/components/brand/logo-mark";
@@ -10,42 +15,16 @@ import connectDB from "@/lib/db";
 import { User } from "@/models";
 import { connection } from "next/server";
 
-// Force dynamic rendering - this page depends on session state and DB
 export const instant = false;
 
-const promises = ["80 mm slip and A4 invoice", "Bengali and English print correctly", "Role-based staff access", "Every change logged"];
-
-const covers = [
-  { icon: ShoppingCart, title: "Sales & POS", text: "Search by name, SKU or barcode, add lines, discount, cash or part payment, and put the rest on due. F2 search, F4 customer, F9 finishes the invoice." },
-  { icon: Truck, title: "Purchases & batches", text: "Stock enters through a purchase: quantity, what you paid per unit and the selling price. Completing it moves stock into dated batches." },
-  { icon: Boxes, title: "Products & labels", text: "Catalogue with units and pack conversions, categories, low-stock levels, automatic SKUs and A4 barcode sticker sheets for the shelves." },
-  { icon: UsersRound, title: "Dues & collections", text: "Customer and supplier ledgers with outstanding balance, 0–30 / 31–60 / 60+ day ageing, and a payment slip that prints on the roll." },
-  { icon: ChartNoAxesCombined, title: "Reports & profit", text: "Sales, purchases, profit & loss, stock valuation, expenses and dues — each one printing as a bank-style statement." },
-  { icon: ShieldCheck, title: "Staff & audit", text: "Owner, manager, cashier and stock clerk, each ticked with the actions they may take, plus an activity log of who changed what." },
-  { icon: Printer, title: "Paper", text: "80 mm thermal slips, A4 invoices, payment receipts and shelf stickers. The preview on screen is what the printer gives you." },
-  { icon: MapPin, title: "Your shop, your formats", text: "The country you choose sets currency, date, number format and time zone. Invoice prefixes and payment methods stay yours." },
-];
-
-const outsideScope = [
-  "No online shop — customers cannot browse or order; everything is billed at your counter.",
-  "No accounting books — no VAT or tax return, journal, balance sheet or e-invoice filing.",
-  "No payroll — staff salary, attendance and advances are kept outside this app.",
-  "No messaging — no SMS or app alerts to customers or suppliers.",
-  "No multi-branch — one installation runs one shop; a second shop needs its own install.",
-  "No offline billing — the counter has to reach this shop's own server.",
-];
-
-const firstWeek = [
-  { title: "Name the shop", text: "Settings → Shop & invoice settings: shop name, address, phone and country. Currency, dates and time zone follow the country." },
-  { title: "Build the catalogue", text: "Products: categories, units, pack sizes, selling price and the low-stock level for each item." },
-  { title: "Bring in opening stock", text: "Purchases: raise an Opening Stock purchase with cost and selling price per unit, then complete it to move stock." },
-  { title: "Start billing", text: "Sales: press F2, find the item, print the slip. Then add staff accounts and tick what each role may do." },
+const highlights = [
+  { icon: ShoppingCart, label: "Fast counter sales" },
+  { icon: Boxes, label: "Live stock levels" },
+  { icon: ChartNoAxesCombined, label: "Clear shop reports" },
 ];
 
 export default async function LoginPage() {
-  // Force dynamic by accessing connection
   await connection();
-
   await connectDB();
   const user = await getViewerUser();
   if (user) redirect("/");
@@ -54,84 +33,88 @@ export default async function LoginPage() {
   if (userCount === 0) redirect("/setup");
 
   return (
-    <div className="min-h-screen">
-      <header className="mx-auto flex w-full max-w-6xl items-center gap-3 px-4 py-6 pr-16 sm:px-6">
-        <span className="grid size-11 shrink-0 place-items-center rounded-2xl border border-border bg-white shadow-2xl"><LogoMark className="size-7" /></span>
-        <span>
-          <span className="block font-logo text-2xl font-semibold leading-none tracking-[0.06em]">STOCK-PILOT</span>
-          <span className="text-xs text-muted-foreground">Grocery shop management</span>
+    <div className="relative isolate min-h-screen overflow-hidden bg-[#f4f7f6] dark:bg-[#16181a]">
+      <div aria-hidden="true" className="pointer-events-none absolute -right-40 -top-52 size-[540px] rounded-full bg-[#d8f0eb] blur-3xl dark:bg-[#19332f]" />
+      <div aria-hidden="true" className="pointer-events-none absolute -bottom-64 -left-48 size-[580px] rounded-full bg-[#e6f2ef] blur-3xl dark:bg-[#1a2927]" />
+
+      <header className="relative z-10 mx-auto flex w-full max-w-7xl items-center justify-between px-5 py-6 sm:px-8 lg:px-12">
+        <a href="/login" className="flex items-center gap-3" aria-label="StockPilot home">
+          <span className="grid size-11 place-items-center rounded-[15px] bg-primary text-white shadow-[0_8px_20px_rgba(10,159,148,0.22)]">
+            <LogoMark className="size-7" />
+          </span>
+          <span>
+            <span className="font-brand block text-[20px] leading-none tracking-[0.025em] text-[#172523] dark:text-foreground">STOCK PILOT</span>
+            <span className="mt-1 block text-[10px] font-semibold uppercase tracking-[0.16em] text-[#75827e]">Shop management</span>
+          </span>
+        </a>
+        <span className="hidden items-center gap-2 rounded-full border border-[#dce7e3] bg-white/80 px-3.5 py-2 text-xs font-medium text-[#64736f] dark:border-border dark:bg-card/80 dark:text-muted-foreground sm:inline-flex">
+          <ShieldCheck size={15} className="text-primary" /> Private to your shop
         </span>
       </header>
 
-      <main className="mx-auto w-full max-w-6xl px-4 pb-12 sm:px-6">
-        <section className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_28rem] lg:items-start">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-primary">Built for one shop, on your own server</p>
-            <h1 className="mt-3 text-3xl font-bold tracking-[0.02em] sm:text-4xl">The counter, the store-room and the dues — in one system.</h1>
-            <p className="mt-4 max-w-xl text-sm leading-6 text-muted-foreground">
-              StockPilot keeps a grocery shop straight: bill fast at the counter, watch stock fall as it sells, know exactly
-              who owes what, and hand out paper your customers expect. Every staff member sees only the screens their role allows.
+      <main className="relative z-10 mx-auto grid w-full max-w-7xl items-center gap-8 px-5 pb-10 pt-3 sm:px-8 lg:min-h-[calc(100vh-104px)] lg:grid-cols-[minmax(0,1fr)_440px] lg:gap-16 lg:px-12 lg:pb-16 lg:pt-0">
+        <section className="order-2 py-2 lg:order-1 lg:py-10">
+          <div className="max-w-2xl">
+            <span className="inline-flex items-center gap-2 rounded-full border border-[#cfe5df] bg-white/75 px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.13em] text-[#087f76] dark:border-[#2a4943] dark:bg-card/75 dark:text-teal-strong">
+              <span className="size-1.5 rounded-full bg-primary" /> Made for your shop
+            </span>
+              <h1 className="mt-5 max-w-[620px] text-[clamp(2.5rem,5vw,4.45rem)] font-semibold leading-[1.04] tracking-[-0.055em] text-[#172523] dark:text-foreground">
+              Your whole shop, <span className="text-primary">in sync.</span>
+            </h1>
+            <p className="mt-5 max-w-xl text-[15px] leading-7 text-[#62716d] dark:text-muted-foreground sm:text-base">
+              Make every sale, stock movement and customer balance easier to follow. Sign in to pick up right where your team left off.
             </p>
-            <ul className="mt-6 flex flex-wrap gap-2">
-              {promises.map((promise) => (
-                <li key={promise} className="flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1.5 text-xs">
-                  <Check size={13} className="text-primary" aria-hidden />{promise}
-                </li>
+
+            <div className="mt-7 flex flex-wrap gap-2.5">
+              {highlights.map(({ icon: Icon, label }) => (
+                <span key={label} className="inline-flex items-center gap-2 rounded-xl border border-[#dfe9e5] bg-white/80 px-3 py-2.5 text-xs font-semibold text-[#334541] shadow-[0_2px_8px_rgba(26,50,44,0.035)] dark:border-border dark:bg-card/80 dark:text-foreground dark:shadow-none">
+                  <Icon size={15} className="text-primary" /> {label}
+                </span>
               ))}
-            </ul>
-            <p className="mt-6 max-w-xl text-[13px] leading-6 text-muted-foreground">
-              The counter runs on the keyboard: F2 finds a product, F4 opens the customer, F8 allows a due and F9 finishes the
-              invoice — so a queue moves without anyone reaching for the mouse.
-            </p>
+            </div>
           </div>
+
+          <div className="relative mt-9 max-w-[590px] overflow-hidden rounded-[26px] border border-[#dfe9e5] bg-white/90 p-5 text-[#243632] shadow-[0_18px_50px_rgba(30,60,54,0.08)] dark:border-border dark:bg-card dark:text-foreground dark:shadow-none sm:p-7">
+            <div aria-hidden="true" className="absolute -right-14 -top-20 size-64 rounded-full border border-primary/10" />
+            <div aria-hidden="true" className="absolute -right-1 top-2 size-44 rounded-full border border-primary/[0.07]" />
+            <div className="relative flex items-start justify-between gap-4">
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-primary">A clearer view of today</p>
+                <p className="mt-2 text-sm text-[#71807c] dark:text-muted-foreground">Your counter at a glance</p>
+              </div>
+              <span className="grid size-10 shrink-0 place-items-center rounded-[13px] bg-primary/10 text-primary"><Store size={19} /></span>
+            </div>
+            <div className="relative mt-7 flex flex-wrap items-end justify-between gap-5">
+              <div>
+                <p className="text-xs text-[#71807c] dark:text-muted-foreground">Sales move with your stock</p>
+                <p className="mt-1 text-[28px] font-semibold tracking-tight">One simple flow</p>
+              </div>
+              <div className="flex items-center gap-2 rounded-full bg-primary/10 px-3 py-2 text-xs font-semibold text-primary">
+                <ArrowDownRight size={15} /> Every item accounted for
+              </div>
+            </div>
+            <div className="relative mt-6 grid grid-cols-3 gap-2 border-t border-[#e4ece9] pt-4 dark:border-border">
+              {["Sales", "Purchases", "Balances"].map((label) => (
+                <div key={label} className="flex items-center gap-1.5 text-[11px] font-medium text-[#657570] dark:text-muted-foreground"><Check size={13} className="text-primary" />{label}</div>
+              ))}
+            </div>
+          </div>
+
+          <p className="mt-6 flex items-center gap-2 text-xs text-[#73817d] dark:text-muted-foreground">
+            <ShieldCheck size={14} className="text-primary" /> Your shop data stays on your own server.
+          </p>
+        </section>
+
+        <section className="order-1 lg:order-2">
           <AuthForm mode="login" showBrand={false} />
         </section>
-
-        <section className="mt-14">
-          <h2 className="text-sm font-semibold uppercase tracking-[0.14em] text-primary">What it handles</h2>
-          <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            {covers.map((feature) => (
-              <article key={feature.title} className="rounded-2xl border border-border bg-card p-4">
-                <span className="grid size-9 place-items-center rounded-xl bg-primary/10 text-primary"><feature.icon size={17} aria-hidden /></span>
-                <h3 className="mt-3 text-sm font-semibold">{feature.title}</h3>
-                <p className="mt-1.5 text-[13px] leading-5 text-muted-foreground">{feature.text}</p>
-              </article>
-            ))}
-          </div>
-        </section>
-
-        <section className="mt-12 grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-          <div className="rounded-3xl border border-border bg-card p-5 sm:p-6">
-            <h2 className="text-xs font-semibold uppercase tracking-[0.14em] text-primary">First week in the shop</h2>
-            <ol className="mt-4 space-y-3.5">
-              {firstWeek.map((step, index) => (
-                <li key={step.title} className="flex gap-3">
-                  <span className="grid size-7 shrink-0 place-items-center rounded-lg bg-primary text-[13px] font-bold text-primary-foreground tabular-nums">{index + 1}</span>
-                  <span className="text-[13px] leading-5"><span className="font-semibold">{step.title}.</span> <span className="text-muted-foreground">{step.text}</span></span>
-                </li>
-              ))}
-            </ol>
-          </div>
-          <div className="rounded-3xl border border-border bg-card p-5 sm:p-6">
-            <h2 className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">What it does not do</h2>
-            <ul className="mt-4 space-y-2.5">
-              {outsideScope.map((line) => (
-                <li key={line} className="flex gap-2.5 text-[13px] leading-5 text-muted-foreground">
-                  <X size={15} className="mt-0.5 shrink-0" aria-hidden /><span>{line}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </section>
-
-        <footer className="mt-12 flex flex-col items-start justify-between gap-3 border-t border-border pt-6 text-xs text-muted-foreground sm:flex-row sm:items-center">
-          <p className="flex items-center gap-2"><Store size={14} className="text-primary" aria-hidden />Your shop&apos;s data lives on your own server. Nothing is shared outside your staff accounts.</p>
-          <p>
-            Developed by{" "}
-            <a href="https://bymaza.me" target="_blank" rel="noopener noreferrer" className="font-semibold text-primary hover:underline">Mazaharul</a>
-          </p>
-        </footer>
       </main>
+
+      <footer className="relative z-10 mx-auto flex w-full max-w-7xl flex-col gap-2 px-5 pb-6 text-[11px] text-[#82908c] dark:text-muted-foreground sm:flex-row sm:justify-between sm:px-8 lg:px-12">
+        <span>Secure sign-in for your shop team</span>
+        <span>StockPilot · Shop management</span>
+        <span>Designed &amp; built by <a href="https://bymaza.me" target="_blank" rel="noopener noreferrer" className="font-semibold text-primary transition-colors hover:underline">Mazaharul</a></span>
+      </footer>
     </div>
   );
 }

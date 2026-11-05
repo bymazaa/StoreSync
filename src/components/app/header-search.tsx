@@ -108,7 +108,7 @@ export function HeaderSearch({ currencyCode, locale }: { currencyCode: string; l
         aria-controls="header-search-results"
         aria-autocomplete="list"
         aria-activedescendant={open && items[active] ? `header-search-${items[active].type}-${items[active].id}` : undefined}
-        className="h-10 w-full rounded-[16px] border border-gray-300/80 bg-card dark:border-gray-700 pl-11 pr-16 text-sm text-foreground shadow-2xl shadow-gray-100 outline-none transition-[border-color,box-shadow,background-color] duration-200 placeholder:text-muted-foreground/80 hover:border-primary/25 focus:border-primary/45 focus:shadow-2xl focus:shadow-gray-100 focus:ring-2 focus:ring-primary/15 dark:shadow-none"
+        className="h-11 w-full rounded-[14px] border border-shell-border/80 bg-card/90 pl-11 pr-16 text-sm text-foreground shadow-[0_2px_8px_rgba(17,54,47,0.055)] outline-none transition-[border-color,box-shadow,background-color] duration-200 placeholder:text-muted-foreground/80 hover:border-primary/30 focus:border-primary/50 focus:shadow-[0_0_0_3px_rgba(10,159,148,0.12)] focus:ring-0 dark:shadow-none"
         placeholder="Search products, invoices..."
         aria-label="Search products, invoices, customers and suppliers"
       />

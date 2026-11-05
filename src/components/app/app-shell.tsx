@@ -299,8 +299,8 @@ export function AppShell({
                             <LogoMark className="size-9" />
                         </span>
                         <span className="nav-wordmark min-w-0">
-                            <span className="block font-sans text-[17px] font-semibold leading-none tracking-[0.04em] text-foreground">
-                                {APP_META.name}
+                            <span className="block font-brand text-[17px] leading-none tracking-[0.04em] text-foreground">
+                                STOCK PILOT
                             </span>
                             <span className="mt-1 block truncate text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
                                 Shop management
@@ -326,7 +326,7 @@ export function AppShell({
                         { label: 'People', items: visibleNavigation.filter((item) => ['/customers', '/suppliers'].includes(item.href)) },
                         { label: 'Insights', items: visibleNavigation.filter((item) => ['/reports', '/activity', '/expenses'].includes(item.href)) },
                     ].filter((group) => group.items.length > 0).map((group) => (
-                        <section key={group.label} className="rounded-[18px] border border-shell-border/60 bg-card/45 p-2">
+                        <section key={group.label} className="py-1.5">
                             <h2 className="nav-section-title mb-2 px-2.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground/70">
                                 {group.label}
                             </h2>
@@ -341,7 +341,7 @@ export function AppShell({
                 </div>
 
                 <div className="mt-auto pt-4">
-                    <div className="nav-footer rounded-[20px] border border-shell-border/80 bg-card/85 p-1.5 shadow-2xl shadow-gray-100 backdrop-blur-sm dark:shadow-none">
+                    <div className="nav-footer p-1.5">
                         {visibleBottomNavigation.length > 0 && (
                             <nav aria-label="Workspace links" className="space-y-0.5">
                                 <p className="nav-section-title px-2.5 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground/70">
@@ -379,14 +379,14 @@ export function AppShell({
                 </div>
             </aside>
 
-            <div className="app-shell-frame flex min-w-0 flex-1 flex-col bg-background">
-                <header className="app-shell-header sticky top-0 z-20 flex h-[76px] items-center justify-between gap-3 bg-background/85 px-4 backdrop-blur-xl sm:px-7 xl:px-10">
+            <div className="app-shell-frame flex min-w-0 flex-1 flex-col bg-transparent">
+                <header className="app-shell-header sticky top-0 z-20 flex h-[72px] items-center justify-between gap-3 border-b border-shell-border/50 bg-transparent px-4 backdrop-blur-xl sm:px-7 xl:px-10">
                     <div className="flex items-center gap-3">
                         <button
                             aria-label="Open navigation"
                             type="button"
                             onClick={() => setMenuOpen(true)}
-                            className="grid size-10 place-items-center rounded-xl border border-line bg-card text-foreground shadow-sm transition-colors hover:border-primary/25 hover:bg-primary-soft/40 shadow-2xl shadow-gray-100 dark:shadow-none lg:hidden"
+                            className="grid size-10 place-items-center rounded-[13px] border border-shell-border/80 bg-card/85 text-muted-foreground transition-colors hover:border-primary/30 hover:bg-primary-soft/50 hover:text-primary lg:hidden"
                         >
                             <Menu size={18} />
                         </button>
@@ -395,7 +395,7 @@ export function AppShell({
                             aria-pressed={collapsed}
                             type="button"
                             onClick={() => setCollapsed((value) => !value)}
-                            className="hidden size-10 place-items-center rounded-xl border border-line bg-card text-foreground shadow-sm transition-colors hover:border-primary/25 hover:bg-primary-soft/40 shadow-2xl shadow-gray-100 dark:shadow-none lg:grid"
+                            className="hidden size-10 place-items-center rounded-[13px] border border-shell-border/80 bg-card/85 text-muted-foreground transition-colors hover:border-primary/30 hover:bg-primary-soft/50 hover:text-primary lg:grid"
                         >
                             {collapsed ? <PanelLeftOpen size={17} /> : <PanelLeftClose size={17} />}
                         </button>
@@ -411,7 +411,7 @@ export function AppShell({
                         <div className="relative">
                             <button
                                 onClick={() => setProfileOpen((open) => !open)}
-                                className="flex items-center gap-2 rounded-2xl border border-transparent bg-card/70 py-1.5 pl-1.5 pr-2.5 text-left shadow-2xl shadow-gray-100 transition-colors dark:shadow-none hover:border-line hover:bg-card"
+                                className="flex items-center gap-2 rounded-[15px] border border-shell-border/70 bg-card/80 py-1.5 pl-1.5 pr-2.5 text-left transition-colors hover:border-primary/25 hover:bg-card"
                                 aria-expanded={profileOpen}
                                 aria-label="Open profile menu"
                                 type="button"
@@ -493,38 +493,38 @@ export function AppShell({
                         aria-labelledby="logout-title"
                         aria-describedby="logout-description"
                         aria-busy={loggingOut}
-                        className="relative w-full max-w-[420px] overflow-hidden rounded-[24px] border border-line bg-card p-5 shadow-2xl shadow-slate-950/20 sm:p-7 dark:shadow-none"
+                        className="relative isolate w-full max-w-[360px] overflow-hidden rounded-[22px] border border-line bg-card p-5 shadow-2xl shadow-slate-950/20 dark:shadow-none"
                     >
-                        <div className="flex items-start justify-between gap-4">
-                            <span className="grid size-14 place-items-center rounded-[18px] border border-danger/15 bg-danger/10 text-danger ring-4 ring-danger/5">
-                                <LogOut size={23} strokeWidth={1.8} />
+                        <div aria-hidden="true" className="pointer-events-none absolute -right-20 -top-28 z-0 size-64 rounded-full bg-primary-soft/65 blur-3xl dark:bg-primary-soft/30" />
+                        <div className="relative z-10">
+                        <div className="flex items-center justify-between gap-4">
+                            <span className="flex items-center gap-2.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-danger">
+                                <span className="grid size-9 place-items-center rounded-[12px] bg-danger/10"><LogOut size={17} strokeWidth={1.9} /></span>
+                                End session
                             </span>
                             <button
                                 type="button"
                                 aria-label="Close sign out dialog"
                                 disabled={loggingOut}
                                 onClick={() => setLogoutOpen(false)}
-                                className="grid size-9 place-items-center rounded-xl text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+                                className="grid size-8 place-items-center rounded-[10px] text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
                             >
                                 <X size={17} />
                             </button>
                         </div>
-                        <p className="mt-5 text-[11px] font-semibold uppercase tracking-[0.14em] text-danger">
-                            Account session
-                        </p>
-                        <h2 id="logout-title" className="mt-1 text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
-                            Sign out of your account?
+                        <h2 id="logout-title" className="mt-4 text-[19px] font-semibold tracking-tight text-foreground">
+                            Sign out?
                         </h2>
-                        <p id="logout-description" className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                            You will need your email and password to get back into this workspace.
+                        <p id="logout-description" className="mt-1.5 text-[13px] leading-5 text-muted-foreground">
+                            You’ll need your email and password to sign in again.
                         </p>
                         {logoutError && (
-                            <p role="alert" className="mt-4 rounded-xl border border-danger/20 bg-danger/10 px-3 py-2.5 text-sm text-danger">
+                            <p role="alert" className="mt-3 rounded-xl border border-danger/20 bg-danger/10 px-3 py-2 text-[13px] text-danger">
                                 {logoutError}
                             </p>
                         )}
-                        <div className="mt-5 flex items-center gap-3 rounded-2xl border border-line bg-background/70 px-4 py-3">
-                            <span className="grid size-8 shrink-0 place-items-center rounded-xl bg-primary/10 text-xs font-semibold text-primary">
+                        <div className="mt-4 flex items-center gap-2.5 rounded-[13px] border border-line bg-background/70 px-3 py-2.5">
+                            <span className="grid size-8 shrink-0 place-items-center rounded-[10px] bg-primary/10 text-xs font-semibold text-primary">
                                 {shopName.trim().charAt(0).toUpperCase() || 'S'}
                             </span>
                             <span className="min-w-0">
@@ -536,10 +536,10 @@ export function AppShell({
                                 </span>
                             </span>
                         </div>
-                        <div className="mt-6 flex flex-col-reverse gap-2.5 sm:flex-row sm:justify-end">
+                        <div className="mt-4 flex gap-2">
                             <Button
                                 variant="outline"
-                                className="w-full sm:w-auto"
+                                className="h-10 flex-1 px-3 text-[13px]"
                                 onClick={() => setLogoutOpen(false)}
                                 disabled={loggingOut}
                             >
@@ -549,11 +549,12 @@ export function AppShell({
                                 type="button"
                                 onClick={() => void logout()}
                                 disabled={loggingOut}
-                                className="inline-flex h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-[12px] bg-danger px-4 text-sm font-semibold text-white transition-colors hover:bg-danger/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger focus-visible:ring-offset-2 focus-visible:ring-offset-card disabled:cursor-wait disabled:opacity-60 sm:w-auto"
+                                className="inline-flex h-10 flex-1 cursor-pointer items-center justify-center gap-2 rounded-[12px] bg-danger px-3 text-[13px] font-semibold text-white transition-colors hover:bg-danger/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger focus-visible:ring-offset-2 focus-visible:ring-offset-card disabled:cursor-wait disabled:opacity-60"
                             >
                                 <LogOut size={15} />
                                 {loggingOut ? 'Signing out…' : 'Sign out'}
                             </button>
+                        </div>
                         </div>
                     </div>
                 </div>

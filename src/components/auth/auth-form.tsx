@@ -56,7 +56,9 @@ export function AuthForm({ mode, showBrand = true }: AuthFormProps) {
           <span><span className="block font-logo text-2xl font-semibold leading-none tracking-[0.06em]">STOCK-PILOT</span><span className="text-xs text-muted-foreground">Grocery shop management</span></span>
         </div>
       )}
-      <div className="rounded-3xl border border-border bg-card p-6 shadow-card sm:p-8">
+      <div className={isSetup
+        ? "rounded-3xl border border-border bg-card p-6 shadow-card sm:p-8"
+        : "rounded-[26px] border border-[#e3ebe8] bg-white p-6 shadow-[0_24px_70px_rgba(30,60,54,0.12)] sm:p-9 dark:border-border dark:bg-card dark:shadow-2xl dark:shadow-black/20"}>
         <p className="text-xs font-semibold uppercase tracking-[0.14em] text-primary">{isSetup ? "First-time setup" : "Welcome back"}</p>
         <h1 className="mt-2 text-2xl font-semibold tracking-[0.02em]">{isSetup ? "Create your owner account" : "Sign in to your shop"}</h1>
         <p className="mt-2 text-sm leading-6 text-muted-foreground">{isSetup ? "Create the main account for the person responsible for this shop. The owner can manage products, purchases, sales, settings and staff access." : "Use the account set up by your shop owner."}</p>
