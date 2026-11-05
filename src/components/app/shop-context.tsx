@@ -6,10 +6,15 @@ import { createStatementFormat } from "@/lib/reports/format";
 const CurrencyContext = createContext("USD");
 const CountryContext = createContext("US");
 const PermissionContext = createContext<string[]>([]);
+const UserIdContext = createContext("");
 const FormattingContext = createContext({ locale: "en-US", timezone: "America/New_York" });
 
-export function ShopProvider({ countryCode, currencyCode, locale, timezone, permissions, children }: { countryCode: string; currencyCode: string; locale: string; timezone: string; permissions: string[]; children: ReactNode }) {
-  return <CountryContext.Provider value={countryCode}><CurrencyContext.Provider value={currencyCode}><FormattingContext.Provider value={{ locale, timezone }}><PermissionContext.Provider value={permissions}>{children}</PermissionContext.Provider></FormattingContext.Provider></CurrencyContext.Provider></CountryContext.Provider>;
+export function ShopProvider({ userId, countryCode, currencyCode, locale, timezone, permissions, children }: { userId: string; countryCode: string; currencyCode: string; locale: string; timezone: string; permissions: string[]; children: ReactNode }) {
+  return <UserIdContext.Provider value={userId}><CountryContext.Provider value={countryCode}><CurrencyContext.Provider value={currencyCode}><FormattingContext.Provider value={{ locale, timezone }}><PermissionContext.Provider value={permissions}>{children}</PermissionContext.Provider></FormattingContext.Provider></CurrencyContext.Provider></CountryContext.Provider></UserIdContext.Provider>;
+}
+
+export function useShopUserId() {
+  return useContext(UserIdContext);
 }
 
 export function useCurrencyCode() {

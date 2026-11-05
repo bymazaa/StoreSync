@@ -18,22 +18,21 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ us
   await connectDB();
   
   const { userId } = await params;
-  if (userId === guard.user.id) {
-    return NextResponse.json({ error: { code: "BAD_REQUEST", message: "Use another owner account to change or deactivate your own access." } }, { status: 400 });
-  }
-  
   let body: unknown;
   try { body = await request.json(); } catch { return invalidBody(); }
   const parsed = updateSchema.safeParse(body);
   if (!parsed.success) return invalidBody(parsed.error.issues);
+  const selfNameChange = userId === guard.user.id && parsed.data.fullName !== undefined && Object.keys(parsed.data).every((key) => key === "fullName");
+  if (userId === guard.user.id && !selfNameChange) return NextResponse.json({ error: { code: "BAD_REQUEST", message: "You can only change your own name here. Use another owner account to change your access." } }, { status: 400 });
   
   const passwordHash = parsed.data.password ? await hash(parsed.data.password, 12) : undefined;
   
   try {
     const existing = await User.findById(userId).select("role").lean() as Pick<IUser, "role"> | null;
-    if (!existing || existing.role === UserRole.OWNER) throw new UserUpdateError("Owner account changes must be managed separately.");
+    if (!existing || (existing.role === UserRole.OWNER && !selfNameChange)) throw new UserUpdateError("Owner account changes must be managed separately.");
     
     const updateData: UpdateQuery<IUser> = {};
+    if (parsed.data.fullName) updateData.fullName = parsed.data.fullName;
     if (parsed.data.role) updateData.role = parsed.data.role;
     if (parsed.data.isActive !== undefined) updateData.isActive = parsed.data.isActive;
     if (passwordHash) updateData.passwordHash = passwordHash;
