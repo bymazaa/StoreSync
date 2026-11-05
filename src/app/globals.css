@@ -136,6 +136,17 @@
         border-radius: 0 !important;
         background: transparent !important;
     }
+    .print-document > section.receipt-party-section {
+        width: 100%;
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+    }
+    .print-document > section.receipt-party-section > div:first-child {
+        text-align: left !important;
+    }
+    .print-document > section.receipt-party-section > div:last-child {
+        text-align: right !important;
+    }
     .print-document > section.grid p {
         margin-top: 0.5mm !important;
     }
@@ -192,7 +203,7 @@
     .print-document th,
     .print-document td {
         vertical-align: top;
-        border-bottom: 0.12mm solid #e2eae7;
+        border-bottom: 0.1mm solid #d5ddda;
     }
     .print-document th {
         padding: 1.5mm 1.7mm;
@@ -201,9 +212,25 @@
         font-size: 6.8pt;
         font-weight: 700;
         letter-spacing: 0.05em;
-        border-bottom: 0.2mm solid #0f766e !important;
+        border-bottom: 0.1mm solid #d5ddda !important;
         print-color-adjust: exact;
         -webkit-print-color-adjust: exact;
+    }
+    .print-document .a4-invoice-table th {
+        background: #0a9f94 !important;
+        color: #fff !important;
+        border-bottom: 0 !important;
+        print-color-adjust: exact;
+        -webkit-print-color-adjust: exact;
+    }
+    .print-document .a4-invoice-table th:first-child,
+    .print-document .a4-invoice-table td:first-child {
+        padding-left: 0 !important;
+    }
+    .print-document .a4-invoice-table th:last-child,
+    .print-document .a4-invoice-table td:last-child {
+        padding-right: 0 !important;
+        text-align: right;
     }
     .print-document td {
         padding: 1.6mm 1.7mm;
@@ -260,7 +287,7 @@
     }
     @page report {
         size: A4 landscape;
-        margin: 9mm 10mm;
+        margin: 10mm 12mm;
     }
     /* The statement is a bank document: hairline rules, no fills, and the same face the shop reads on screen,
      so the paper never looks like a different product. Tabular figures keep the money columns aligned. */
@@ -300,16 +327,16 @@
         font-variant-numeric: tabular-nums;
     }
     .report-print th {
-        padding: 1.1mm 1.4mm;
-        line-height: 1.3;
-        background: #cfe1db !important;
-        color: #16241f !important;
-        font-size: 6.2pt;
+        padding: 1.7mm 1.8mm;
+        line-height: 1.35;
+        background: #0b5f57 !important;
+        color: #ffffff !important;
+        font-size: 6.4pt;
         font-weight: 700;
-        letter-spacing: 0.05em;
+        letter-spacing: 0.06em;
         text-transform: uppercase;
         text-align: left;
-        border-bottom: 0.2mm solid #0f766e;
+        border-bottom: 0.2mm solid #064e47;
         vertical-align: bottom;
         print-color-adjust: exact;
         -webkit-print-color-adjust: exact;
@@ -320,8 +347,8 @@
     }
     /* Bengali pre-base matras and conjuncts stack below the baseline, so print rows need extra leading. */
     .report-print td {
-        padding: 1mm 1.4mm;
-        line-height: 1.5;
+        padding: 1.35mm 1.8mm;
+        line-height: 1.45;
         border-bottom: 0.1mm solid #cddcd8;
         color: #16241f;
         vertical-align: top;
@@ -339,15 +366,19 @@
         background: transparent !important;
     }
     .report-print tfoot td {
-        padding-top: 1.3mm;
+        padding: 1.6mm 1.8mm !important;
         border-top: 0.2mm solid #0f766e;
         border-bottom: 0;
-        background: transparent !important;
+        background: #eaf4f2 !important;
+        print-color-adjust: exact;
+        -webkit-print-color-adjust: exact;
         color: #0c4a44 !important;
         font-weight: 700;
     }
     .report-print tbody tr:nth-child(even) {
-        background: transparent !important;
+        background: #f3f7f6 !important;
+        print-color-adjust: exact;
+        -webkit-print-color-adjust: exact;
     }
     .report-print .report-empty {
         color: #6b7874 !important;
@@ -360,8 +391,8 @@
     }
     /* The screen table frame and its row dividers are chrome; paper keeps only the printed hairlines. */
     .report-print .report-table-frame {
-        border: 0 !important;
-        border-radius: 0 !important;
+        border: 0.15mm solid #cbd8d5 !important;
+        border-radius: 1.6mm !important;
         overflow: visible !important;
     }
     .report-print tbody tr {
@@ -372,8 +403,8 @@
         align-items: flex-start;
         justify-content: space-between;
         gap: 8mm;
-        padding-bottom: 1.6mm;
-        border-bottom: 0.2mm solid #0f766e;
+        padding-bottom: 2.5mm;
+        border-bottom: 0.25mm solid #0f766e;
     }
     .report-shop-name {
         font-size: 12pt;
@@ -412,34 +443,41 @@
     }
     .report-title-band {
         display: flex;
-        align-items: baseline;
+        align-items: center;
         justify-content: space-between;
         gap: 6mm;
-        margin-top: 2mm;
+        margin-top: 3mm;
+        padding: 3mm 4mm;
+        border: 0.15mm solid #064e47;
+        border-radius: 1.8mm;
+        background: #0b5f57 !important;
+        print-color-adjust: exact;
+        -webkit-print-color-adjust: exact;
     }
     .report-title {
-        font-size: 9.6pt;
-        font-weight: 700;
-        letter-spacing: 0.08em;
+        font-size: 13pt;
+        font-weight: 750;
+        letter-spacing: 0.09em;
         text-transform: uppercase;
-        color: #0d1a17 !important;
+        color: #ffffff !important;
     }
     .report-period {
-        font-size: 7.2pt;
-        color: #4a5855 !important;
+        font-size: 7.6pt;
+        font-weight: 600;
+        color: #e6fffb !important;
     }
     .report-print .report-section {
-        margin-top: 2.4mm !important;
-        padding: 2mm 2.4mm !important;
-        border: 0.15mm solid #d6e2de !important;
-        border-radius: 1.4mm !important;
+        margin-top: 3.5mm !important;
+        padding: 3mm 3.2mm !important;
+        border: 0.15mm solid #cbd8d5 !important;
+        border-radius: 1.8mm !important;
         background: #fff !important;
         box-shadow: none !important;
     }
     .report-print .report-section h2 {
-        font-size: 8.2pt;
+        font-size: 8.8pt;
         font-weight: 700;
-        letter-spacing: 0.06em;
+        letter-spacing: 0.07em;
         text-transform: uppercase;
         color: #0c4a44 !important;
     }
@@ -448,8 +486,8 @@
         color: #5a6965 !important;
     }
     .report-print .report-section > div:first-child {
-        margin-bottom: 1.5mm !important;
-        padding-bottom: 1.2mm;
+        margin-bottom: 2.2mm !important;
+        padding-bottom: 1.8mm;
         border-bottom: 0.15mm solid #e6eeeb;
     }
     .report-summary {
@@ -558,11 +596,34 @@
     width: auto;
     max-width: 28mm;
 }
+.receipt-mode .print-document .invoice-logo-frame {
+    box-sizing: border-box;
+    height: 10mm;
+    min-width: 12mm;
+    max-width: 30mm;
+    padding: 0.7mm;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+}
+.receipt-mode .print-document .invoice-logo-frame .invoice-shop-logo {
+    height: 8mm;
+    max-width: 27mm;
+    background: transparent !important;
+}
 .receipt-mode .print-document .invoice-shop-mark {
     display: grid;
     place-items: center;
     height: 10mm;
     width: 10mm;
+    border: 0.15mm solid #08766f !important;
+    border-radius: 1.2mm !important;
+    background: #0a9f94 !important;
+    color: #fff !important;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
 }
 .receipt-mode .print-document > header > div + div {
     margin-top: 1.8mm;
@@ -618,8 +679,14 @@
     background: transparent !important;
     border-bottom: 0 !important;
 }
+.receipt-mode .print-document > section.receipt-party-section-thermal {
+    width: calc(100% + 1.5mm);
+    margin-left: -1.5mm !important;
+}
 .receipt-mode .print-document > section.grid > div {
     text-align: left;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
 }
 .receipt-mode .print-document > section.grid > div + div {
     margin-top: 1.6mm;
@@ -978,12 +1045,15 @@ body {
     padding-bottom: 0.625rem;
 }
 .recent-table tbody td {
-    height: 52px;
+    height: 48px;
 }
 
 /* Row-action buttons ask for h-8/h-9 next to the Button base h-11, and cn() has no
    tailwind-merge to drop the loser. Unlayered rules beat @layer utilities, so the
    compact height a caller asked for survives. */
+button.h-7 {
+    height: 1.75rem;
+}
 button.h-8 {
     height: 2rem;
 }
@@ -1035,6 +1105,26 @@ label:has(
     display: none;
 }
 
+/* Product editor keeps a slim, brand-colored scrollbar for long forms. */
+.product-modal-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: var(--primary) var(--primary-soft);
+}
+.product-modal-scrollbar::-webkit-scrollbar {
+    width: 4px;
+}
+.product-modal-scrollbar::-webkit-scrollbar-track {
+    border-radius: 999px;
+    background: var(--primary-soft);
+}
+.product-modal-scrollbar::-webkit-scrollbar-thumb {
+    border: 1px solid var(--card);
+    border-radius: 999px;
+    background: var(--primary);
+}
+.product-modal-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: color-mix(in srgb, var(--primary) 82%, var(--foreground));
+}
 /* Same rule for scrolling bodies inside overlays, so a modal never grows a visible bar. */
 .hide-scrollbar {
     scrollbar-width: none;
@@ -1274,3 +1364,4 @@ label:has(
         border-top: 1px solid var(--line) !important;
     }
 }
+

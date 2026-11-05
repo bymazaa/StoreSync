@@ -15,16 +15,16 @@ export function ThemeToggle() {
   const { setTheme, theme } = useTheme();
   const mounted = useSyncExternalStore(() => () => undefined, () => true, () => false);
 
-  if (!mounted) return <div aria-hidden className="h-10 w-[122px] rounded-xl bg-muted" />;
+  if (!mounted) return <div aria-hidden className="h-10 w-[104px] rounded-[12px] bg-muted" />;
 
   return (
-    <div className="inline-flex items-center rounded-full border border-line bg-muted p-1 shadow-2xl shadow-gray-100 dark:shadow-none" aria-label="Appearance">
+    <div className="inline-flex items-center rounded-[12px] border border-line bg-card p-1" aria-label="Appearance">
       {themeOptions.map(({ value, label, icon: Icon }) => (
         <button
           key={value}
           aria-label={`${label} theme`}
           aria-pressed={theme === value}
-          className={`grid size-8 place-items-center rounded-full transition-colors ${theme === value ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:bg-card hover:text-foreground"}`}
+          className={`grid size-8 place-items-center rounded-[9px] transition-colors ${theme === value ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:bg-muted hover:text-foreground"}`}
           onClick={() => setTheme(value)}
           title={label}
           type="button"

@@ -296,11 +296,13 @@ export function InvoiceView({ mode }: { mode: 'sale' | 'purchase' }) {
                     <header className="invoice-brand-header flex min-w-0 flex-col items-start justify-between gap-4 border-b border-border pb-4 sm:flex-row sm:items-center sm:gap-6 sm:pb-5">
                         <div className="flex min-w-0 w-full items-start gap-3 sm:w-auto">
                             {shop?.logoUrl ? (
-                                <img
-                                    className="invoice-shop-logo h-10 max-w-24 shrink-0 object-contain sm:h-14 sm:max-w-40"
-                                    src={shop.logoUrl}
-                                    alt={`${shop.shopName} logo`}
-                                />
+                                <span className="invoice-logo-frame grid shrink-0 place-items-center">
+                                    <img
+                                        className="invoice-shop-logo h-10 max-w-24 object-contain sm:h-14 sm:max-w-40"
+                                        src={shop.logoUrl}
+                                        alt={`${shop.shopName} logo`}
+                                    />
+                                </span>
                             ) : (
                                 <span className="invoice-shop-mark grid size-10 shrink-0 place-items-center rounded-xl bg-primary text-base font-bold text-white sm:size-12 sm:rounded-2xl sm:text-lg">
                                     {(shop?.shopName || 'S').trim().charAt(0).toUpperCase()}
@@ -357,7 +359,7 @@ export function InvoiceView({ mode }: { mode: 'sale' | 'purchase' }) {
                             </p>
                         </div>
                     </header>
-                    <section className="grid min-w-0 grid-cols-2 gap-4 border-b border-border py-4 sm:gap-6 sm:py-5">
+                    <section className={`receipt-party-section grid min-w-0 grid-cols-2 gap-4 border-b border-border py-4 sm:gap-6 sm:py-5 ${receiptPrint ? 'receipt-party-section-thermal' : ''}`}>
                         <div className="min-w-0 rounded-xl  p-3 sm:p-4">
                             <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
                                 {mode === 'sale' ? 'Customer' : 'Supplier'}
@@ -400,7 +402,7 @@ export function InvoiceView({ mode }: { mode: 'sale' | 'purchase' }) {
                         </div>
                     </section>
                     <div className="-mx-1 overflow-x-auto rounded-lg sm:mx-0">
-                        <table className={`w-full min-w-[560px] text-left text-xs sm:min-w-0 sm:text-sm print:min-w-0 ${completedReturns.length > 0 ? 'receipt-items-returns' : ''}`}>
+                        <table className={`${receiptPrint ? '' : 'a4-invoice-table'} w-full min-w-[560px] text-left text-xs sm:min-w-0 sm:text-sm print:min-w-0 ${completedReturns.length > 0 ? 'receipt-items-returns' : ''}`}>
                             <thead className="border-b border-border bg-muted/35 text-[11px] uppercase tracking-wide text-muted-foreground sm:text-xs">
                                 <tr>
                                     <th className="px-2 py-3 sm:px-3">Product</th>

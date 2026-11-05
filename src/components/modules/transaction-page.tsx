@@ -149,7 +149,7 @@ export function TransactionPage({ mode }: { mode: "sale" | "purchase" }) {
     }, 180);
     return () => { active = false; window.clearTimeout(timer); };
   }, [contactSearch, contacts, isSale]);
-  useEffect(() => { const timer = window.setTimeout(() => { void load(); }, 0); return () => window.clearTimeout(timer); }, [load]);
+  useEffect(() => { if (pathname !== (isSale ? "/sales" : "/purchases")) return; const timer = window.setTimeout(() => { void load(); }, 0); return () => window.clearTimeout(timer); }, [load, pathname, isSale]);
   useEffect(() => {
     if (!query.trim()) return;
     let active = true;
@@ -497,16 +497,16 @@ export function TransactionPage({ mode }: { mode: "sale" | "purchase" }) {
 
             <div className="hidden overflow-hidden rounded-[16px] border border-border/70 bg-background xl:block">
               <div className="overflow-x-auto">
-                <table className="stock-table w-full min-w-[980px] table-fixed text-left text-sm">
+                <table className="stock-table recent-table w-full min-w-[980px] table-fixed text-left text-sm">
                   <thead className="bg-muted/45 text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
                     <tr>
-                      <th className="w-[17%] px-4 py-3 font-semibold">Invoice</th>
-                      <th className="w-[14%] px-4 py-3 font-semibold">Status</th>
-                      <th className="w-[18%] px-4 py-3 font-semibold">{isSale ? "Customer" : "Supplier"}</th>
-                      <th className="w-[16%] px-4 py-3 font-semibold">Date</th>
-                      <th className="w-[13%] px-4 py-3 text-right font-semibold">Total</th>
-                      <th className="w-[12%] px-4 py-3 text-right font-semibold">Due</th>
-                      <th className="w-[10%] px-4 py-3 text-right"><span className="sr-only">Actions</span></th>
+                      <th className="w-[17%] px-2.5 py-2 font-semibold">Invoice</th>
+                      <th className="w-[14%] px-2.5 py-2 font-semibold">Status</th>
+                      <th className="w-[18%] px-2.5 py-2 font-semibold">{isSale ? "Customer" : "Supplier"}</th>
+                      <th className="w-[16%] px-2.5 py-2 font-semibold">Date</th>
+                      <th className="w-[13%] px-2.5 py-2 text-right font-semibold">Total</th>
+                      <th className="w-[12%] px-2.5 py-2 text-right font-semibold">Due</th>
+                      <th className="w-[10%] px-2.5 py-2 text-right"><span className="sr-only">Actions</span></th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border/70">
@@ -514,15 +514,15 @@ export function TransactionPage({ mode }: { mode: "sale" | "purchase" }) {
                       const due = Number(item.dueAmount);
                       return (
                         <tr key={item.id} className="transition-colors hover:bg-primary-soft/20">
-                          <td className="px-4 py-3">
+                          <td className="px-2.5 py-2">
                             <button type="button" onClick={() => setDetailId(item.id)} className="block max-w-full truncate text-left text-sm font-semibold tabular-nums text-foreground hover:text-primary">{item.invoiceNumber}</button>
                           </td>
-                          <td className="px-4 py-3"><span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-semibold whitespace-nowrap ${invoiceStatusTones[item.status] ?? "bg-muted text-muted-foreground"}`}><span className="size-1.5 rounded-full bg-current" />{item.status.replaceAll("_", " ")}</span></td>
-                          <td className="px-4 py-3"><span className="block truncate text-sm font-medium text-foreground" title={item.customer?.name ?? item.supplier?.name ?? undefined}>{item.customer?.name ?? item.supplier?.name ?? "Walk-in customer"}</span></td>
-                          <td className="px-4 py-3 text-xs tabular-nums text-muted-foreground">{formatDateTime(item.soldAt ?? item.purchasedAt ?? "")}</td>
-                          <td className="px-4 py-3 text-right"><span className="ml-auto block max-w-full break-words text-sm font-semibold tabular-nums text-foreground [overflow-wrap:anywhere]">{formatMoney(item.total)}</span></td>
-                          <td className="px-4 py-3 text-right"><span className={`ml-auto block max-w-full break-words text-sm font-semibold tabular-nums [overflow-wrap:anywhere] ${due > 0 ? "text-amber-strong" : "text-muted-foreground"}`}>{due > 0 ? formatMoney(item.dueAmount) : "—"}</span></td>
-                          <td className="px-4 py-3 text-right"><button type="button" aria-label={`Open ${item.invoiceNumber} details`} onClick={() => setDetailId(item.id)} className="group ml-auto inline-flex h-9 items-center gap-1.5 rounded-xl border border-primary bg-primary px-2.5 text-xs font-semibold text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/25">Details<ArrowRight size={13} className="transition-transform group-hover:translate-x-0.5" /></button></td>
+                          <td className="px-2.5 py-2"><span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-semibold whitespace-nowrap ${invoiceStatusTones[item.status] ?? "bg-muted text-muted-foreground"}`}><span className="size-1.5 rounded-full bg-current" />{item.status.replaceAll("_", " ")}</span></td>
+                          <td className="px-2.5 py-2"><span className="block truncate text-sm font-medium text-foreground" title={item.customer?.name ?? item.supplier?.name ?? undefined}>{item.customer?.name ?? item.supplier?.name ?? "Walk-in customer"}</span></td>
+                          <td className="px-2.5 py-2 text-xs tabular-nums text-muted-foreground">{formatDateTime(item.soldAt ?? item.purchasedAt ?? "")}</td>
+                          <td className="px-2.5 py-2 text-right"><span className="ml-auto block max-w-full break-words text-sm font-semibold tabular-nums text-foreground [overflow-wrap:anywhere]">{formatMoney(item.total)}</span></td>
+                          <td className="px-2.5 py-2 text-right"><span className={`ml-auto block max-w-full break-words text-sm font-semibold tabular-nums [overflow-wrap:anywhere] ${due > 0 ? "text-amber-strong" : "text-muted-foreground"}`}>{due > 0 ? formatMoney(item.dueAmount) : "—"}</span></td>
+                          <td className="px-2.5 py-2 text-right"><button type="button" aria-label={`Open ${item.invoiceNumber} details`} onClick={() => setDetailId(item.id)} className="group ml-auto inline-flex h-7 items-center gap-1 rounded-lg border border-primary bg-primary px-2 text-[11px] font-semibold text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/25">Details<ArrowRight size={13} className="transition-transform group-hover:translate-x-0.5" /></button></td>
                         </tr>
                       );
                     })}
