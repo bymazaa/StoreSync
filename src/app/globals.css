@@ -59,6 +59,29 @@
         border: 0 !important;
         background: #fff !important;
     }
+    /* The statement prints on the landscape @page report, but html/body and the body-level
+     DateField portal belong to the default portrait @page — that mismatch emits one trailing
+     blank A4 sheet. Pull the whole document onto the report page and drop the viewport-height
+     wrappers so no second page box is left over. */
+    html:has(.report-print) {
+        page: report;
+    }
+    html,
+    body {
+        height: auto !important;
+        min-height: 0 !important;
+    }
+    body {
+        display: block !important;
+    }
+    body > :not(.app-shell-canvas) {
+        display: none !important;
+    }
+    .app-shell-canvas,
+    .app-shell-frame {
+        display: block !important;
+        height: auto !important;
+    }
     .print-document .overflow-x-auto {
         overflow: visible !important;
     }
