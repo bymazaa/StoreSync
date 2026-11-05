@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { ArrowRight, Minus, Plus, Search, X } from "lucide-react";
 import { apiRequest, jsonBody } from "@/lib/client-api";
 import { ErrorMessage, inputClass, PageHeader, Panel, selectClass } from "@/components/ui/page";
@@ -55,6 +56,7 @@ function MobileCaption({ children }: { children: ReactNode }) {
 }
 
 export function TransactionPage({ mode }: { mode: "sale" | "purchase" }) {
+  const pathname = usePathname();
   const isSale = mode === "sale";
   const { formatMoney, formatDateTime } = useShopFormat();
   const countryCode = useShopCountryCode();
@@ -92,6 +94,11 @@ export function TransactionPage({ mode }: { mode: "sale" | "purchase" }) {
   const [detailNonce, setDetailNonce] = useState(0);
   const [detail, setDetail] = useState<InvoiceDetail | null>(null);
   const [detailError, setDetailError] = useState("");
+  useEffect(() => {
+    setDetailId(null);
+    setDetail(null);
+    setDetailError("");
+  }, [pathname]);
   const pendingTransactionRequests = useRef(new Map<string, string>());
   const searchRef = useRef<HTMLInputElement>(null);
   const contactRef = useRef<HTMLInputElement>(null);
