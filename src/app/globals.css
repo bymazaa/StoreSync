@@ -683,6 +683,9 @@
     width: calc(100% + 1.5mm);
     margin-left: -1.5mm !important;
 }
+.receipt-mode .print-document > section.receipt-party-section-thermal > div:last-child {
+    text-align: left !important;
+}
 .receipt-mode .print-document > section.grid > div {
     text-align: left;
     padding-left: 0 !important;
