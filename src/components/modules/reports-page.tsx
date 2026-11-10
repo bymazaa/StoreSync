@@ -186,21 +186,21 @@ export function ReportsPage() {
                 <div className="report-letterhead">
                     <div className="report-letterhead-shop">
                         <p className="report-shop-name">{shopName}</p>
-                        {contact ? <p className="report-contact">{contact}</p> : null}
+                        {data?.shop?.address && <p className="report-contact">{data.shop.address}</p>}
+                        {data?.shop?.phone && <p className="report-contact">Phone: {data.shop.phone}</p>}
+                        <div className="report-shop-extra">
+                            <p className="report-meta-sub">
+                                <span>Report Type:</span> {label} Statement
+                            </p>
+                            <p className="report-meta-sub">
+                                <span>Date Range:</span> {period}
+                            </p>
+                            <p className="report-meta-sub">
+                                <span>Total Records:</span> {rows.length.toLocaleString()} {rows.length === 1 ? 'entry' : 'entries'}
+                            </p>
+                        </div>
                     </div>
                     <div className="report-meta">
-                        <div>
-                            <span className="report-meta-label">Statement</span>
-                            <span>{label}</span>
-                        </div>
-                        <div>
-                            <span className="report-meta-label">Period</span>
-                            <span className="tabular-nums">{period}</span>
-                        </div>
-                        <div>
-                            <span className="report-meta-label">Entries</span>
-                            <span className="tabular-nums">{rows.length.toLocaleString()}</span>
-                        </div>
                         <div>
                             <span className="report-meta-label">Generated</span>
                             <span className="tabular-nums">{generatedAt}</span>
@@ -208,6 +208,14 @@ export function ReportsPage() {
                         <div>
                             <span className="report-meta-label">Currency</span>
                             <span>{currencyCode || '—'}</span>
+                        </div>
+                        <div>
+                            <span className="report-meta-label">Timezone</span>
+                            <span>{timezone || 'Local'}</span>
+                        </div>
+                        <div>
+                            <span className="report-meta-label">Document</span>
+                            <span>Official Statement</span>
                         </div>
                     </div>
                 </div>
@@ -412,7 +420,7 @@ function ReportTable({ rows, columns }: { rows: Row[]; columns: string[] }) {
         );
     };
     return (
-        <div className="report-table-frame overflow-hidden rounded-xl border border-border/70">
+        <div className="report-table-frame overflow-hidden rounded-xl border border-border/70 print:border-0 print:rounded-none">
             <div className="overflow-x-auto">
                 <table className="w-full min-w-[640px] table-fixed text-left text-sm">
                     <colgroup>
@@ -420,7 +428,7 @@ function ReportTable({ rows, columns }: { rows: Row[]; columns: string[] }) {
                             <col key={index} style={{ width }} />
                         ))}
                     </colgroup>
-                    <thead className="border-b border-border bg-muted/40 text-[11px] uppercase tracking-[0.08em] text-muted-foreground">
+                    <thead className="border-b border-border bg-muted/40 text-[11px] uppercase tracking-[0.08em] text-muted-foreground print:border-0">
                         <tr>
                             <th className="px-2 py-3 text-right font-semibold">#</th>
                             {columns.map((key) => (
@@ -433,7 +441,7 @@ function ReportTable({ rows, columns }: { rows: Row[]; columns: string[] }) {
                             ))}
                         </tr>
                     </thead>
-                    <tbody className="divide-y divide-border/60">
+                    <tbody className="divide-y divide-border/60 print:divide-y-0">
                         {rows.map((row, index) => (
                             <tr
                                 key={typeof row.id === 'string' && row.id.length > 0 ? String(row.id) : index}
@@ -465,7 +473,7 @@ function ReportTable({ rows, columns }: { rows: Row[]; columns: string[] }) {
                     </tbody>
                     {showTotal && (
                         <tfoot>
-                            <tr className="border-t-2 border-primary/60 bg-muted/20">
+                            <tr className="border-t-2 border-primary/60 bg-muted/20 print:border-0">
                                 <td className="px-2 py-3.5 text-right text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
                                     {labelIndex === -1 ? 'Total' : ''}
                                 </td>

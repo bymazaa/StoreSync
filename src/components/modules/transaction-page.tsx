@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ArrowRight, Minus, Plus, Search, X } from "lucide-react";
+import { ArrowRight, Barcode, CornerDownLeft, Minus, Package, PackageSearch, Plus, Search, User, X } from "lucide-react";
 import { apiRequest, jsonBody } from "@/lib/client-api";
 import { createClientRequestId } from "@/lib/client-request-id";
 import { ErrorMessage, inputClass, PageHeader, Panel, selectClass } from "@/components/ui/page";
@@ -196,7 +196,7 @@ export function TransactionPage({ mode }: { mode: "sale" | "purchase" }) {
     const timer = window.setTimeout(() => setPaidAmount(total), 0);
     return () => window.clearTimeout(timer);
   }, [allowDue, paidAmount, total, totalCents]);
-  const results = searchResults.slice(0, 8);
+  const results = searchResults.slice(0, 10);
   // Keep the caret in the search box so a scanner can feed the next item immediately.
   function keepSearchFocused() { window.setTimeout(() => searchRef.current?.focus(), 0); }
   function addProduct(product: Product) {
@@ -390,8 +390,124 @@ export function TransactionPage({ mode }: { mode: "sale" | "purchase" }) {
     {error && <ErrorMessage>{error}</ErrorMessage>}
     <form ref={formRef} onSubmit={submit} className="space-y-5">
       <Panel title="Items" description="Scan a barcode or type a name — the arrow keys browse the matches." className="min-w-0" action={<span className="inline-flex items-center gap-2 rounded-full bg-primary-soft/70 px-3 py-1.5 text-xs font-semibold text-teal-strong"><span>{lines.length} {lines.length === 1 ? "item" : "items"}</span><span aria-hidden="true" className="size-1 rounded-full bg-current opacity-50" />{formatMoney(subtotal)}</span>}>
-        <div className="relative"><Search size={16} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground"/><input ref={searchRef} aria-label="Search or scan a product" autoComplete="off" role="combobox" aria-expanded={Boolean(query.trim())} aria-controls="product-matches" value={query} onChange={(e) => { setQuery(e.target.value); setSearchResults([]); setOutOfStock(""); }} onKeyDown={searchKeyDown} className={`${inputClass} h-12 pl-10 pr-10 text-[15px]`} placeholder="Scan barcode or search product (F2)"/>{query && <button type="button" onClick={() => { setQuery(""); setSearchResults([]); keepSearchFocused(); }} aria-label="Clear product search" className="absolute right-3 top-1/2 -translate-y-1/2 rounded-md p-1 text-muted-foreground hover:bg-muted"><X size={15}/></button>}
-          {query.trim() && <div id="product-matches" role="listbox" className="absolute z-30 mt-1.5 max-h-72 w-full overflow-y-auto rounded-xl border border-border bg-card shadow-lg">{results.map((product, index) => { const stock = Number(product.stockOnHand); return <button type="button" role="option" aria-selected={index === cursor} key={product.id} onMouseEnter={() => setCursor(index)} onClick={() => addProduct(product)} className={`flex w-full min-w-0 items-center justify-between gap-3 border-b border-border px-4 py-3 text-left text-sm last:border-0 ${index === cursor ? "bg-teal-soft" : "hover:bg-muted"}`}><span className="min-w-0"><span className="block truncate font-medium">{product.name}<span className="ml-2 text-xs text-muted-foreground">{product.sku}</span></span><span className={`mt-0.5 block text-xs ${stock <= 0 ? "font-semibold text-danger" : "text-muted-foreground"}`}>{trimDecimalZeros(product.stockOnHand)} {product.baseUnit.symbol} in stock{stock <= 0 ? " · out of stock" : ""}</span></span><span className="flex max-w-[46%] shrink-0 flex-col items-end text-right"><span className="max-w-full break-words font-semibold tabular-nums [overflow-wrap:anywhere]">{formatMoney(isSale ? product.sellingPrice : product.purchasePrice)}</span><span className="text-xs font-normal text-muted-foreground">/ {product.baseUnit.symbol}</span></span></button>; })}{results.length === 0 && <p className="p-4 text-sm text-muted-foreground">No products found — press Enter to search the full catalogue again.</p>}{results.length > 1 && <p className="sticky bottom-0 flex items-center gap-1.5 bg-card px-4 py-2 text-[11px] text-muted-foreground"><Key>↑</Key><Key>↓</Key> browse · <Key>Enter</Key> add · <Key>Esc</Key> clear</p>}</div>}
+        <div className="relative">
+          <Search size={17} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          <input
+            ref={searchRef}
+            aria-label="Search or scan a product"
+            autoComplete="off"
+            role="combobox"
+            aria-expanded={Boolean(query.trim())}
+            aria-controls="product-matches"
+            value={query}
+            onChange={(e) => { setQuery(e.target.value); setSearchResults([]); setOutOfStock(""); }}
+            onKeyDown={searchKeyDown}
+            className={`${inputClass} h-12 pl-10.5 pr-14 text-[15px] font-medium shadow-xs transition-all focus:ring-2 focus:ring-primary/20`}
+            placeholder="Scan barcode or search product (F2)"
+          />
+          {query ? (
+            <button
+              type="button"
+              onClick={() => { setQuery(""); setSearchResults([]); keepSearchFocused(); }}
+              aria-label="Clear product search"
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+            >
+              <X size={16} />
+            </button>
+          ) : (
+            <span className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 hidden sm:flex items-center text-xs text-muted-foreground">
+              <Key>F2</Key>
+            </span>
+          )}
+
+          {query.trim() && (
+            <div
+              id="product-matches"
+              role="listbox"
+              className="absolute left-0 right-0 z-40 mt-1.5 max-h-80 overflow-hidden rounded-xl border border-border/80 bg-card shadow-xl shadow-black/5 flex flex-col"
+            >
+              <div className="flex-1 overflow-y-auto p-1 space-y-0.5">
+                {results.map((product, index) => {
+                  const stock = Number(product.stockOnHand);
+                  const isOutOfStock = stock <= 0;
+                  const isLowStock = !isOutOfStock && stock <= 5;
+                  const isSelected = index === cursor;
+                  const price = isSale ? product.sellingPrice : product.purchasePrice;
+
+                  return (
+                    <button
+                      type="button"
+                      role="option"
+                      aria-selected={isSelected}
+                      key={product.id}
+                      onMouseEnter={() => setCursor(index)}
+                      onClick={() => addProduct(product)}
+                      className={`group flex w-full min-w-0 items-center justify-between gap-3 rounded-lg px-3.5 py-2.5 text-left transition-colors duration-100 outline-none ${
+                        isSelected
+                          ? "bg-primary/10 text-card-foreground"
+                          : "hover:bg-muted/60 text-card-foreground"
+                      }`}
+                    >
+                      {/* Left: Product Name & Clean Info */}
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="truncate text-sm font-semibold text-foreground">
+                            {product.name}
+                          </span>
+                          {(product.barcode || product.sku) && (
+                            <span className="shrink-0 text-xs text-muted-foreground">
+                              ({product.barcode || product.sku})
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Stock text: clean & lightweight */}
+                        <p className="mt-0.5 text-xs">
+                          {isOutOfStock ? (
+                            <span className="font-medium text-danger">Out of stock</span>
+                          ) : isLowStock ? (
+                            <span className="font-medium text-amber-600 dark:text-amber-400">
+                              Low stock · {trimDecimalZeros(product.stockOnHand)} {product.baseUnit.symbol}
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground">
+                              {trimDecimalZeros(product.stockOnHand)} {product.baseUnit.symbol} in stock
+                            </span>
+                          )}
+                        </p>
+                      </div>
+
+                      {/* Right: Price */}
+                      <div className="shrink-0 text-right">
+                        <p className="text-sm sm:text-base font-bold tabular-nums text-foreground">
+                          {formatMoney(price)}
+                        </p>
+                        <p className="text-[11px] text-muted-foreground">
+                          per {product.baseUnit.symbol}
+                        </p>
+                      </div>
+                    </button>
+                  );
+                })}
+
+                {results.length === 0 && (
+                  <div className="py-6 px-4 text-center">
+                    <p className="text-sm font-medium text-foreground">No matching products</p>
+                    <p className="mt-0.5 text-xs text-muted-foreground">
+                      Press <Key>Enter</Key> to search the full catalogue.
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {results.length > 0 && (
+                <div className="flex items-center justify-between border-t border-border/60 bg-muted/20 px-3.5 py-1.5 text-[11px] text-muted-foreground">
+                  <span><Key>↑</Key> <Key>↓</Key> navigate · <Key>Enter</Key> select · <Key>Esc</Key> close</span>
+                  <span>{results.length} {results.length === 1 ? "result" : "results"}</span>
+                </div>
+              )}
+            </div>
+          )}
         </div>
         {outOfStock && <div role="alert" className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl border border-danger/30 bg-danger/10 px-3 py-2 text-xs text-danger"><span><strong>{outOfStock}</strong> is out of stock. Receive a purchase before selling it.</span>{canPurchase && <Link href="/purchases" className="font-semibold underline">Create a purchase</Link>}<button type="button" onClick={() => setOutOfStock("")} className="ml-auto rounded-md p-1 hover:bg-danger/10" aria-label="Dismiss stock warning"><X size={14} /></button></div>}
         <div className="mt-4">{lines.length === 0 ? <div className="rounded-xl border border-dashed border-border px-4 py-10 text-center text-sm text-muted-foreground">Nothing added yet. Scan a barcode, or press <Key>F2</Key> and start typing.</div> : <div className="overflow-hidden rounded-xl border border-border/70">
@@ -424,7 +540,34 @@ export function TransactionPage({ mode }: { mode: "sale" | "purchase" }) {
 
       <Panel className="min-w-0" title={isSale ? "Customer" : "Supplier"} description={isSale ? "A phone number that matches an existing customer selects them." : "Search an existing supplier, or enter details below."}>
         <div className="grid gap-3 lg:grid-cols-2">
-          <div className="relative"><Search size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"/><input ref={contactRef} aria-label={`Search existing ${isSale ? "customers" : "suppliers"}`} autoComplete="off" value={contactSearch} onFocus={() => setContactSearchOpen(true)} onBlur={() => window.setTimeout(() => setContactSearchOpen(false), 120)} onChange={(event) => { const value = event.target.value; if (contactId) clearContact(); setContactSearch(value); setContactSearchOpen(true); }} className={`${inputClass} pl-9`} placeholder={`Search ${isSale ? "customer" : "supplier"} (F4)`}/>{contactSearchOpen && <div className="absolute z-30 mt-1 max-h-64 w-full overflow-y-auto rounded-xl border border-border bg-card shadow-lg">{contactResults.map((contact) => <button type="button" key={contact.id} onMouseDown={(event) => event.preventDefault()} onClick={() => chooseContact(contact)} className="block w-full border-b border-border px-4 py-3 text-left last:border-0 hover:bg-muted"><span className="block text-sm font-medium">{contact.name}</span><span className="mt-0.5 block text-xs text-muted-foreground">{[contact.phoneE164, contact.email].filter(Boolean).join(" · ") || "No phone or email"}</span></button>)}{contactResults.length === 0 && <p className="p-4 text-sm text-muted-foreground">No matching {isSale ? "customers" : "suppliers"} found.</p>}</div>}</div>
+          <div className="relative"><Search size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"/><input ref={contactRef} aria-label={`Search existing ${isSale ? "customers" : "suppliers"}`} autoComplete="off" value={contactSearch} onFocus={() => setContactSearchOpen(true)} onBlur={() => window.setTimeout(() => setContactSearchOpen(false), 120)} onChange={(event) => { const value = event.target.value; if (contactId) clearContact(); setContactSearch(value); setContactSearchOpen(true); }} className={`${inputClass} pl-9`} placeholder={`Search ${isSale ? "customer" : "supplier"} (F4)`}/>{contactSearchOpen && (
+            <div className="absolute left-0 right-0 z-30 mt-1.5 max-h-60 overflow-hidden rounded-xl border border-border/80 bg-card shadow-xl shadow-black/5 p-1 flex flex-col">
+              <div className="overflow-y-auto space-y-0.5">
+                {contactResults.map((contact) => (
+                  <button
+                    type="button"
+                    key={contact.id}
+                    onMouseDown={(event) => event.preventDefault()}
+                    onClick={() => chooseContact(contact)}
+                    className="flex w-full min-w-0 items-center justify-between gap-3 rounded-lg px-3 py-2 text-left transition-colors hover:bg-muted/60"
+                  >
+                    <div className="min-w-0">
+                      <span className="block truncate text-sm font-semibold text-foreground">{contact.name}</span>
+                      <span className="mt-0.5 block truncate text-xs text-muted-foreground">
+                        {[contact.phoneE164, contact.email].filter(Boolean).join(" · ") || "No phone or email"}
+                      </span>
+                    </div>
+                    <span className="shrink-0 text-xs font-medium text-muted-foreground">Select</span>
+                  </button>
+                ))}
+                {contactResults.length === 0 && (
+                  <p className="py-5 text-center text-xs text-muted-foreground">
+                    No matching {isSale ? "customers" : "suppliers"} found.
+                  </p>
+                )}
+              </div>
+            </div>
+          )}</div>
           <input name="contactName" value={contactName} onChange={(e) => setContactName(e.target.value)} className={inputClass} placeholder={`${isSale ? "Customer" : "Supplier"} name — blank is a walk-in sale`}/>
         </div>
         {selectedContact && <div className="mt-3 flex items-center justify-between rounded-xl border border-primary/20 bg-primary/5 px-3 py-2 text-sm"><span>Selected: <strong>{selectedContact.name}</strong> — details below are theirs, edit only for this invoice.</span><button type="button" onClick={clearContact} className="ml-3 shrink-0 rounded-md p-1 text-muted-foreground hover:bg-muted" aria-label="Clear selected contact"><X size={15}/></button></div>}

@@ -204,6 +204,15 @@
         border-radius: 0 !important;
         text-align: center !important;
     }
+    .print-document .a4-purchase-invoice-meta {
+        box-sizing: border-box;
+        width: 92mm !important;
+        max-width: 100% !important;
+        margin: 0 auto !important;
+        padding: 0 !important;
+        border: 0 !important;
+        text-align: center !important;
+    }
     .invoice-shop-logo {
         max-height: 11mm;
     }
@@ -235,6 +244,16 @@
         border-top: 0 !important;
         padding-top: 1mm !important;
     }
+    .print-document .a4-invoice-reference {
+        margin-bottom: 2.5mm !important;
+    }
+    .print-document .a4-invoice-reference .receipt-doc-no {
+        font-size: 10pt !important;
+        font-weight: 700 !important;
+    }
+    .print-document .a4-invoice-reference p:last-child {
+        font-size: 7.5pt !important;
+    }
     .print-document:not(.receipt-coupon-paper) .receipt-totals {
         border-top: 0.2mm dashed #e5e7eb !important;
     }
@@ -263,6 +282,12 @@
         margin-top: 0 !important;
         font-size: 10pt !important;
         font-weight: 700 !important;
+    }
+    .print-document .payment-status-label {
+        font-size: 7pt !important;
+    }
+    .print-document .payment-status-value {
+        font-size: 9pt !important;
     }
     .print-document > section.grid p {
         margin-top: 0.5mm !important;
@@ -295,7 +320,10 @@
     .print-document .receipt-payment-row {
         padding-top: 0.8mm !important;
         padding-bottom: 0.8mm !important;
-        font-size: 8pt;
+        font-size: 7.5pt !important;
+    }
+    .print-document .receipt-payment-history > p {
+        font-size: 7.2pt !important;
     }
     .print-document > section.mt-6,
     .print-document > section.mt-7,
@@ -340,7 +368,7 @@
         background: #0a9f94 !important;
         color: #fff !important;
         border-bottom: 0 !important;
-        padding: 2mm 1.7mm;
+        padding: 1.6mm 1.7mm;
         font-size: 7pt;
         font-weight: 700;
         letter-spacing: 0.07em;
@@ -355,15 +383,13 @@
         padding-bottom: 1.2mm !important;
     }
     .print-document .a4-print-invoice-table,
-    .print-document .a4-print-invoice-table tr,
-    .print-document .a4-print-invoice-table th,
-    .print-document .a4-print-invoice-table td {
+    .print-document .a4-print-invoice-table * {
         border: 0 !important;
-    }
-    .print-document .a4-print-invoice-table thead,
-    .print-document .a4-print-invoice-table thead tr,
-    .print-document .a4-print-invoice-table thead th {
-        border: 0 !important;
+        border-style: none !important;
+        border-width: 0 !important;
+        border-color: transparent !important;
+        border-radius: 0 !important;
+        box-shadow: none !important;
     }
     .print-document .a4-invoice-table th:first-child {
         border-top-left-radius: 1mm;
@@ -391,7 +417,7 @@
     .print-document footer {
         color: #4a5855 !important;
     }
-    .print-document .receipt-barcode-block {
+    .print-document .invoice-qr-block {
         display: flex !important;
         flex-direction: column !important;
         align-items: center !important;
@@ -400,7 +426,9 @@
         break-inside: avoid;
         page-break-inside: avoid;
     }
-    .print-document .receipt-barcode-block svg {
+    .print-document .invoice-qr-code svg {
+        width: 34mm !important;
+        height: 34mm !important;
         print-color-adjust: exact;
         -webkit-print-color-adjust: exact;
     }
@@ -455,11 +483,10 @@
         size: A4 landscape;
         margin: 10mm 12mm;
     }
-    /* The statement is a bank document: hairline rules, no fills, and the same face the shop reads on screen,
-     so the paper never looks like a different product. Tabular figures keep the money columns aligned. */
+    /* Modern, borderless statement with subtle soft-tinted backgrounds for effortless readability. */
     .report-print {
         page: report;
-        color: #101f1b;
+        color: #162420;
         font-family: var(--app-font-sans);
     }
     .report-print .overflow-x-auto {
@@ -468,8 +495,6 @@
     .report-print thead {
         display: table-header-group;
     }
-    /* Rows and the summary band never split; the entries section itself is allowed to break so its
-     first rows start on page 1 even for long statements — the panel heading stays glued to them. */
     .report-print tr,
     .report-print .report-summary {
         break-inside: avoid;
@@ -481,114 +506,167 @@
         page-break-inside: avoid;
         page-break-after: avoid;
     }
-    /* Fixed column shares come from the component, so a wide cell wraps instead of running off the page. */
+    /* Fixed column shares with zero borders and clean spacing */
+    .report-print table,
+    .report-print thead,
+    .report-print tbody,
+    .report-print tfoot,
+    .report-print tr,
+    .report-print th,
+    .report-print td {
+        border: 0 !important;
+        border-style: none !important;
+        border-width: 0 !important;
+        box-shadow: none !important;
+    }
+    .report-print .divide-y > * {
+        border-top-width: 0 !important;
+        border-style: none !important;
+    }
     .report-print table {
         width: 100%;
         min-width: 0 !important;
         margin: 0;
-        border-collapse: collapse;
+        border-collapse: separate;
+        border-spacing: 0;
         table-layout: fixed;
         font-size: 7.2pt;
         line-height: 1.45;
         font-variant-numeric: tabular-nums;
     }
     .report-print th {
-        padding: 1.7mm 1.8mm;
+        padding: 2.2mm 2.2mm;
         line-height: 1.35;
-        background: #0b5f57 !important;
-        color: #ffffff !important;
-        font-size: 6.4pt;
+        background: #f1f5f4 !important;
+        color: #1a3832 !important;
+        font-size: 6.8pt;
         font-weight: 700;
         letter-spacing: 0.06em;
         text-transform: uppercase;
         text-align: left;
-        border-bottom: 0.2mm solid #064e47;
-        vertical-align: bottom;
+        vertical-align: middle;
         print-color-adjust: exact;
         -webkit-print-color-adjust: exact;
+    }
+    .report-print th:first-child {
+        border-top-left-radius: 1.6mm;
+        border-bottom-left-radius: 1.6mm;
+    }
+    .report-print th:last-child {
+        border-top-right-radius: 1.6mm;
+        border-bottom-right-radius: 1.6mm;
     }
     .report-print th.text-right,
     .report-print td.text-right {
         text-align: right;
     }
-    /* Bengali pre-base matras and conjuncts stack below the baseline, so print rows need extra leading. */
     .report-print td {
-        padding: 1.35mm 1.8mm;
+        padding: 1.7mm 2.2mm;
         line-height: 1.45;
-        border-bottom: 0.1mm solid #cddcd8;
-        color: #16241f;
-        vertical-align: top;
+        color: #1a2a26;
+        vertical-align: middle;
+    }
+    .report-print tbody tr:nth-child(even) td {
+        background: #f7faf9 !important;
+        print-color-adjust: exact;
+        -webkit-print-color-adjust: exact;
+    }
+    .report-print tbody tr:nth-child(odd) td {
+        background: #ffffff !important;
+    }
+    .report-print tbody tr:nth-child(even) td:first-child {
+        border-top-left-radius: 1.4mm;
+        border-bottom-left-radius: 1.4mm;
+    }
+    .report-print tbody tr:nth-child(even) td:last-child {
+        border-top-right-radius: 1.4mm;
+        border-bottom-right-radius: 1.4mm;
     }
     .report-print .report-serial {
         color: #7c8985 !important;
     }
-    /* Amount totals close the statement the way a bank footer does — a rule and a bold figure, no band.
-     table-footer-group repeats on every printed page, so it prints as a plain row group: once, at the end. */
     .report-print tfoot {
         display: table-row-group;
     }
     .report-print tfoot tr {
-        border-top: 0 !important;
         background: transparent !important;
     }
     .report-print tfoot td {
-        padding: 1.6mm 1.8mm !important;
-        border-top: 0.2mm solid #0f766e;
-        border-bottom: 0;
-        background: #eaf4f2 !important;
+        padding: 2.2mm 2.2mm !important;
+        background: #e6f0ed !important;
         print-color-adjust: exact;
         -webkit-print-color-adjust: exact;
-        color: #0c4a44 !important;
+        color: #084841 !important;
         font-weight: 700;
+        font-size: 7.6pt;
+        vertical-align: middle;
     }
-    .report-print tbody tr:nth-child(even) {
-        background: #f3f7f6 !important;
-        print-color-adjust: exact;
-        -webkit-print-color-adjust: exact;
+    .report-print tfoot td:first-child {
+        border-top-left-radius: 1.6mm;
+        border-bottom-left-radius: 1.6mm;
+    }
+    .report-print tfoot td:last-child {
+        border-top-right-radius: 1.6mm;
+        border-bottom-right-radius: 1.6mm;
     }
     .report-print .report-empty {
         color: #6b7874 !important;
         background: #fff !important;
     }
-    /* Every printed cell breaks inside its own column share — a figure can wrap, but never run over a neighbour. */
     .report-print td,
     .report-print th {
         overflow-wrap: anywhere;
     }
-    /* The screen table frame and its row dividers are chrome; paper keeps only the printed hairlines. */
     .report-print .report-table-frame {
-        border: 0.15mm solid #cbd8d5 !important;
-        border-radius: 1.6mm !important;
-        overflow: visible !important;
-    }
-    .report-print tbody tr {
-        border-top: 0 !important;
+        border: 0 !important;
+        border-radius: 2mm !important;
+        overflow: hidden !important;
+        box-shadow: none !important;
+        background: transparent !important;
     }
     .report-letterhead {
         display: flex;
         align-items: flex-start;
         justify-content: space-between;
         gap: 8mm;
-        padding-bottom: 2.5mm;
+        padding-bottom: 3mm;
         border-bottom: 0.25mm solid #0f766e;
     }
     .report-shop-name {
-        font-size: 12pt;
-        font-weight: 700;
+        font-size: 13.5pt;
+        font-weight: 800;
         letter-spacing: 0.02em;
-        line-height: 1.3;
-        color: #0c4a44 !important;
+        line-height: 1.25;
+        color: #0b4d46 !important;
     }
     .report-contact {
         margin-top: 0.6mm;
         font-size: 7.6pt;
-        line-height: 1.5;
-        color: #4a5855 !important;
+        line-height: 1.4;
+        color: #4e5f5b !important;
+    }
+    .report-letterhead-shop {
+        max-width: 60%;
+    }
+    .report-shop-extra {
+        margin-top: 1.6mm;
+        display: flex;
+        flex-direction: column;
+        gap: 0.5mm;
+    }
+    .report-meta-sub {
+        font-size: 7.2pt;
+        line-height: 1.35;
+        color: #4c5d59 !important;
+    }
+    .report-meta-sub span {
+        font-weight: 700;
+        color: #182c28 !important;
     }
     .report-meta {
         font-size: 7.2pt;
         color: #24332f !important;
-        text-align: left;
+        text-align: right;
     }
     .report-meta > div {
         display: flex;
@@ -596,7 +674,7 @@
         gap: 2mm;
     }
     .report-meta > div + div {
-        margin-top: 0.4mm;
+        margin-top: 0.5mm;
     }
     .report-meta-label {
         min-width: 20mm;
@@ -612,95 +690,92 @@
         align-items: center;
         justify-content: space-between;
         gap: 6mm;
-        margin-top: 3mm;
-        padding: 3mm 4mm;
-        border: 0.15mm solid #064e47;
-        border-radius: 1.8mm;
-        background: #0b5f57 !important;
+        margin-top: 3.5mm;
+        padding: 2.5mm 4mm;
+        border: 0 !important;
+        border-radius: 2mm;
+        background: #f1f6f5 !important;
         print-color-adjust: exact;
         -webkit-print-color-adjust: exact;
     }
     .report-title {
-        font-size: 13pt;
-        font-weight: 750;
-        letter-spacing: 0.09em;
+        font-size: 11pt;
+        font-weight: 800;
+        letter-spacing: 0.07em;
         text-transform: uppercase;
-        color: #ffffff !important;
+        color: #0b4d46 !important;
     }
     .report-period {
-        font-size: 7.6pt;
+        font-size: 7.5pt;
         font-weight: 600;
-        color: #e6fffb !important;
+        color: #435954 !important;
     }
     .report-print .report-section {
-        margin-top: 3.5mm !important;
-        padding: 3mm 3.2mm !important;
-        border: 0.15mm solid #cbd8d5 !important;
-        border-radius: 1.8mm !important;
-        background: #fff !important;
+        margin-top: 4.5mm !important;
+        padding: 0 !important;
+        border: 0 !important;
+        border-radius: 0 !important;
+        background: transparent !important;
         box-shadow: none !important;
     }
     .report-print .report-section h2 {
-        font-size: 8.8pt;
+        font-size: 9.5pt;
         font-weight: 700;
-        letter-spacing: 0.07em;
+        letter-spacing: 0.05em;
         text-transform: uppercase;
-        color: #0c4a44 !important;
+        color: #0b4d46 !important;
     }
     .report-print .report-section p {
-        font-size: 7pt;
-        color: #5a6965 !important;
+        font-size: 7.2pt;
+        color: #5c6d69 !important;
     }
     .report-print .report-section > div:first-child {
         margin-bottom: 2.2mm !important;
-        padding-bottom: 1.8mm;
-        border-bottom: 0.15mm solid #e6eeeb;
+        padding-bottom: 1.6mm;
+        border-bottom: 0.15mm solid #e5edea;
     }
     .report-summary {
         display: grid !important;
         grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
-        gap: 0 !important;
-        margin-top: 2.4mm !important;
-        border: 0.15mm solid #d6e2de;
-        border-radius: 1.4mm;
-        overflow: hidden;
+        gap: 2.5mm !important;
+        margin-top: 3.5mm !important;
+        border: 0 !important;
+        border-radius: 0 !important;
+        overflow: visible !important;
+        background: transparent !important;
     }
     .report-summary > div {
-        padding: 1.5mm 2mm !important;
+        padding: 2.2mm 3mm !important;
         margin: 0 !important;
         border: 0 !important;
-        border-left: 0.15mm solid #e6eeeb !important;
-        border-radius: 0 !important;
-        background: #fff !important;
-    }
-    .report-summary > div:nth-child(4n + 1) {
-        border-left: 0 !important;
-    }
-    .report-summary > div:nth-child(n + 5) {
-        border-top: 0.15mm solid #e6eeeb;
+        border-radius: 2mm !important;
+        background: #f6faf9 !important;
+        print-color-adjust: exact;
+        -webkit-print-color-adjust: exact;
     }
     .report-summary p:first-child {
-        font-size: 6pt;
+        font-size: 6.2pt;
         font-weight: 700;
-        letter-spacing: 0.05em;
+        letter-spacing: 0.06em;
         text-transform: uppercase;
-        color: #6f7c79 !important;
+        color: #586965 !important;
     }
     .report-summary p:last-child {
-        margin-top: 0.5mm !important;
-        font-size: 8.4pt;
+        margin-top: 1.2mm !important;
+        font-size: 9.5pt;
         font-weight: 700;
-        color: #0c4a44 !important;
+        color: #0a4f47 !important;
     }
     .report-footnote {
+        display: flex;
         justify-content: space-between;
         gap: 6mm;
-        margin-top: 2.4mm !important;
-        padding-top: 1.2mm;
+        margin-top: 3.5mm !important;
+        padding-top: 2mm;
         border-top: 0.2mm solid #0f766e;
-        font-size: 6.2pt;
+        font-size: 6.4pt;
         letter-spacing: 0.04em;
-        color: #66736f !important;
+        color: #61706c !important;
     }
 }
 /* 80 mm thermal receipt: compact content inside a light dashed coupon frame. */
@@ -750,7 +825,7 @@
     flex-direction: column !important;
     align-items: center !important;
     text-align: center !important;
-    gap: 1.5mm !important;
+    gap: 0.8mm !important;
 }
 .receipt-mode .print-document .invoice-brand-header .receipt-shop-name {
     font-size: 1.25em !important;
@@ -763,15 +838,41 @@
     text-align: center !important;
     font-size: 0.82em !important;
 }
+.receipt-mode .print-document .truncate-receipt {
+    display: -webkit-box !important;
+    max-width: 100% !important;
+    overflow: hidden !important;
+    overflow-wrap: anywhere !important;
+    -webkit-box-orient: vertical !important;
+    -webkit-line-clamp: 2 !important;
+    text-overflow: ellipsis !important;
+}
 .receipt-mode .print-document .invoice-number-block {
     width: 100% !important;
-    margin-top: 0.8mm !important;
+    margin-top: 0 !important;
     padding-top: 0 !important;
     border-top: 0 !important;
     text-align: left !important;
 }
+.receipt-mode .print-document .receipt-payment-history > p {
+    font-size: 0.8em !important;
+}
+.receipt-mode .print-document .receipt-payment-row {
+    font-size: 0.9em !important;
+}
 .receipt-mode .print-document .invoice-number-block .receipt-doc-no {
-    font-size: 1.05em !important;
+    font-size: 0.95em !important;
+    font-weight: 700 !important;
+}
+.receipt-mode .print-document .payment-status-content > p:first-child {
+    margin-bottom: 0.8mm !important;
+    color: #697773 !important;
+    font-size: 0.72em !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.04em;
+}
+.receipt-mode .print-document .payment-status-content > p:nth-child(2) {
+    margin-top: 0 !important;
     font-weight: 700 !important;
 }
 .receipt-mode .print-document .receipt-party-section {
@@ -795,6 +896,17 @@
 .receipt-mode .print-document .receipt-party-section > div > div:first-child {
     margin-right: auto !important;
     text-align: left !important;
+}
+.receipt-mode .print-document .receipt-party-section > div > div:first-child .truncate-receipt {
+    font-size: 0.8em !important;
+    line-height: 1.35 !important;
+}
+.receipt-mode .print-document .receipt-party-name,
+.receipt-mode .print-document .payment-status-value {
+    font-size: 9pt !important;
+}
+.receipt-mode .print-document .receipt-party-phone {
+    font-size: 7.5pt !important;
 }
 .receipt-mode .print-document .receipt-party-section > div > div:last-child {
     margin-left: auto !important;
@@ -863,20 +975,6 @@
     border-top: 0.2mm solid #82908c !important;
     border-bottom: 0.2mm solid #82908c !important;
     letter-spacing: 0.02em !important;
-}
-.receipt-mode .print-document .receipt-barcode-block {
-    display: flex !important;
-    flex-direction: column !important;
-    align-items: center !important;
-    justify-content: center !important;
-    margin: 3.5mm auto 1.5mm !important;
-    text-align: center !important;
-}
-.receipt-mode .print-document .receipt-barcode-block svg {
-    max-width: 52mm !important;
-    height: 10mm !important;
-    margin: 0 auto !important;
-    shape-rendering: crispEdges;
 }
 .receipt-mode .print-document footer {
     margin-top: 2.5mm !important;
@@ -1017,9 +1115,9 @@
     --card: #ffffff;
     --border: #ededed;
     --line: #f0f0f0;
-    --shell-border: #e8e8ea;
+    --shell-border: #e8ecf0;
     /* A whisper of the brand teal, so the nav column reads as its own zone without going gray. */
-    --sidebar: #eef2f0;
+    --sidebar: #f8fafc;
     --input: #f7f7f8;
     --table-head: #f7f7f8;
     --muted: #f1f1f3;
@@ -1106,8 +1204,8 @@
     --card: #1d1f21;
     --border: #2e3032;
     --line: #26282a;
-    --shell-border: #222426;
-    --sidebar: #191b1d;
+    --shell-border: #1e2227;
+    --sidebar: #121417;
     --input: #222426;
     --table-head: #212325;
     --muted: #232527;
@@ -1231,13 +1329,9 @@ label:has(
 /* The docked sidebar still scrolls on short screens, but the bar itself must stay invisible. */
 .app-shell-nav {
     scrollbar-width: none;
-    box-shadow: 6px 0 22px rgb(37 65 59 / 0.12);
-    background-image: linear-gradient(
-        155deg,
-        color-mix(in srgb, var(--primary-soft) 82%, var(--sidebar)),
-        var(--sidebar) 46%,
-        color-mix(in srgb, var(--primary-soft) 48%, var(--sidebar))
-    );
+    background-color: var(--sidebar);
+    background-image: none;
+    box-shadow: 1px 0 3px 0 rgba(0, 0, 0, 0.03);
 }
 .dark .app-shell-nav {
     box-shadow: none;
@@ -1316,7 +1410,7 @@ label:has(
    @layer utilities, so the rail works at every viewport instead of only lg and above.
    The nav link keeps its accessible name and tooltip through title={label}. */
 .app-shell-nav[data-collapsed='true'] {
-    width: 84px;
+    width: 72px;
 }
 .app-shell-nav[data-collapsed='true'] .nav-logo-card {
     flex-direction: column;
