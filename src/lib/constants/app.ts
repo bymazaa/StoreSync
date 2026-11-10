@@ -14,3 +14,6 @@ export const INVENTORY_UNITS = ["kg", "g", "liter", "piece", "bag", "packet"] as
 export const PAYMENT_METHODS = ["Cash", "Card", "Bank transfer", "Mobile payment"] as const;
 export const STOCK_ALERT = { lowStockFactor: 1, expiryWarningDays: 30 } as const;
 export const THEME_OPTIONS = ["light", "dark", "system"] as const;
+
+
+
