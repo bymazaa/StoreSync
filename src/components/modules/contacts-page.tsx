@@ -2,6 +2,7 @@
 
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { apiRequest, jsonBody } from "@/lib/client-api";
+import { createClientRequestId } from "@/lib/client-request-id";
 import { notifySuccessToast } from "@/lib/client-notifications";
 import { Button } from "@/components/ui/button";
 import { ErrorMessage, inputClass, Notice, PageHeader, Panel } from "@/components/ui/page";
@@ -65,7 +66,7 @@ export function ContactsPage({ mode, initialSearch = "" }: { mode: "customer" | 
     const fingerprint = JSON.stringify(payload);
     let clientRequestId = pendingPaymentRequests.current.get(fingerprint);
     if (!clientRequestId) {
-      clientRequestId = crypto.randomUUID();
+      clientRequestId = createClientRequestId();
       pendingPaymentRequests.current.set(fingerprint, clientRequestId);
     }
     setBusy(true); setError("");

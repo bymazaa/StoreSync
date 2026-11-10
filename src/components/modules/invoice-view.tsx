@@ -4,17 +4,20 @@ import { FormEvent, useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { apiRequest } from '@/lib/client-api';
+import { createClientRequestId } from '@/lib/client-request-id';
 import { ErrorMessage, PageHeader, Panel } from '@/components/ui/page';
 import { Button } from '@/components/ui/button';
 import { DateField } from '@/components/ui/date-field';
 import { useHasPermission, useShopFormat } from '@/components/app/shop-context';
 import { usesWholeQuantity } from '@/lib/quantity';
+import { BarcodeSvg } from '@/components/ui/barcode';
+import { isCode128Encodable } from '@/lib/barcode';
+import { CircleCheck } from 'lucide-react';
 
 function formatQuantity(value: number | string) {
     return String(Number(value));
 }
 
-/** Keep long invoice labels readable while preserving the original value in the title tooltip. */
 function limitText(value: string | null | undefined, maxLength: number) {
     const text = value?.trim() ?? '';
     if (text.length <= maxLength) return text;
@@ -74,6 +77,7 @@ type Invoice = {
         reference: string | null;
     }[];
 };
+
 type PaymentMethod = { id: string; name: string };
 type ShopBranding = {
     shopName: string;
@@ -81,6 +85,7 @@ type ShopBranding = {
     address: string | null;
     phone: string | null;
 };
+
 export function InvoiceView({ mode }: { mode: 'sale' | 'purchase' }) {
     const params = useParams<{ saleId?: string; purchaseId?: string }>();
     const id = mode === 'sale' ? params.saleId : params.purchaseId;
@@ -94,6 +99,7 @@ export function InvoiceView({ mode }: { mode: 'sale' | 'purchase' }) {
     const [receiptPrint, setReceiptPrint] = useState(false);
     const [returnQuantities, setReturnQuantities] = useState<Record<string, string>>({});
     const pendingReturnRequests = useRef(new Map<string, string>());
+
     const load = useCallback(async () => {
         if (!id) return;
         try {
@@ -109,12 +115,14 @@ export function InvoiceView({ mode }: { mode: 'sale' | 'purchase' }) {
             setError(e instanceof Error ? e.message : 'Invoice could not be loaded.');
         }
     }, [id, mode]);
+
     useEffect(() => {
         const timer = window.setTimeout(() => {
             void load();
         }, 0);
         return () => window.clearTimeout(timer);
     }, [load]);
+
     useEffect(() => {
         const reset = () => {
             document.getElementById('receipt-print-page-size')?.remove();
@@ -122,6 +130,7 @@ export function InvoiceView({ mode }: { mode: 'sale' | 'purchase' }) {
         window.addEventListener('afterprint', reset);
         return () => window.removeEventListener('afterprint', reset);
     }, []);
+
     useEffect(() => {
         if (!canProcessReturns) return;
         const timer = window.setTimeout(() => {
@@ -131,6 +140,7 @@ export function InvoiceView({ mode }: { mode: 'sale' | 'purchase' }) {
         }, 0);
         return () => window.clearTimeout(timer);
     }, [canProcessReturns]);
+
     async function cancelInvoice() {
         if (
             !invoice ||
@@ -153,6 +163,7 @@ export function InvoiceView({ mode }: { mode: 'sale' | 'purchase' }) {
             setBusy(false);
         }
     }
+
     async function returnItems(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();
         if (!invoice || busy) return;
@@ -189,7 +200,7 @@ export function InvoiceView({ mode }: { mode: 'sale' | 'purchase' }) {
         const fingerprint = JSON.stringify({ mode, invoiceId: invoice.id, ...payload });
         let clientRequestId = pendingReturnRequests.current.get(fingerprint);
         if (!clientRequestId) {
-            clientRequestId = crypto.randomUUID();
+            clientRequestId = createClientRequestId();
             pendingReturnRequests.current.set(fingerprint, clientRequestId);
         }
         try {
@@ -206,7 +217,7 @@ export function InvoiceView({ mode }: { mode: 'sale' | 'purchase' }) {
             setBusy(false);
         }
     }
-    /** Chrome ignores named pages, so the 80 mm sheet size is injected only for the print job that needs it. */
+
     function setReceiptPageSize(enabled: boolean) {
         document.getElementById('receipt-print-page-size')?.remove();
         if (!enabled) return;
@@ -215,22 +226,32 @@ export function InvoiceView({ mode }: { mode: 'sale' | 'purchase' }) {
         pageStyle.textContent = '@media print { @page { size: 80mm auto; margin: 0; } }';
         document.head.append(pageStyle);
     }
+
+    function printWithInvoiceFilename(useReceiptSize: boolean) {
+        if (!invoice) return;
+        const previousTitle = document.title;
+        document.title = invoice.invoiceNumber;
+        window.addEventListener('afterprint', () => {
+            document.title = previousTitle;
+        }, { once: true });
+        setReceiptPrint(useReceiptSize);
+        window.setTimeout(() => {
+            setReceiptPageSize(useReceiptSize);
+            window.print();
+        }, 100);
+    }
+
     function printReceipt() {
-        setReceiptPrint(true);
-        window.setTimeout(() => {
-            setReceiptPageSize(true);
-            window.print();
-        }, 100);
+        printWithInvoiceFilename(true);
     }
+
     function printInvoice() {
-        setReceiptPrint(false);
-        window.setTimeout(() => {
-            setReceiptPageSize(false);
-            window.print();
-        }, 100);
+        printWithInvoiceFilename(false);
     }
+
     if (error) return <ErrorMessage>{error}</ErrorMessage>;
     if (!invoice) return <div className="h-40 animate-pulse rounded-2xl bg-muted sm:h-56" />;
+
     const party = invoice.customer ?? invoice.supplier;
     const date = invoice.soldAt ?? invoice.purchasedAt;
     const completedReturns = (invoice.returns ?? []).filter(
@@ -253,8 +274,12 @@ export function InvoiceView({ mode }: { mode: 'sale' | 'purchase' }) {
     );
     const dueReducedByReturns = Math.max(0, returnedAmount - refundedAmount);
     const saleItemsById = new Map(invoice.items.map((item) => [item.id, item]));
+    const isPaid = Number(invoice.dueAmount) <= 0;
+    const canBarcode = isCode128Encodable(invoice.invoiceNumber);
+
     return (
         <div className={`min-w-0 space-y-4 sm:space-y-6 ${receiptPrint ? 'receipt-mode' : ''}`}>
+            {/* ── Screen header action bar ── */}
             <div className="print:hidden">
                 <PageHeader
                     eyebrow={mode === 'sale' ? 'Sales invoice' : 'Purchase invoice'}
@@ -269,10 +294,28 @@ export function InvoiceView({ mode }: { mode: 'sale' | 'purchase' }) {
                                 Back
                             </Link>
                             <div className="flex min-h-10 items-center gap-0.5 rounded-xl border border-border p-0.5">
-                                <button type="button" aria-pressed={!receiptPrint} onClick={() => setReceiptPrint(false)} className={`h-9 rounded-lg px-3 text-xs font-semibold transition-colors ${receiptPrint ? 'text-muted-foreground hover:bg-muted' : 'bg-teal-soft text-teal-strong'}`}>A4</button>
-                                <button type="button" aria-pressed={receiptPrint} onClick={() => setReceiptPrint(true)} className={`h-9 rounded-lg px-3 text-xs font-semibold transition-colors ${receiptPrint ? 'bg-teal-soft text-teal-strong' : 'text-muted-foreground hover:bg-muted'}`}>80 mm</button>
+                                <button
+                                    type="button"
+                                    aria-pressed={!receiptPrint}
+                                    onClick={() => setReceiptPrint(false)}
+                                    className={`h-9 rounded-lg px-3 text-xs font-semibold transition-colors ${receiptPrint ? 'text-muted-foreground hover:bg-muted' : 'bg-teal-soft text-teal-strong'}`}
+                                >
+                                    A4
+                                </button>
+                                <button
+                                    type="button"
+                                    aria-pressed={receiptPrint}
+                                    onClick={() => setReceiptPrint(true)}
+                                    className={`h-9 rounded-lg px-3 text-xs font-semibold transition-colors ${receiptPrint ? 'bg-teal-soft text-teal-strong' : 'text-muted-foreground hover:bg-muted'}`}
+                                >
+                                    80 mm
+                                </button>
                             </div>
-                            <Button className="min-h-10 flex-1 text-sm sm:flex-none" variant="outline" onClick={printInvoice}>
+                            <Button
+                                className="min-h-10 flex-1 text-sm sm:flex-none"
+                                variant="outline"
+                                onClick={printInvoice}
+                            >
                                 Print invoice
                             </Button>
                             <Button
@@ -286,185 +329,159 @@ export function InvoiceView({ mode }: { mode: 'sale' | 'purchase' }) {
                     }
                 />
             </div>
+
             {error && (
                 <div className="print:hidden">
                     <ErrorMessage>{error}</ErrorMessage>
                 </div>
             )}
+
+            {/* ── Printable Paper Document (No heavy boxes, clean typography & generous spacing) ── */}
             <Panel className="invoice-panel overflow-hidden">
-                <div className="print-document invoice-paper mx-auto w-full min-w-0 max-w-4xl break-words px-3 py-4 sm:px-6 sm:py-6 print:px-0 print:py-0">
-                    <header className="invoice-brand-header flex min-w-0 flex-col items-start justify-between gap-4 border-b border-border pb-4 sm:flex-row sm:items-center sm:gap-6 sm:pb-5">
-                        <div className="flex min-w-0 w-full items-start gap-3 sm:w-auto">
-                            {shop?.logoUrl ? (
-                                <span className="invoice-logo-frame grid shrink-0 place-items-center">
-                                    <img
-                                        className="invoice-shop-logo h-10 max-w-24 object-contain sm:h-14 sm:max-w-40"
-                                        src={shop.logoUrl}
-                                        alt={`${shop.shopName} logo`}
-                                    />
-                                </span>
-                            ) : (
-                                <span className="invoice-shop-mark grid size-10 shrink-0 place-items-center rounded-xl bg-primary text-base font-bold text-white sm:size-12 sm:rounded-2xl sm:text-lg">
-                                    {(shop?.shopName || 'S').trim().charAt(0).toUpperCase()}
-                                </span>
-                            )}
-                            <div className="min-w-0 flex-1">
-                                <p
-                                    title={shop?.shopName || 'StockPilot'}
-                                    className="receipt-shop-name max-w-full truncate text-lg font-bold uppercase tracking-tight sm:text-2xl"
-                                >
-                                    {limitText(shop?.shopName || 'StockPilot', 42)}
+                <div className={`print-document invoice-paper mx-auto w-full min-w-0 max-w-4xl break-words px-4 py-6 sm:px-8 sm:py-8 print:px-0 print:py-0 ${receiptPrint ? 'receipt-coupon-paper' : ''}`}>
+                    {/* Header: Brand details + Invoice title */}
+                    <header className="invoice-brand-header pb-4 sm:pb-5">
+                        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                            <div className="flex items-start gap-3.5">
+                                {shop?.logoUrl ? (
+                                    <span className="invoice-logo-frame grid shrink-0 place-items-center">
+                                        <img
+                                            className="invoice-shop-logo h-11 max-w-32 object-contain sm:h-14 sm:max-w-44"
+                                            src={shop.logoUrl}
+                                            alt={`${shop.shopName} logo`}
+                                        />
+                                    </span>
+                                ) : null}
+                                <div className="min-w-0 flex-1">
+                                    <h1 className="receipt-shop-name text-lg font-bold tracking-tight text-foreground sm:text-2xl">
+                                        {shop?.shopName || 'StockPilot'}
+                                    </h1>
+                                    {shop?.address && (
+                                        <p className="truncate-receipt mt-0.5 text-xs text-muted-foreground leading-relaxed sm:max-w-md">
+                                            {shop.address}
+                                        </p>
+                                    )}
+                                    {shop?.phone && (
+                                        <p className="mt-0.5 text-xs text-muted-foreground">
+                                            Tel: {shop.phone}
+                                        </p>
+                                    )}
+                                </div>
+                            </div>
+
+                            <div className={`invoice-number-block text-left sm:text-right ${mode === 'sale' && !receiptPrint ? 'a4-sales-invoice-meta' : ''}`}>
+                                <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                                    {mode === 'sale' ? 'Tax Invoice / Receipt' : 'Purchase Invoice'}
                                 </p>
-                                <p className="mt-1 text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-                                    {mode === 'sale' ? 'Sales receipt' : 'Purchase invoice'}
+                                <p className="receipt-doc-no mt-1 text-base font-bold tabular-nums text-foreground sm:text-xl">
+                                    {invoice.invoiceNumber}
                                 </p>
-                                {shop?.address && (
-                                    <p
-                                        title={shop.address}
-                                        className="truncate-receipt mt-1 max-w-full break-words text-xs leading-4 text-muted-foreground sm:max-w-[26rem] sm:leading-5"
-                                    >
-                                        {limitText(shop.address, 84)}
+                                {mode === 'purchase' && invoice.supplierInvoiceNumber && (
+                                    <p className="mt-0.5 text-xs text-muted-foreground">
+                                        Supplier Ref: {invoice.supplierInvoiceNumber}
                                     </p>
                                 )}
-                                {shop?.phone && (
-                                    <p
-                                        title={shop.phone}
-                                        className="max-w-full truncate text-xs text-muted-foreground sm:max-w-72"
-                                    >
-                                        {limitText(shop.phone, 28)}
+                                <p className="mt-0.5 text-xs text-muted-foreground">
+                                    Date: {date ? formatDateTime(date) : ''}
+                                </p>
+                            </div>
+                        </div>
+                    </header>
+
+                    {/* Party information: clean 2-column without boxed backgrounds */}
+                    <section className="receipt-party-section py-4 sm:py-5 border-t border-b border-border/70">
+                        <div className="grid grid-cols-2 gap-4 sm:gap-8">
+                            <div className="min-w-0">
+                                <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                                    {mode === 'sale' ? 'Bill To' : 'Supplier'}
+                                </p>
+                                <p className="mt-1 text-sm font-semibold capitalize text-foreground sm:text-base">
+                                    {party?.name ?? (mode === 'sale' ? 'Walk-in customer' : 'Supplier')}
+                                </p>
+                                {party?.phoneE164 && (
+                                    <p className="mt-0.5 text-xs text-muted-foreground">
+                                        {party.phoneE164}
+                                    </p>
+                                )}
+                                {party?.address && (
+                                    <p className="truncate-receipt mt-0.5 text-xs leading-relaxed text-muted-foreground max-w-xs">
+                                        {party.address}
                                     </p>
                                 )}
                             </div>
-                        </div>
-                        <div className="invoice-number-block w-full min-w-0 border-t border-dashed border-border pt-3 text-left sm:w-auto sm:max-w-[44%] sm:border-0 sm:pt-0 sm:text-right">
-                            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-                                {mode === 'sale' ? 'Invoice' : 'Purchase invoice'}
-                            </p>
-                            <p
-                                title={invoice.invoiceNumber}
-                                className="receipt-doc-no mt-1 max-w-full break-words text-base font-semibold sm:text-lg"
-                            >
-                                {limitText(invoice.invoiceNumber, 36)}
-                            </p>
-                            {mode === 'purchase' && invoice.supplierInvoiceNumber && (
-                                <p
-                                    title={invoice.supplierInvoiceNumber}
-                                    className="max-w-full break-words text-xs text-muted-foreground"
-                                >
-                                    Supplier bill: {limitText(invoice.supplierInvoiceNumber, 36)}
+
+                            <div className="min-w-0 text-right">
+                                <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                                    Payment Status
                                 </p>
-                            )}
-                            <p className="mt-1 break-words text-xs text-muted-foreground sm:text-sm">
-                                {date ? formatDateTime(date) : ''}
-                            </p>
-                        </div>
-                    </header>
-                    <section className={`receipt-party-section grid min-w-0 grid-cols-2 gap-4 border-b border-border py-4 sm:gap-6 sm:py-5 ${receiptPrint ? 'receipt-party-section-thermal' : ''}`}>
-                        <div className="min-w-0 rounded-xl  p-3 sm:p-4">
-                            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-                                {mode === 'sale' ? 'Customer' : 'Supplier'}
-                            </p>
-                            <p
-                                title={party?.name ?? 'Walk-in customer'}
-                                className="mt-2 max-w-full break-words text-sm font-semibold capitalize sm:text-base"
-                            >
-                                {limitText(party?.name ?? 'Walk-in customer', 48)}
-                            </p>
-                            {party?.phoneE164 && (
-                                <p
-                                    title={party.phoneE164}
-                                    className="mt-1 max-w-full break-words text-sm text-muted-foreground"
-                                >
-                                    {limitText(party.phoneE164, 28)}
+                                <p className={`mt-1 text-sm font-bold sm:text-base ${isPaid ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'}`}>
+                                    {isPaid ? <span className="inline-flex items-center gap-1"><CircleCheck size={14} aria-hidden="true" />Fully Paid</span> : '○ Balance Due'}
                                 </p>
-                            )}
-                            {party?.address && (
-                                <p
-                                    title={party.address}
-                                    className="truncate-receipt mt-1 max-w-full break-words text-sm leading-5 text-muted-foreground"
-                                >
-                                    {limitText(party.address, 90)}
+                                <p className="mt-0.5 text-xs text-muted-foreground">
+                                    {isPaid ? 'Amount Settled' : `${formatMoney(invoice.dueAmount)} due`}
                                 </p>
-                            )}
-                        </div>
-                        <div className="min-w-0 rounded-xl p-3 text-right sm:p-4">
-                            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-                                Payment status
-                            </p>
-                            <p
-                                className={`mt-2 inline-block max-w-full text-sm font-semibold ${Number(invoice.dueAmount) > 0 ? 'text-amber-strong' : 'text-success'}`}
-                            >
-                                {Number(invoice.dueAmount) > 0 ? 'Balance due' : 'Paid'}
-                            </p>
-                            <p className="mt-2 text-xs leading-5 text-muted-foreground sm:text-sm">
-                                Created by shop staff
-                            </p>
+                            </div>
                         </div>
                     </section>
-                    <div className="-mx-1 overflow-x-auto rounded-lg sm:mx-0">
-                        <table className={`${receiptPrint ? '' : 'a4-invoice-table'} w-full min-w-[560px] text-left text-xs sm:min-w-0 sm:text-sm print:min-w-0 ${completedReturns.length > 0 ? 'receipt-items-returns' : ''}`}>
-                            <thead className="border-b border-border bg-muted/35 text-[11px] uppercase tracking-wide text-muted-foreground sm:text-xs">
-                                <tr>
-                                    <th className="px-2 py-3 sm:px-3">Product</th>
-                                    <th className="px-2 py-3 sm:px-3">Quantity</th>
+
+                    {/* Items table: clear headers, borderless look, comfortable spacing */}
+                    <div className="receipt-items-wrap overflow-x-auto py-2">
+                        <table className={`a4-invoice-table w-full min-w-[500px] text-left text-xs sm:min-w-0 sm:text-sm print:min-w-0 ${!receiptPrint ? 'a4-print-invoice-table' : ''} ${mode === 'sale' && !receiptPrint ? 'a4-sales-invoice-table' : ''}`}>
+                            <thead>
+                                <tr className="border-b border-border/80 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                                    {!receiptPrint && <th className="py-2.5 px-2 w-10">#</th>}
+                                    <th className="py-2.5 px-2">Item</th>
+                                    <th className="py-2.5 px-2 text-right">Qty</th>
                                     {completedReturns.length > 0 && (
                                         <>
-                                            <th className="px-2 py-3 sm:px-3">Returned</th>
-                                            <th className="px-2 py-3 sm:px-3">Remaining</th>
+                                            <th className="py-2.5 px-2 text-right">Ret</th>
+                                            <th className="py-2.5 px-2 text-right">Net</th>
                                         </>
                                     )}
-                                    <th className="px-2 py-3 sm:px-3">Unit price</th>
-                                    <th className="px-2 py-3 text-right sm:px-3">Line total</th>
+                                    <th className="py-2.5 px-2 text-right">Rate</th>
+                                    <th className="py-2.5 px-2 text-right">Total</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-border">
-                                {invoice.items.map((item) => (
-                                    <tr key={item.id}>
-                                        <td className="max-w-52 px-2 py-3 font-medium sm:px-3">
-                                            <span title={item.productName} className="block max-w-52 break-words font-semibold">
-                                                <span className="print:hidden">
-                                                    {limitText(item.productName, 42)}
-                                                </span>
-                                                <span className="hidden print:inline">
-                                                    {item.productName}
-                                                </span>
-                                            </span>
-                                            <span className="receipt-item-meta mt-0.5 block max-w-52 break-words text-[10px] text-muted-foreground sm:text-xs">
-                                                SKU {limitText(item.skuSnapshot, 24)}
-                                                {item.batchNumber
-                                                    ? ` · Batch ${limitText(item.batchNumber, 18)}`
-                                                    : ''}
-                                            </span>
+                            <tbody className="divide-y divide-border/40">
+                                {invoice.items.map((item, index) => (
+                                    <tr key={item.id} className="align-top">
+                                        {!receiptPrint && <td className="py-2.5 px-2 text-muted-foreground text-xs">{index + 1}</td>}
+                                        <td className="py-2.5 px-2">
+                                            <p className={`font-medium text-foreground ${receiptPrint ? 'uppercase' : ''}`}>
+                                                {item.productName}
+                                            </p>
+                                            {!receiptPrint && (mode === 'purchase' || item.batchNumber) && <p className="receipt-item-meta text-[11px] text-muted-foreground">
+                                                {mode === 'purchase' && <>SKU: {item.skuSnapshot}</>}
+                                                {item.batchNumber ? ` · Batch: ${item.batchNumber}` : ''}
+                                            </p>}
                                         </td>
-                                        <td className="whitespace-nowrap px-2 py-3 sm:px-3">
+                                        <td className="py-2.5 px-2 text-right whitespace-nowrap">
                                             {formatQuantity(item.quantity)} {item.unit.symbol}
                                         </td>
                                         {completedReturns.length > 0 && (
                                             <>
-                                                <td className="whitespace-nowrap px-2 py-3 sm:px-3">
-                                                    {formatQuantity(returnTotals.get(item.id) ?? 0)}{' '}
-                                                    {item.unit.symbol}
+                                                <td className="py-2.5 px-2 text-right whitespace-nowrap text-muted-foreground">
+                                                    {formatQuantity(returnTotals.get(item.id) ?? 0)}
                                                 </td>
-                                                <td className="whitespace-nowrap px-2 py-3 sm:px-3">
+                                                <td className="py-2.5 px-2 text-right whitespace-nowrap font-medium">
                                                     {formatQuantity(
                                                         Math.max(
                                                             0,
                                                             Number(item.quantity) -
                                                                 (returnTotals.get(item.id) ?? 0),
                                                         ),
-                                                    )}{' '}
-                                                    {item.unit.symbol}
+                                                    )}
                                                 </td>
                                             </>
                                         )}
-                                        <td className="whitespace-nowrap px-2 py-3 sm:px-3">
+                                        <td className="py-2.5 px-2 text-right whitespace-nowrap">
                                             {formatMoney(
                                                 mode === 'sale'
                                                     ? (item.unitPrice ?? '0')
                                                     : (item.unitCost ?? '0'),
                                             )}
                                         </td>
-                                        <td className="whitespace-nowrap px-2 py-3 text-right sm:px-3">
+                                        <td className="py-2.5 px-2 text-right whitespace-nowrap font-semibold">
                                             {formatMoney(item.lineTotal)}
                                         </td>
                                     </tr>
@@ -472,180 +489,138 @@ export function InvoiceView({ mode }: { mode: 'sale' | 'purchase' }) {
                             </tbody>
                         </table>
                     </div>
-                    <section className="receipt-totals ml-auto mt-5 w-full max-w-sm space-y-2.5 text-sm sm:mt-6">
+
+                    {/* Summary & Totals: clean aligned figures, no box */}
+                    <section className="receipt-totals ml-auto mt-4 w-full max-w-xs space-y-1.5 text-xs sm:text-sm border-t border-border/80 pt-3">
                         <div className="flex justify-between">
                             <span className="text-muted-foreground">Subtotal</span>
-                            <span>{formatMoney(invoice.subtotal)}</span>
+                            <span className="tabular-nums font-medium">{formatMoney(invoice.subtotal)}</span>
                         </div>
-                        <div className="flex justify-between">
-                            <span className="text-muted-foreground">Discount</span>
-                            <span>− {formatMoney(invoice.discountAmount)}</span>
-                        </div>
-                        {invoice.additionalCost && (
-                            <div className="flex justify-between">
-                                <span className="text-muted-foreground">Additional cost</span>
-                                <span>{formatMoney(invoice.additionalCost)}</span>
+                        {Number(invoice.discountAmount) > 0 && (
+                            <div className="flex justify-between text-muted-foreground">
+                                <span>Discount</span>
+                                <span className="tabular-nums">− {formatMoney(invoice.discountAmount)}</span>
                             </div>
                         )}
-                        <div className="receipt-grand-total flex items-center justify-between gap-4 border-t-2 border-foreground/20 pt-3 text-base font-bold uppercase sm:text-lg">
-                            <span>Grand total</span>
-                            <span className="text-right tabular-nums">{formatMoney(invoice.total)}</span>
+                        {invoice.additionalCost && Number(invoice.additionalCost) > 0 && (
+                            <div className="flex justify-between text-muted-foreground">
+                                <span>Additional Cost</span>
+                                <span className="tabular-nums">{formatMoney(invoice.additionalCost)}</span>
+                            </div>
+                        )}
+
+                        <div className="receipt-grand-total flex items-center justify-between border-t-2 border-b-2 border-foreground/80 py-2 my-2 text-sm sm:text-base font-bold uppercase text-foreground">
+                            <span>Grand Total</span>
+                            <span className="tabular-nums text-base sm:text-lg">
+                                {formatMoney(invoice.total)}
+                            </span>
                         </div>
-                        <div className="flex justify-between">
-                            <span className="text-muted-foreground">Paid</span>
-                            <span>{formatMoney(invoice.paidAmount)}</span>
+
+                        <div className="flex justify-between text-muted-foreground pt-0.5">
+                            <span>Paid Amount</span>
+                            <span className="tabular-nums font-medium text-foreground">{formatMoney(invoice.paidAmount)}</span>
                         </div>
-                        <div className="flex justify-between font-semibold">
-                            <span>Due</span>
-                            <span>{formatMoney(invoice.dueAmount)}</span>
+
+                        <div className={`flex justify-between font-bold pt-0.5 ${isPaid ? 'text-emerald-700 dark:text-emerald-400' : 'text-amber-700 dark:text-amber-400'}`}>
+                            <span>Balance Due</span>
+                            <span className="tabular-nums">{formatMoney(invoice.dueAmount)}</span>
                         </div>
                     </section>
+
+                    {/* Returns summary (if any) */}
                     {completedReturns.length > 0 && (
-                        <section className="receipt-return-summary mt-6 border-t border-border pt-4 sm:mt-7">
-                            <h2 className="text-sm font-semibold">Returns and refunds</h2>
-                            <div className="mt-3 space-y-3">
+                        <section className="receipt-return-summary mt-6 border-t border-border/80 pt-4 text-xs">
+                            <p className="font-bold uppercase tracking-wider text-muted-foreground text-[10px]">
+                                Returns & Adjustments
+                            </p>
+                            <div className="mt-2 space-y-2">
                                 {completedReturns.map((returned) => (
-                                    <article
-                                        key={returned.id}
-                                        className="receipt-return border-b border-dashed border-border pb-3"
-                                    >
-                                        <div className="flex justify-between gap-2 text-sm font-medium">
-                                            <span
-                                                title={returned.returnNumber}
-                                                className="min-w-0 break-words"
-                                            >
-                                                {limitText(returned.returnNumber, 34)}
-                                            </span>
-                                            <span>{formatDateTime(returned.returnedAt)}</span>
+                                    <div key={returned.id} className="receipt-return flex justify-between border-b border-dashed border-border/60 pb-1.5">
+                                        <div>
+                                            <p className="font-medium">{returned.returnNumber}</p>
+                                            {returned.reason && (
+                                                <p className="text-[11px] text-muted-foreground">{returned.reason}</p>
+                                            )}
                                         </div>
-                                        {returned.reason && (
-                                            <p
-                                                title={returned.reason}
-                                                className="mt-1 max-w-full break-words text-xs leading-5 text-muted-foreground"
-                                            >
-                                                Reason: {limitText(returned.reason, 120)}
-                                            </p>
-                                        )}
-                                        <ul className="mt-2 space-y-1 text-xs">
-                                            {returned.items.map((line, index) => {
-                                                const item = line.saleItemId
-                                                    ? saleItemsById.get(line.saleItemId)
-                                                    : undefined;
-                                                return (
-                                                    <li
-                                                        key={`${returned.id}-${line.saleItemId ?? index}`}
-                                                        className="flex min-w-0 flex-col justify-between gap-1 sm:flex-row sm:gap-2"
-                                                    >
-                                                        <span
-                                                            title={item?.productName ?? 'Returned item'}
-                                                            className="min-w-0 break-words"
-                                                        >
-                                                            {limitText(item?.productName ?? 'Returned item', 42)} ·{' '}
-                                                            {formatQuantity(line.quantity)}{' '}
-                                                            {line.unit?.symbol ?? item?.unit.symbol ?? ''}
-                                                        </span>
-                                                        <span className="shrink-0 font-medium tabular-nums sm:text-right">
-                                                            {formatMoney(line.lineTotal ?? '0')}
-                                                        </span>
-                                                    </li>
-                                                );
-                                            })}
-                                        </ul>
-                                        <div className="mt-2 flex justify-between text-xs">
-                                            <span>Invoice amount reduced</span>
-                                            <span>{formatMoney(returned.total)}</span>
+                                        <div className="text-right">
+                                            <p className="font-medium tabular-nums">{formatMoney(returned.total)}</p>
+                                            <p className="text-[11px] text-muted-foreground">{formatDateTime(returned.returnedAt)}</p>
                                         </div>
-                                        <div className="flex justify-between text-xs">
-                                            <span>
-                                                {mode === 'sale'
-                                                    ? 'Refund paid to customer'
-                                                    : 'Refund received from supplier'}
-                                            </span>
-                                            <span>{formatMoney(returned.refundAmount)}</span>
-                                        </div>
-                                    </article>
+                                    </div>
                                 ))}
                             </div>
-                            <div className="mt-3 space-y-1 text-sm">
-                                <div className="flex justify-between">
-                                    <span className="text-muted-foreground">
-                                        Invoice amount before returns
-                                    </span>
-                                    <span>
-                                        {formatMoney(Number(invoice.total) + returnedAmount)}
-                                    </span>
-                                </div>
-                                <div className="flex justify-between">
-                                    <span className="text-muted-foreground">Total returns</span>
-                                    <span>{formatMoney(returnedAmount)}</span>
-                                </div>
-                                <div className="flex justify-between">
-                                    <span className="text-muted-foreground">
-                                        {mode === 'sale' ? 'Refunds paid' : 'Refunds received'}
-                                    </span>
-                                    <span>{formatMoney(refundedAmount)}</span>
-                                </div>
-                                <div className="flex justify-between">
-                                    <span className="text-muted-foreground">
-                                        {mode === 'sale'
-                                            ? 'Customer balance reduced'
-                                            : 'Supplier balance reduced'}
-                                    </span>
-                                    <span>{formatMoney(dueReducedByReturns)}</span>
-                                </div>
-                                <div className="flex justify-between border-t border-border pt-2 font-semibold">
-                                    <span>Invoice total after returns</span>
-                                    <span>{formatMoney(invoice.total)}</span>
-                                </div>
+                        </section>
+                    )}
+
+                    {/* Payment methods history */}
+                    {invoice.payments.length > 0 && (
+                        <section className="receipt-payment-history mt-5 border-t border-border/70 pt-3 text-xs">
+                            <p className="font-bold uppercase tracking-wider text-muted-foreground text-[10px]">
+                                Payment History
+                            </p>
+                            <div className="mt-1.5 divide-y divide-border/30">
+                                {invoice.payments.map((payment, index) => (
+                                    <div
+                                        key={`${payment.paidAt}-${index}`}
+                                        className="receipt-payment-row flex items-center justify-between py-1.5 text-muted-foreground"
+                                    >
+                                        <span>
+                                            {payment.method.name} · {formatDate(payment.paidAt)}
+                                            {payment.reference ? ` (${payment.reference})` : ''}
+                                        </span>
+                                        <span className="font-medium text-foreground tabular-nums">
+                                            {formatMoney(Math.abs(Number(payment.amount)))}
+                                        </span>
+                                    </div>
+                                ))}
                             </div>
                         </section>
                     )}
-                    {invoice.payments.length > 0 && (
-                        <section className="mt-6 border-t border-border pt-4">
-                            <h2 className="text-sm font-semibold">
-                                {completedReturns.length > 0
-                                    ? 'Payment and refund history'
-                                    : 'Payment history'}
-                            </h2>
-                            {invoice.payments.map((payment, index) => (
-                                <div
-                                    key={`${payment.paidAt}-${index}`}
-                                    className="receipt-payment-row flex flex-col justify-between gap-1 border-b border-border/50 py-3 text-sm last:border-0 sm:flex-row sm:gap-4"
-                                >
-                                    <span
-                                        title={[payment.method.name, payment.reference]
-                                            .filter(Boolean)
-                                            .join(' · ')}
-                                        className="min-w-0 break-words leading-5 sm:pr-4"
-                                    >
-                                        {Number(payment.amount) < 0
-                                            ? `${mode === 'sale' ? 'Refund paid' : 'Refund received'} via ${limitText(payment.method.name, 28)}`
-                                            : limitText(payment.method.name, 28)}{' '}
-                                        · {formatDate(payment.paidAt)}
-                                        {payment.reference
-                                            ? ` · ${limitText(payment.reference, 32)}`
-                                            : ''}
-                                    </span>
-                                    <span className="shrink-0 font-medium tabular-nums">
-                                        {formatMoney(Math.abs(Number(payment.amount)))}
-                                    </span>
-                                </div>
-                            ))}
-                        </section>
-                    )}
+
+                    {/* Notes */}
                     {invoice.notes && (
-                        <p
-                            title={invoice.notes}
-                            className="mt-5 max-w-full border-t border-border pt-4 text-sm leading-6 text-muted-foreground"
-                        >
-                            Note: {limitText(invoice.notes, 360)}
-                        </p>
+                        <div className="mt-4 border-t border-border/60 pt-3 text-xs text-muted-foreground">
+                            <p className="font-semibold text-foreground">Note:</p>
+                            <p className="mt-0.5 leading-relaxed">{invoice.notes}</p>
+                        </div>
                     )}
-                    <footer className="mt-6 border-t border-border pt-4 text-center text-[11px] leading-5 text-muted-foreground sm:mt-8 sm:text-xs">
-                        Thank you. Please keep this invoice for your records.
+
+                    {/* ── BARCODE ONLY (centered, crisp, scan-ready) ── */}
+                    {canBarcode && (
+                        <div className="receipt-barcode-block my-5 flex flex-col items-center justify-center text-center">
+                            <div className="h-10 w-44 sm:h-12 sm:w-56">
+                                <BarcodeSvg value={invoice.invoiceNumber} className="h-full w-full" />
+                            </div>
+                            <p className="mt-1 font-mono text-[10px] tracking-[0.25em] text-foreground">
+                                {invoice.invoiceNumber}
+                            </p>
+                        </div>
+                    )}
+
+                    {/* Footer */}
+                    <footer className="mt-4 border-t border-border/60 pt-4 text-center text-xs text-muted-foreground">
+                        <p className="font-medium text-foreground">
+                            Thank you for your {mode === 'sale' ? 'business' : 'partnership'}!
+                        </p>
+                        <p className="mt-0.5 text-[11px]">
+                            Please retain this invoice for your warranty & records.
+                        </p>
                     </footer>
+
+                    {/* Subtle tear-off dashed line on thermal prints */}
+                    <div className="receipt-cut-line hidden items-center gap-1.5 text-neutral-400 my-3" aria-hidden="true">
+                        <span className="receipt-cut-rule" />
+                        <svg className="receipt-cut-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <circle cx="6" cy="6" r="3" stroke="currentColor" strokeWidth="1.7" />
+                            <circle cx="6" cy="18" r="3" stroke="currentColor" strokeWidth="1.7" />
+                            <path d="M8.2 8.2 20 20M8.2 15.8 20 4M14 10l-2 2" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                        <span className="receipt-cut-rule" />
+                    </div>
                 </div>
             </Panel>
+
+            {/* ── Screen-only Process Returns Form ── */}
             {canProcessReturns && ['COMPLETED', 'PARTIALLY_RETURNED'].includes(invoice.status) && (
                 <Panel
                     className="print:hidden"
@@ -688,11 +663,11 @@ export function InvoiceView({ mode }: { mode: 'sale' | 'purchase' }) {
                                                     className="max-w-52 px-2 py-2 font-medium sm:px-3"
                                                 >
                                                     <span className="print:hidden">
-                                                    {limitText(item.productName, 42)}
-                                                </span>
-                                                <span className="hidden print:inline">
-                                                    {item.productName}
-                                                </span>
+                                                        {limitText(item.productName, 42)}
+                                                    </span>
+                                                    <span className="hidden print:inline">
+                                                        {item.productName}
+                                                    </span>
                                                 </td>
                                                 <td className="whitespace-nowrap px-2 py-2 sm:px-3">
                                                     {formatQuantity(item.quantity)}{' '}
@@ -759,11 +734,13 @@ export function InvoiceView({ mode }: { mode: 'sale' | 'purchase' }) {
                                                                     name={`expiry-${item.id}`}
                                                                     required={
                                                                         Boolean(
-                                                                            item.product?.tracksExpiry,
+                                                                            item.product
+                                                                                ?.tracksExpiry,
                                                                         ) &&
                                                                         Number(
-                                                                            returnQuantities[item.id] ??
-                                                                                0,
+                                                                            returnQuantities[
+                                                                                item.id
+                                                                            ] ?? 0,
                                                                         ) > 0
                                                                     }
                                                                     disabled={remaining <= 0}
@@ -812,6 +789,7 @@ export function InvoiceView({ mode }: { mode: 'sale' | 'purchase' }) {
                     </form>
                 </Panel>
             )}
+
             {canProcessReturns &&
                 invoice.status === 'COMPLETED' &&
                 Number(invoice.paidAmount) === 0 && (

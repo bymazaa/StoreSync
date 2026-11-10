@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ArrowRight, Minus, Plus, Search, X } from "lucide-react";
 import { apiRequest, jsonBody } from "@/lib/client-api";
+import { createClientRequestId } from "@/lib/client-request-id";
 import { ErrorMessage, inputClass, PageHeader, Panel, selectClass } from "@/components/ui/page";
 import { Button } from "@/components/ui/button";
 import { DateField } from "@/components/ui/date-field";
@@ -361,7 +362,7 @@ export function TransactionPage({ mode }: { mode: "sale" | "purchase" }) {
       // A retry of the same online checkout reuses its key, preventing duplicate stock and invoices.
       let requestId = pendingTransactionRequests.current.get(fingerprint);
       if (!requestId) {
-        requestId = crypto.randomUUID();
+        requestId = createClientRequestId();
         pendingTransactionRequests.current.set(fingerprint, requestId);
       }
       const body = isSale

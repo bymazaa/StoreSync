@@ -26,7 +26,7 @@ export async function POST(request: Request) {
   
   if (!session || !session.userId || session.revokedAt || session.expiresAt <= new Date() || !(session.userId as any).isActive) {
     const response = apiError(401, "UNAUTHENTICATED", "Please sign in again.");
-    clearAuthCookies(response);
+    clearAuthCookies(response, request);
     return response;
   }
 
@@ -42,7 +42,7 @@ export async function POST(request: Request) {
   
   if (result.matchedCount !== 1) {
     const response = apiError(401, "UNAUTHENTICATED", "Please sign in again.");
-    clearAuthCookies(response);
+    clearAuthCookies(response, request);
     return response;
   }
   
@@ -63,6 +63,6 @@ export async function POST(request: Request) {
   });
   
   const response = NextResponse.json({ ok: true });
-  setAuthCookies(response, accessToken, nextRefreshToken);
+  setAuthCookies(response, accessToken, nextRefreshToken, request);
   return response;
 }

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Search } from "lucide-react";
 import { apiRequest, jsonBody } from "@/lib/client-api";
+import { createClientRequestId } from "@/lib/client-request-id";
 import { ErrorMessage, inputClass, PageHeader, Panel, selectClass } from "@/components/ui/page";
 import { Button } from "@/components/ui/button";
 import { DateField } from "@/components/ui/date-field";
@@ -69,7 +70,7 @@ export function InventoryPage() {
     const fingerprint = JSON.stringify(payload);
     let clientRequestId = pendingAdjustmentRequests.current.get(fingerprint);
     if (!clientRequestId) {
-      clientRequestId = crypto.randomUUID();
+      clientRequestId = createClientRequestId();
       pendingAdjustmentRequests.current.set(fingerprint, clientRequestId);
     }
     try {

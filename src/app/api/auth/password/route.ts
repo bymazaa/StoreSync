@@ -48,6 +48,6 @@ export async function POST(request: Request) {
   });
 
   const response = NextResponse.json({ ok: true, message: "Password updated. Sign in again with your new password." });
-  clearAuthCookies(response);
+  clearAuthCookies(response, request);
   return response;
 }

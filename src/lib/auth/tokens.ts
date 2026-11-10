@@ -5,10 +5,10 @@ import type { UserRole } from "@/types";
 export const ACCESS_COOKIE = "stockpilot_access";
 export const REFRESH_COOKIE = "stockpilot_refresh";
 export const ACCESS_TTL_SECONDS = 15 * 60;
-
+export const SESSION_REFRESH_DAYS=30;
 /** A shop device keeps its sign-in for this many days; SESSION_REFRESH_DAYS in .env overrides it (1–180, default 30). */
 function refreshDays() {
-  const configured = Number(process.env.SESSION_REFRESH_DAYS);
+  const configured = Number(SESSION_REFRESH_DAYS);
   return Number.isFinite(configured) && configured >= 1 && configured <= 180 ? Math.trunc(configured) : 30;
 }
 

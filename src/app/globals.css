@@ -59,6 +59,24 @@
         border: 0 !important;
         background: #fff !important;
     }
+    .invoice-status-badge {
+        print-color-adjust: exact;
+        -webkit-print-color-adjust: exact;
+    }
+    .invoice-paid-due-section {
+        border: 0.15mm solid #d6e2de !important;
+        border-radius: 1.2mm !important;
+        padding: 1.6mm 2.2mm !important;
+        background: #f7faf9 !important;
+        print-color-adjust: exact;
+        -webkit-print-color-adjust: exact;
+    }
+    .invoice-footer p {
+        margin: 0;
+    }
+    .receipt-dashed-end {
+        display: none !important;
+    }
     /* The statement prints on the landscape @page report, but html/body and the body-level
      DateField portal belong to the default portrait @page — that mismatch emits one trailing
      blank A4 sheet. Pull the whole document onto the report page and drop the viewport-height
@@ -134,9 +152,57 @@
     .print-document * {
         box-shadow: none !important;
     }
+    .print-document:not(.receipt-coupon-paper) * {
+        border-color: #e5e7eb !important;
+    }
     .invoice-brand-header {
-        border-bottom: 0.2mm solid #0f766e !important;
-        padding-bottom: 2mm !important;
+        border-bottom: 0 !important;
+        padding-bottom: 2.5mm !important;
+    }
+    .print-document .invoice-brand-header > div {
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        gap: 0.4mm !important;
+        text-align: center !important;
+    }
+    .print-document .invoice-brand-header > div > div:first-child {
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: center !important;
+        gap: 1mm !important;
+        text-align: center !important;
+    }
+    .print-document .invoice-brand-header .receipt-shop-name,
+    .print-document .invoice-brand-header > div > div:first-child p {
+        text-align: center !important;
+    }
+    .print-document .invoice-brand-header .receipt-shop-name {
+        font-size: 15pt !important;
+        font-weight: 800 !important;
+        letter-spacing: 0.04em !important;
+        text-transform: uppercase !important;
+    }
+    .print-document .invoice-number-block {
+        width: 100% !important;
+        min-width: 0 !important;
+        margin-top: 1mm !important;
+        text-align: left !important;
+    }
+    .print-document .invoice-number-block .receipt-doc-no {
+        margin-top: 0.5mm !important;
+        font-size: 12pt !important;
+        font-weight: 700 !important;
+    }
+    .print-document .a4-sales-invoice-meta {
+        box-sizing: border-box;
+        width: 92mm !important;
+        max-width: 100% !important;
+        margin: 0 auto !important;
+        padding: 0.8mm 3mm !important;
+        border: 0 !important;
+        border-radius: 0 !important;
+        text-align: center !important;
     }
     .invoice-shop-logo {
         max-height: 11mm;
@@ -161,14 +227,42 @@
     }
     .print-document > section.receipt-party-section {
         width: 100%;
-        padding-left: 0 !important;
-        padding-right: 0 !important;
+        margin: 2.5mm 0 3mm !important;
+        padding: 0 !important;
+        border: 0 !important;
     }
-    .print-document > section.receipt-party-section > div:first-child {
+    .print-document .receipt-payment-history {
+        border-top: 0 !important;
+        padding-top: 1mm !important;
+    }
+    .print-document:not(.receipt-coupon-paper) .receipt-totals {
+        border-top: 0.2mm dashed #e5e7eb !important;
+    }
+    .print-document > section.receipt-party-section > div {
+        display: grid !important;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
+        align-items: start !important;
+        column-gap: 12mm !important;
+        width: 100% !important;
+    }
+    .print-document > section.receipt-party-section > div > div:first-child {
         text-align: left !important;
     }
-    .print-document > section.receipt-party-section > div:last-child {
+    .print-document > section.receipt-party-section > div > div:last-child {
         text-align: right !important;
+    }
+    .print-document > section.receipt-party-section > div > div > p:first-child {
+        margin: 0 0 1.2mm !important;
+        color: #0c4a44 !important;
+        font-size: 7.5pt !important;
+        font-weight: 700 !important;
+        letter-spacing: 0.08em !important;
+        text-transform: uppercase !important;
+    }
+    .print-document > section.receipt-party-section > div > div > p:nth-child(2) {
+        margin-top: 0 !important;
+        font-size: 10pt !important;
+        font-weight: 700 !important;
     }
     .print-document > section.grid p {
         margin-top: 0.5mm !important;
@@ -180,10 +274,13 @@
         margin-top: 0.7mm !important;
     }
     .print-document .receipt-grand-total {
-        margin-top: 1.4mm !important;
-        padding-top: 1.4mm !important;
-        border-top: 0.2mm solid #0f766e !important;
+        margin-top: 1.8mm !important;
+        padding-top: 1.8mm !important;
+        border-top: 0.25mm dashed #e5e7eb !important;
+        border-bottom: 0 !important;
+        padding-bottom: 1.4mm !important;
         color: #0c4a44 !important;
+        font-size: 10.5pt;
     }
     .print-document section h2 {
         font-size: 7.6pt;
@@ -243,6 +340,39 @@
         background: #0a9f94 !important;
         color: #fff !important;
         border-bottom: 0 !important;
+        padding: 2mm 1.7mm;
+        font-size: 7pt;
+        font-weight: 700;
+        letter-spacing: 0.07em;
+        text-transform: uppercase;
+        print-color-adjust: exact;
+        -webkit-print-color-adjust: exact;
+    }
+    .print-document .a4-sales-invoice-table th {
+        background: #0a9f94 !important;
+        border-bottom: 0 !important;
+        padding-top: 1.2mm !important;
+        padding-bottom: 1.2mm !important;
+    }
+    .print-document .a4-print-invoice-table,
+    .print-document .a4-print-invoice-table tr,
+    .print-document .a4-print-invoice-table th,
+    .print-document .a4-print-invoice-table td {
+        border: 0 !important;
+    }
+    .print-document .a4-print-invoice-table thead,
+    .print-document .a4-print-invoice-table thead tr,
+    .print-document .a4-print-invoice-table thead th {
+        border: 0 !important;
+    }
+    .print-document .a4-invoice-table th:first-child {
+        border-top-left-radius: 1mm;
+    }
+    .print-document .a4-invoice-table th:last-child {
+        border-top-right-radius: 1mm;
+    }
+    .print-document .a4-invoice-table tbody tr:nth-child(even) {
+        background: #f7faf9 !important;
         print-color-adjust: exact;
         -webkit-print-color-adjust: exact;
     }
@@ -260,6 +390,19 @@
     }
     .print-document footer {
         color: #4a5855 !important;
+    }
+    .print-document .receipt-barcode-block {
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: center !important;
+        margin: 4mm auto 2mm !important;
+        break-inside: avoid;
+        page-break-inside: avoid;
+    }
+    .print-document .receipt-barcode-block svg {
+        print-color-adjust: exact;
+        -webkit-print-color-adjust: exact;
     }
     /* Paper stays in the body face — the display face is reserved for on-screen headings. */
     .print-document h1,
@@ -560,250 +703,208 @@
         color: #66736f !important;
     }
 }
-/* 80 mm thermal slip. One rule set styles the on-screen preview and the paper, and every size is in
-   mm/pt/em so the column breaks its lines identically in both. Body text stays one dark ink and the
-   hairlines are light gray (#cbd3d0) — the slip carries no brand color, only ink. No fills: pills
-   would smudge. No outer frame either: the roll is already 80 mm wide, so side rules read as a cut
-   line, not as design. */
+/* 80 mm thermal receipt: compact content inside a light dashed coupon frame. */
 .receipt-mode .print-document {
     --spacing: 0.35mm;
     box-sizing: border-box;
     width: 76mm;
     max-width: 76mm;
     margin: 0 auto;
-    padding: 3.4mm 3.6mm 4mm !important;
+    padding: 3mm 2.5mm 4mm !important;
     border: 0;
     border-radius: 0;
-    background: #fff;
-    color: #1b2825 !important;
-    font-size: 8.6pt;
-    line-height: 1.45;
+    background: #fff !important;
+    color: #000 !important;
+    font-size: 8.5pt;
+    line-height: 1.4;
     text-align: left;
     font-variant-numeric: tabular-nums;
 }
+.receipt-mode .print-document.receipt-coupon-paper {
+    width: 72mm;
+    max-width: 72mm;
+    margin: 0 auto;
+    padding: 4mm 3.5mm !important;
+    border: 0.28mm dashed #82908c !important;
+    border-radius: 2mm !important;
+    background: #fff !important;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+}
 .receipt-mode .print-document,
 .receipt-mode .print-document * {
-    text-transform: none;
-}
-.receipt-mode .print-document * {
-    font-size: inherit;
-    line-height: inherit;
-    color: #1b2825 !important;
-    background: transparent !important;
-    border-width: 0 !important;
-    border-radius: 0 !important;
+    color: #000 !important;
     box-shadow: none !important;
 }
 .receipt-mode .print-document header,
 .receipt-mode .print-document footer,
 .receipt-mode .print-document > section {
     margin-left: 0 !important;
-    text-align: left;
 }
-.receipt-mode .print-document > header {
-    display: block;
-    border-bottom: 0.1mm solid #cbd3d0 !important;
-    padding-bottom: 1.8mm;
+.receipt-mode .print-document .invoice-brand-header {
+    border-bottom: 0 !important;
+    padding-bottom: 2mm !important;
 }
-/* Paper is only 80 mm wide, so the sm: row breakpoint never fires and the brand block stacked. Forced back
-   into a row: logo left, vertically centred against the shop name, sizes in mm so screen equals roll. */
-.receipt-mode .print-document > header > div:first-child {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    gap: 2.5mm;
-    width: 100%;
+.receipt-mode .print-document .invoice-brand-header > div {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    text-align: center !important;
+    gap: 1.5mm !important;
 }
-.receipt-mode .print-document .invoice-shop-logo {
-    height: 10mm;
-    width: auto;
-    max-width: 28mm;
+.receipt-mode .print-document .invoice-brand-header .receipt-shop-name {
+    font-size: 1.25em !important;
+    font-weight: 800 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.04em !important;
+    text-align: center !important;
 }
-.receipt-mode .print-document .invoice-logo-frame {
-    box-sizing: border-box;
-    height: 10mm;
-    min-width: 12mm;
-    max-width: 30mm;
-    padding: 0.7mm;
+.receipt-mode .print-document .invoice-brand-header p {
+    text-align: center !important;
+    font-size: 0.82em !important;
+}
+.receipt-mode .print-document .invoice-number-block {
+    width: 100% !important;
+    margin-top: 0.8mm !important;
+    padding-top: 0 !important;
+    border-top: 0 !important;
+    text-align: left !important;
+}
+.receipt-mode .print-document .invoice-number-block .receipt-doc-no {
+    font-size: 1.05em !important;
+    font-weight: 700 !important;
+}
+.receipt-mode .print-document .receipt-party-section {
+    margin-top: 2mm !important;
+    padding: 1.5mm 0 !important;
     border: 0 !important;
     border-radius: 0 !important;
     background: transparent !important;
-    print-color-adjust: exact;
-    -webkit-print-color-adjust: exact;
 }
-.receipt-mode .print-document .invoice-logo-frame .invoice-shop-logo {
-    height: 8mm;
-    max-width: 27mm;
-    background: transparent !important;
+.receipt-mode .print-document .receipt-party-section > div {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: flex-start !important;
+    gap: 2.5mm !important;
+    font-size: 0.78em !important;
 }
-.receipt-mode .print-document .invoice-shop-mark {
-    display: grid;
-    place-items: center;
-    height: 10mm;
-    width: 10mm;
-    border: 0.15mm solid #08766f !important;
-    border-radius: 1.2mm !important;
-    background: #0a9f94 !important;
-    color: #fff !important;
-    print-color-adjust: exact;
-    -webkit-print-color-adjust: exact;
-}
-.receipt-mode .print-document > header > div + div {
-    margin-top: 1.8mm;
-}
-.receipt-mode .print-document .invoice-number-block {
+.receipt-mode .print-document .receipt-party-section > div > div {
+    width: 50%;
     min-width: 0;
-    text-align: left;
 }
-.receipt-mode .print-document h2 {
-    font-size: 1em;
-    font-weight: 700 !important;
-    letter-spacing: 0;
-}
-/* Small caps labels carry the hierarchy; only the internal hairlines are ink. */
-.receipt-mode .print-document [class~='uppercase'] {
-    text-transform: uppercase;
-    font-size: 0.76em;
-    letter-spacing: 0.1em;
-    font-weight: 700;
-}
-.receipt-mode .print-document .receipt-shop-name {
-    font-size: 1.35em;
-    font-weight: 700;
-    line-height: 1.25;
-}
-.receipt-mode .print-document .receipt-doc-no {
-    font-size: 1.1em;
-    font-weight: 700;
-}
-.receipt-mode .print-document .receipt-grand-total {
-    font-size: 1.18em;
-    font-weight: 700;
-    margin-top: 1.5mm !important;
-    padding-top: 1.5mm !important;
-    border-top: 0.1mm solid #cbd3d0 !important;
-}
-.receipt-mode .truncate-receipt {
-    display: block;
-    overflow: hidden;
-    white-space: nowrap;
-    text-overflow: ellipsis;
-}
-/* Screen clamps with an ellipsis; the slip has to keep the value inside its own column instead. */
-.receipt-mode .print-document [class~='truncate'] {
-    max-width: 100% !important;
-    overflow: visible;
-    white-space: normal;
-    text-overflow: clip;
-}
-.receipt-mode .print-document > section.grid {
-    display: block;
-    padding: 2.5mm 0 0;
-    background: transparent !important;
-    border-bottom: 0 !important;
-}
-.receipt-mode .print-document > section.receipt-party-section-thermal {
-    width: calc(100% + 1.5mm);
-    margin-left: -1.5mm !important;
-}
-.receipt-mode .print-document > section.receipt-party-section-thermal > div:last-child {
+.receipt-mode .print-document .receipt-party-section > div > div:first-child {
+    margin-right: auto !important;
     text-align: left !important;
 }
-.receipt-mode .print-document > section.grid > div {
-    text-align: left;
-    padding-left: 0 !important;
-    padding-right: 0 !important;
+.receipt-mode .print-document .receipt-party-section > div > div:last-child {
+    margin-left: auto !important;
+    text-align: right !important;
 }
-.receipt-mode .print-document > section.grid > div + div {
-    margin-top: 1.6mm;
+.receipt-mode .print-document .receipt-party-section > div > div > p:first-child {
+    margin-bottom: 0.8mm !important;
+    color: #697773 !important;
+    font-size: 0.72em !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.04em;
+}
+.receipt-mode .print-document .receipt-party-section > div > div > p:nth-child(2) {
+    font-weight: 700 !important;
+}
+.receipt-mode .print-document .receipt-items-wrap {
+    overflow: visible !important;
+    padding: 1.5mm 0 !important;
 }
 .receipt-mode .print-document table {
-    width: 100%;
+    width: 100% !important;
     min-width: 0 !important;
-    margin-top: 2.2mm;
-    table-layout: fixed;
-    border-collapse: collapse;
-    font-size: 0.88em;
+    margin: 0 !important;
+    border-collapse: collapse !important;
+    table-layout: fixed !important;
+    font-size: 0.78em !important;
 }
-.receipt-mode .print-document th,
-.receipt-mode .print-document td {
-    padding: 1mm 0.4mm;
-    white-space: normal;
-    vertical-align: top;
-    text-align: left;
-    overflow-wrap: break-word;
+.receipt-mode .print-document thead tr {
+    border-top: 0.15mm solid #cbd3d0 !important;
+    border-bottom: 0.15mm solid #cbd3d0 !important;
 }
 .receipt-mode .print-document th {
-    font-size: 0.9em;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    font-weight: 700;
-    background: #0a9f94 !important;
-    color: #fff !important;
-    border-bottom: 0 !important;
+    padding: 1.4mm 0.7mm !important;
+    background: #f1f5f4 !important;
+    color: #263632 !important;
+    font-size: 0.78em !important;
+    font-weight: 700 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.025em !important;
+    border: 0 !important;
     print-color-adjust: exact;
     -webkit-print-color-adjust: exact;
 }
-.receipt-mode .print-document tbody tr + tr td {
-    border-top: 0.1mm solid #cbd3d0 !important;
-}
-.receipt-mode .print-document th:first-child,
-.receipt-mode .print-document td:first-child {
-    width: 40%;
+.receipt-mode .print-document td {
+    padding: 1.5mm 0.7mm !important;
+    border: 0 !important;
+    border-bottom: 0.12mm solid #e1e6e4 !important;
+    vertical-align: top !important;
     overflow-wrap: anywhere;
 }
-.receipt-mode .print-document th:last-child,
-.receipt-mode .print-document td:last-child {
-    width: 25%;
-    text-align: right;
-}
-/* A returned-goods slip carries two more columns, so the item name column steps back. */
-.receipt-mode .receipt-items-returns th:first-child,
-.receipt-mode .receipt-items-returns td:first-child {
-    width: 28%;
-}
-.receipt-mode .receipt-items-returns th:nth-child(2),
-.receipt-mode .receipt-items-returns td:nth-child(2),
-.receipt-mode .receipt-items-returns th:nth-child(3),
-.receipt-mode .receipt-items-returns td:nth-child(3),
-.receipt-mode .receipt-items-returns th:nth-child(4),
-.receipt-mode .receipt-items-returns td:nth-child(4) {
-    width: 12%;
-}
-.receipt-mode .print-document .receipt-item-meta {
-    display: block;
-    font-size: 0.85em;
+.receipt-mode .print-document tbody tr:last-child td {
+    border-bottom: 0 !important;
 }
 .receipt-mode .print-document .receipt-totals {
     max-width: none !important;
-    margin-top: 2.6mm !important;
-    padding-top: 1.8mm;
-    border-top: 0.1mm solid #cbd3d0 !important;
+    margin-top: 2.5mm !important;
+    padding-top: 2.5mm !important;
+    border-top: 0.15mm solid #cbd3d0 !important;
+    font-size: 0.84em !important;
 }
-.receipt-mode .receipt-totals > div {
-    display: flex;
-    justify-content: space-between;
-    gap: 3mm;
+.receipt-mode .print-document .receipt-grand-total {
+    font-size: 1.18em !important;
+    font-weight: 800 !important;
+    margin: 1.8mm 0 !important;
+    padding: 1.8mm 0 !important;
+    border-top: 0.2mm solid #82908c !important;
+    border-bottom: 0.2mm solid #82908c !important;
+    letter-spacing: 0.02em !important;
 }
-.receipt-mode .receipt-totals > div + div {
-    margin-top: 0.8mm !important;
+.receipt-mode .print-document .receipt-barcode-block {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    margin: 3.5mm auto 1.5mm !important;
+    text-align: center !important;
 }
-.receipt-mode .print-document .receipt-return-summary {
-    margin-top: 3mm !important;
-    padding-top: 1.8mm;
-    border-top: 0.1mm solid #cbd3d0 !important;
-}
-.receipt-mode .receipt-return {
-    padding-bottom: 2mm !important;
+.receipt-mode .print-document .receipt-barcode-block svg {
+    max-width: 52mm !important;
+    height: 10mm !important;
+    margin: 0 auto !important;
+    shape-rendering: crispEdges;
 }
 .receipt-mode .print-document footer {
-    margin-top: 3mm !important;
-    padding-top: 1.8mm;
+    margin-top: 2.5mm !important;
+    padding-top: 2mm !important;
     border-top: 0.1mm solid #cbd3d0 !important;
+    text-align: center !important;
+    font-size: 0.78em !important;
+}
+.receipt-mode .print-document .receipt-cut-line {
+    display: flex !important;
+    align-items: center !important;
+    gap: 1.5mm !important;
+    margin-top: 3mm !important;
+    color: #666 !important;
+}
+.receipt-mode .print-document .receipt-cut-rule {
+    flex: 1 1 auto;
+    border-top: 0.2mm dashed #82908c;
+}
+.receipt-mode .print-document .receipt-cut-icon {
+    width: 3.2mm;
+    height: 3.2mm;
+    flex: 0 0 auto;
+    color: #66736f !important;
 }
 @media screen {
-    .receipt-mode .print-document {
-        box-shadow: 0 0.6mm 2.4mm rgba(15, 37, 35, 0.16);
+    .receipt-mode .print-document.receipt-coupon-paper {
+        box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.12), 0 0 1px 1px rgba(0, 0, 0, 0.05) !important;
     }
 }
 /* Stickers keep the same look on screen and paper; only the printable sheet is hidden until printed. */

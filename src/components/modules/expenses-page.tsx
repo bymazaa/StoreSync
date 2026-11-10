@@ -2,6 +2,7 @@
 
 import { FormEvent, useCallback, useEffect, useRef, useState } from 'react';
 import { apiRequest, jsonBody } from '@/lib/client-api';
+import { createClientRequestId } from '@/lib/client-request-id';
 import { useHasPermission, useShopFormat } from '@/components/app/shop-context';
 import { Button } from '@/components/ui/button';
 import { DateField } from '@/components/ui/date-field';
@@ -80,7 +81,7 @@ export function ExpensesPage() {
         const fingerprint = JSON.stringify(payload);
         let clientRequestId = pendingExpenseRequests.current.get(fingerprint);
         if (!clientRequestId) {
-            clientRequestId = crypto.randomUUID();
+            clientRequestId = createClientRequestId();
             pendingExpenseRequests.current.set(fingerprint, clientRequestId);
         }
         setBusy(true);
