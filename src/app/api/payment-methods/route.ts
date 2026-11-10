@@ -6,7 +6,7 @@ import { PaymentMethod, SalePayment, PurchasePayment, Expense, AuditLog } from "
 import { invalidBody } from "@/lib/http/api-response";
 import { paymentMethodSchema, paymentMethodUpdateSchema } from "@/lib/validation/api";
 
-export async function GET() {
+export async function GET(request: Request) {
   await connectDB();
   const guard = await authorizedAny([
     Permission.MANAGE_SETTINGS,
@@ -16,8 +16,10 @@ export async function GET() {
   ]);
   if ("response" in guard) return guard.response;
   
+  const { searchParams } = new URL(request.url);
+  const includeAll = searchParams.get("all") === "true";
   const isAdmin = guard.user.rolePermissions.some((entry) => entry.permission === Permission.MANAGE_SETTINGS);
-  const methods = await PaymentMethod.find(isAdmin ? {} : { isEnabled: true })
+  const methods = await PaymentMethod.find(includeAll && isAdmin ? {} : { isEnabled: true })
     .sort({ sortOrder: 1, name: 1 })
     .lean();
   

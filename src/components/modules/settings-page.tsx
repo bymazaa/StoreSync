@@ -41,7 +41,7 @@ export function SettingsPage() {
     setError("");
     const [settingsResult, methodsResult, usersResult] = await Promise.allSettled([
       canManageSettings ? apiRequest<{ settings: Settings }>("/api/settings") : Promise.resolve(null),
-      canManageSettings ? apiRequest<{ paymentMethods: Method[] }>("/api/payment-methods") : Promise.resolve(null),
+      canManageSettings ? apiRequest<{ paymentMethods: Method[] }>("/api/payment-methods?all=true") : Promise.resolve(null),
       canManageUsers ? apiRequest<{ users: User[]; rolePermissions: { role: string; permission: string }[] }>("/api/users") : Promise.resolve(null),
     ]);
     if (settingsResult.status === "fulfilled" && settingsResult.value) { const shop = settingsResult.value.settings; setSettings(shop); setCountryCode(shop.countryCode); setCurrencyCode(currencyForCountry(shop.countryCode) ?? shop.currencyCode); setShopPhone(shop.phone ?? ""); setShopAddress(shop.address ?? ""); }
