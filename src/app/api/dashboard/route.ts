@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { Permission, PurchaseStatus, SaleStatus } from "@/types";
+import { Permission, PurchaseStatus, SaleStatus, UserRole } from "@/types";
 import { requirePermission } from "@/lib/auth/session";
 import connectDB from "@/lib/db";
 import Sale from "@/models/Sale";
@@ -28,6 +28,8 @@ const activePurchaseStatuses = [PurchaseStatus.COMPLETED, PurchaseStatus.PARTIAL
 export async function GET() {
   const session = await requirePermission(Permission.VIEW_REPORTS);
   if ("response" in session) return session.response;
+
+  const canViewProfit = session.user.role === UserRole.OWNER || session.user.role === UserRole.MANAGER;
 
   try {
     await connectDB();
@@ -62,12 +64,14 @@ export async function GET() {
         .select("returnedAt total items")
         .sort({ returnedAt: 1 })
         .lean(),
-      SaleItem.aggregate([
-        { $lookup: { from: "sales", localField: "saleId", foreignField: "_id", as: "sale" } },
-        { $unwind: "$sale" },
-        { $match: { "sale.status": { $in: activeSaleStatuses }, "sale.soldAt": { $gte: start, $lt: end } } },
-        { $project: { baseQuantity: 1, costPerBaseUnit: 1 } }
-      ]),
+      canViewProfit
+        ? SaleItem.aggregate([
+            { $lookup: { from: "sales", localField: "saleId", foreignField: "_id", as: "sale" } },
+            { $unwind: "$sale" },
+            { $match: { "sale.status": { $in: activeSaleStatuses }, "sale.soldAt": { $gte: start, $lt: end } } },
+            { $project: { baseQuantity: 1, costPerBaseUnit: 1 } }
+          ])
+        : Promise.resolve([]),
       PurchaseReturn.find({ status: "COMPLETED", returnedAt: { $gte: start, $lt: end } })
         .select("total")
         .lean(),
@@ -80,10 +84,12 @@ export async function GET() {
         .sort({ stockOnHand: 1 })
         .limit(8)
         .lean(),
-      Expense.aggregate([
-        { $match: { voidedAt: null, expenseDate: { $gte: start, $lt: end } } },
-        { $group: { _id: null, totalAmount: { $sum: "$amount" } } }
-      ]),
+      canViewProfit
+        ? Expense.aggregate([
+            { $match: { voidedAt: null, expenseDate: { $gte: start, $lt: end } } },
+            { $group: { _id: null, totalAmount: { $sum: "$amount" } } }
+          ])
+        : Promise.resolve([]),
       Sale.find({ status: { $in: activeSaleStatuses } })
         .select("_id invoiceNumber total paidAmount dueAmount soldAt status customerId")
         .sort({ soldAt: -1 })
@@ -125,11 +131,13 @@ export async function GET() {
       chartByDay.set(key, (chartByDay.get(key) ?? 0) - saleReturn.total);
       if (key === todayKey) {
         returnsToday += saleReturn.total;
-        // Calculate returned cost from items
-        const itemCosts = (saleReturn.items || []).reduce((sum: number, item: any) => {
-          return sum + (toNumber(item.baseQuantity) * toNumber(item.saleItem?.costPerBaseUnit || 0));
-        }, 0);
-        returnedCostToday += itemCosts;
+        if (canViewProfit) {
+          // Calculate returned cost from items
+          const itemCosts = (saleReturn.items || []).reduce((sum: number, item: any) => {
+            return sum + (toNumber(item.baseQuantity) * toNumber(item.saleItem?.costPerBaseUnit || 0));
+          }, 0);
+          returnedCostToday += itemCosts;
+        }
       }
     }
 
@@ -137,10 +145,14 @@ export async function GET() {
     const purchasesToday = purchases.reduce((sum, purchase) => 
       sum + purchase.subtotal - purchase.discountAmount + purchase.additionalCost, 0);
     const netPurchasesToday = purchasesToday - purchaseReturns.reduce((sum, item) => sum + item.total, 0);
-    const soldCostToday = saleItems.reduce((sum, item) => sum + (item.baseQuantity * item.costPerBaseUnit), 0);
-    const costOfGoodsToday = soldCostToday - returnedCostToday;
-    const expenseTotal = todayExpenses[0]?.totalAmount || 0;
-    const estimatedProfit = netSalesToday - costOfGoodsToday - expenseTotal;
+    
+    let estimatedProfit: number | null = null;
+    if (canViewProfit) {
+      const soldCostToday = saleItems.reduce((sum, item) => sum + (item.baseQuantity * item.costPerBaseUnit), 0);
+      const costOfGoodsToday = soldCostToday - returnedCostToday;
+      const expenseTotal = todayExpenses[0]?.totalAmount || 0;
+      estimatedProfit = netSalesToday - costOfGoodsToday - expenseTotal;
+    }
 
     // Get unit symbols for low stock products
     const baseUnitIds = [...new Set(lowStockProducts.map(p => p.baseUnitId))];
@@ -158,13 +170,14 @@ export async function GET() {
       today: {
         sales: netSalesToday.toFixed(2),
         purchases: netPurchasesToday.toFixed(2),
-        profitEstimate: estimatedProfit.toFixed(2),
+        profitEstimate: estimatedProfit !== null ? estimatedProfit.toFixed(2) : null,
         activeProducts: productCount,
         lowStockCount: lowStockProducts.length,
       },
       salesChart: [...chartByDay].map(([date, total]) => ({ date, total: total.toFixed(2) })),
       lowStock,
       recentSales: recentSalesWithCustomer,
+      canViewProfit,
     });
   } catch (error) {
     console.error("Dashboard data request failed.", error);

@@ -7,7 +7,7 @@ import { addDateKeyDays, localDateKey } from '@/lib/date-time';
 import { ErrorMessage, PageHeader, Panel, selectClass } from '@/components/ui/page';
 import { Button } from '@/components/ui/button';
 import { DateField } from '@/components/ui/date-field';
-import { useShopFormat } from '@/components/app/shop-context';
+import { useCanViewProfit, useShopFormat } from '@/components/app/shop-context';
 import {
     columnLabel,
     isNumericColumn,
@@ -100,6 +100,8 @@ const summaryTones: Record<string, string> = {
 
 export function ReportsPage() {
     const { formatMoney, formatNumber, formatDateTime, timezone } = useShopFormat();
+    const canViewProfit = useCanViewProfit();
+    const visibleOptions = options.filter((o) => canViewProfit || o.value !== 'profit-loss');
     // `new Date()` stays out of the render path so the page shell can be prerendered;
     // the real "today" lands in a mount effect.
     const [today, setToday] = useState('');
@@ -111,6 +113,12 @@ export function ReportsPage() {
     const [error, setError] = useState('');
     const [busy, setBusy] = useState(false);
     const [generatedAt, setGeneratedAt] = useState('');
+
+    useEffect(() => {
+        if (!canViewProfit && type === 'profit-loss') {
+            setType('sales');
+        }
+    }, [canViewProfit, type]);
     useEffect(() => {
         const end = localDateKey(new Date(), timezone);
         setToday(end);
@@ -258,7 +266,7 @@ export function ReportsPage() {
                             onChange={(e) => setType(e.target.value as ReportType)}
                             className={`${selectClass} mt-1.5 font-normal normal-case tracking-normal`}
                         >
-                            {options.map((o) => (
+                            {visibleOptions.map((o) => (
                                 <option key={o.value} value={o.value}>
                                     {o.label}
                                 </option>
@@ -332,6 +340,7 @@ export function ReportsPage() {
             {data?.summary && (
                 <section className="report-summary grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                     {Object.entries(data.summary)
+                        .filter(([key]) => canViewProfit || (key !== 'grossProfit' && key !== 'costOfGoods' && key !== 'netProfit'))
                         .slice(0, 8)
                         .map(([key, value]) => {
                             const money = moneyKeys.has(key);

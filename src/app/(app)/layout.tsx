@@ -1,11 +1,14 @@
 
 import { Suspense, type ReactNode } from "react";
 import { redirect } from "next/navigation";
+import { connection } from "next/server";
 
 import { AppShell } from "@/components/app/app-shell";
 import { getViewerUser } from "@/lib/auth/session";
 import connectDB from "@/lib/db";
 import { User, Settings } from "@/models";
+
+export const instant = false;
 
 export default function AuthenticatedLayout({
   children,
@@ -32,6 +35,7 @@ async function AuthenticatedContent({
 }: {
   children: ReactNode;
 }) {
+  await connection();
   await connectDB();
 
   const user = await getViewerUser();

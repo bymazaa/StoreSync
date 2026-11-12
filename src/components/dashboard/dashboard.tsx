@@ -8,16 +8,17 @@ import { RecentActivity } from "@/components/dashboard/recent-activity";
 import { SalesChart } from "@/components/dashboard/sales-chart";
 import { StatCard } from "@/components/dashboard/stat-card";
 import { Surface } from "@/components/ui/surface";
-import { useShopFormat, useShopPermissions } from "@/components/app/shop-context";
+import { useCanViewProfit, useShopFormat, useShopPermissions } from "@/components/app/shop-context";
 import { apiRequest } from "@/lib/client-api";
 
 type DashboardPayload = {
   currencyCode: string;
   customerDue: { amount: string; invoiceCount: number };
-  today: { sales: string; purchases: string; profitEstimate: string; activeProducts: number; lowStockCount: number };
+  today: { sales: string; purchases: string; profitEstimate: string | null; activeProducts: number; lowStockCount: number };
   salesChart: { date: string; total: string }[];
   lowStock: { id: string; name: string; sku: string; stockOnHand: string; lowStockThreshold: string; unit: string }[];
   recentSales: { id: string; invoiceNumber: string; total: string; paidAmount: string; dueAmount: string; soldAt: string; status: string; customer: { name: string } | null }[];
+  canViewProfit?: boolean;
 };
 
 // Same permission rules as the sidebar, so "Jump to" never offers a page the staff member cannot open.
@@ -31,11 +32,14 @@ const quickLinks = [
 export function Dashboard() {
   const { locale, formatMoney, formatNumber, formatDate } = useShopFormat();
   const permissions = useShopPermissions();
+  const hasProfitRole = useCanViewProfit();
   const links = quickLinks.filter((link) => link.requires.some((permission) => permissions.includes(permission)));
   const [data, setData] = useState<DashboardPayload | null>(null);
   const [updatedAt, setUpdatedAt] = useState<Date | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
+
+  const canViewProfit = Boolean(hasProfitRole && (data ? data.today.profitEstimate !== null && data.canViewProfit !== false : true));
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -67,8 +71,8 @@ export function Dashboard() {
     : undefined;
 
   const netSales = Number(data?.today.sales ?? 0);
-  const profit = Number(data?.today.profitEstimate ?? 0);
-  const margin = netSales > 0 ? (profit / netSales) * 100 : null;
+  const profit = data?.today.profitEstimate !== null && data?.today.profitEstimate !== undefined ? Number(data.today.profitEstimate) : null;
+  const margin = profit !== null && netSales > 0 ? (profit / netSales) * 100 : null;
 
   return (
     <>
@@ -96,7 +100,7 @@ export function Dashboard() {
 
       {!data && loading ? (
         <div className="mt-5 grid gap-4 xl:grid-cols-3" aria-label="Loading dashboard" aria-busy="true">
-          <div className="grid gap-3 sm:grid-cols-2 xl:col-span-3 xl:grid-cols-4">{Array.from({ length: 4 }, (_, index) => <div key={index} className="h-32 animate-pulse rounded-[16px] border border-border bg-card" />)}</div>
+          <div className={`grid gap-3 sm:grid-cols-2 ${canViewProfit ? "xl:col-span-3 xl:grid-cols-4" : "xl:col-span-3 xl:grid-cols-3"}`}>{Array.from({ length: canViewProfit ? 4 : 3 }, (_, index) => <div key={index} className="h-32 animate-pulse rounded-[16px] border border-border bg-card" />)}</div>
           <div className="h-[310px] animate-pulse rounded-[16px] border border-border bg-card xl:col-span-2" />
           <div className="h-[310px] animate-pulse rounded-[16px] border border-border bg-card" />
         </div>
@@ -104,11 +108,13 @@ export function Dashboard() {
 
       {data ? (
         <>
-          <section aria-label="Today's financial figures" className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <section aria-label="Today's financial figures" className={`mt-5 grid gap-3 sm:grid-cols-2 ${canViewProfit ? "xl:grid-cols-4" : "xl:grid-cols-3"}`}>
             <StatCard title="Today's net sales" value={formatMoney(data.today.sales)} description="After recorded customer returns" icon={Wallet} tone="teal" trend={salesTrend} />
             <StatCard title="Today's net purchases" value={formatMoney(data.today.purchases)} description="After recorded supplier returns" icon={ShoppingBag} tone="blue" />
             <StatCard title="Customer dues" value={formatMoney(data.customerDue.amount)} description={`${formatNumber(data.customerDue.invoiceCount, 0)} unpaid invoices`} icon={CircleAlert} tone="amber" />
-            <StatCard title="Estimated profit" value={formatMoney(data.today.profitEstimate)} description="Net sales − cost of goods − expenses" icon={Activity} tone="violet" />
+            {canViewProfit && data.today.profitEstimate !== null ? (
+              <StatCard title="Estimated profit" value={formatMoney(data.today.profitEstimate)} description="Net sales − cost of goods − expenses" icon={Activity} tone="violet" />
+            ) : null}
           </section>
 
           <section className="mt-4 grid items-stretch gap-4 xl:grid-cols-3">
@@ -119,35 +125,37 @@ export function Dashboard() {
           <section className="mt-4 grid items-stretch gap-4 xl:grid-cols-3">
             <div className="min-w-0 xl:col-span-2"><RecentActivity sales={data.recentSales} /></div>
             <div className="flex min-w-0 flex-col gap-5">
-              <Surface className="relative flex h-full flex-col overflow-hidden p-0">
-                <div aria-hidden="true" className="pointer-events-none absolute -right-20 -top-24 size-64 rounded-full bg-violet-soft/50 blur-3xl dark:bg-violet-soft/20" />
-                <div className="relative flex items-center justify-between gap-3 border-b border-border/70 px-5 py-4 sm:px-6">
-                  <div className="flex min-w-0 items-center gap-3">
-                    <span className="grid size-10 shrink-0 place-items-center rounded-[14px] bg-violet-soft text-violet-strong"><TrendingUp size={18} /></span>
-                    <div className="min-w-0">
-                      <p className="text-base font-semibold text-foreground">Profit snapshot</p>
-                      <p className="mt-0.5 text-xs text-muted-foreground">How today’s sales converted</p>
+              {canViewProfit && data.today.profitEstimate !== null && profit !== null ? (
+                <Surface className="relative flex h-full flex-col overflow-hidden p-0">
+                  <div aria-hidden="true" className="pointer-events-none absolute -right-20 -top-24 size-64 rounded-full bg-violet-soft/50 blur-3xl dark:bg-violet-soft/20" />
+                  <div className="relative flex items-center justify-between gap-3 border-b border-border/70 px-5 py-4 sm:px-6">
+                    <div className="flex min-w-0 items-center gap-3">
+                      <span className="grid size-10 shrink-0 place-items-center rounded-[14px] bg-violet-soft text-violet-strong"><TrendingUp size={18} /></span>
+                      <div className="min-w-0">
+                        <p className="text-base font-semibold text-foreground">Profit snapshot</p>
+                        <p className="mt-0.5 text-xs text-muted-foreground">How today’s sales converted</p>
+                      </div>
                     </div>
+                    <span className="shrink-0 rounded-full border border-border/70 bg-background/80 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Today</span>
                   </div>
-                  <span className="shrink-0 rounded-full border border-border/70 bg-background/80 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">Today</span>
-                </div>
-                <div className="relative flex-1 p-5 sm:p-6">
-                  <div className="rounded-[18px] border border-violet-strong/15 bg-violet-soft/35 p-4 dark:bg-violet-soft/20 sm:p-5">
-                    <p className="text-xs font-medium text-muted-foreground">Estimated profit</p>
-                    <div className="mt-2 flex flex-wrap items-end justify-between gap-3">
-                      <p className="break-words text-[clamp(1.8rem,3vw,2.35rem)] font-semibold leading-none tracking-[-0.035em] tabular-nums text-foreground [overflow-wrap:anywhere]">{formatMoney(data.today.profitEstimate)}</p>
-                      <span className={`shrink-0 rounded-full px-2.5 py-1.5 text-[11px] font-semibold tabular-nums ${margin !== null && margin >= 0 ? "bg-violet-soft text-violet-strong" : "bg-danger/10 text-danger"}`}>{margin === null ? "No sales yet" : `${formatNumber(margin, 1)}% margin`}</span>
+                  <div className="relative flex-1 p-5 sm:p-6">
+                    <div className="rounded-[18px] border border-violet-strong/15 bg-violet-soft/35 p-4 dark:bg-violet-soft/20 sm:p-5">
+                      <p className="text-xs font-medium text-muted-foreground">Estimated profit</p>
+                      <div className="mt-2 flex flex-wrap items-end justify-between gap-3">
+                        <p className="break-words text-[clamp(1.8rem,3vw,2.35rem)] font-semibold leading-none tracking-[-0.035em] tabular-nums text-foreground [overflow-wrap:anywhere]">{formatMoney(data.today.profitEstimate)}</p>
+                        <span className={`shrink-0 rounded-full px-2.5 py-1.5 text-[11px] font-semibold tabular-nums ${margin !== null && margin >= 0 ? "bg-violet-soft text-violet-strong" : "bg-danger/10 text-danger"}`}>{margin === null ? "No sales yet" : `${formatNumber(margin, 1)}% margin`}</span>
+                      </div>
+                      <div className="mt-4 h-2 overflow-hidden rounded-full bg-background/80"><span className="block h-full rounded-full bg-violet-strong transition-[width] duration-500" style={{ width: `${margin === null ? 0 : Math.min(100, Math.max(0, margin))}%` }} /></div>
+                      <div className="mt-2 flex justify-between gap-3 text-[10px] text-muted-foreground"><span>Profit margin</span><span>{margin === null ? "Waiting for sales" : `${formatNumber(Math.min(100, Math.max(0, margin)), 1)}% of net sales`}</span></div>
                     </div>
-                    <div className="mt-4 h-2 overflow-hidden rounded-full bg-background/80"><span className="block h-full rounded-full bg-violet-strong transition-[width] duration-500" style={{ width: `${margin === null ? 0 : Math.min(100, Math.max(0, margin))}%` }} /></div>
-                    <div className="mt-2 flex justify-between gap-3 text-[10px] text-muted-foreground"><span>Profit margin</span><span>{margin === null ? "Waiting for sales" : `${formatNumber(Math.min(100, Math.max(0, margin)), 1)}% of net sales`}</span></div>
+                    <dl className="mt-5 space-y-0 text-sm">
+                      <div className="flex items-center justify-between gap-3 border-b border-border/70 py-3 first:pt-0"><dt className="text-muted-foreground">Net sales</dt><dd className="font-semibold tabular-nums text-foreground">{formatMoney(data.today.sales)}</dd></div>
+                      <div className="flex items-center justify-between gap-3 border-b border-border/70 py-3"><dt className="max-w-[60%] text-muted-foreground">Cost of goods + expenses</dt><dd className="text-right font-semibold tabular-nums text-foreground">{formatMoney(netSales - profit)}</dd></div>
+                      <div className="flex items-center justify-between gap-3 pt-3"><dt className="text-muted-foreground">Net purchases</dt><dd className="font-semibold tabular-nums text-foreground">{formatMoney(data.today.purchases)}</dd></div>
+                    </dl>
                   </div>
-                  <dl className="mt-5 space-y-0 text-sm">
-                    <div className="flex items-center justify-between gap-3 border-b border-border/70 py-3 first:pt-0"><dt className="text-muted-foreground">Net sales</dt><dd className="font-semibold tabular-nums text-foreground">{formatMoney(data.today.sales)}</dd></div>
-                    <div className="flex items-center justify-between gap-3 border-b border-border/70 py-3"><dt className="max-w-[60%] text-muted-foreground">Cost of goods + expenses</dt><dd className="text-right font-semibold tabular-nums text-foreground">{formatMoney(netSales - profit)}</dd></div>
-                    <div className="flex items-center justify-between gap-3 pt-3"><dt className="text-muted-foreground">Net purchases</dt><dd className="font-semibold tabular-nums text-foreground">{formatMoney(data.today.purchases)}</dd></div>
-                  </dl>
-                </div>
-              </Surface>
+                </Surface>
+              ) : null}
 
               <Surface className="p-5 sm:p-6">
                 <div className="flex items-end justify-between gap-3">

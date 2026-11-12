@@ -468,6 +468,7 @@ export function AppShell({
                 >
                     <ShopProvider
                         userId={user.id}
+                        role={user.role}
                         countryCode={countryCode}
                         currencyCode={currencyCode}
                         locale={locale}

@@ -1,4 +1,5 @@
 import { cookies } from "next/headers";
+import { connection } from "next/server";
 
 import { Permission } from "@/types";
 import connectDB from "@/lib/db";
@@ -67,6 +68,7 @@ export async function getCurrentUser() {
  * user revoke the refresh session, so this cannot outlive them.
  */
 export async function getViewerUser() {
+  await connection();
   const accessUser = await getCurrentUser();
   if (accessUser) return accessUser;
 

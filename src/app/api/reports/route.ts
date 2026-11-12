@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { CostingMethod, Permission, PurchaseStatus, SaleStatus } from "@/types";
+import { CostingMethod, Permission, PurchaseStatus, SaleStatus, UserRole } from "@/types";
 import { authorized } from "@/lib/auth/api-guard";
 import connectDB from "@/lib/db";
 import Sale from "@/models/Sale";
@@ -32,6 +32,8 @@ export async function GET(request: Request) {
   const guard = await authorized(Permission.VIEW_REPORTS);
   if ("response" in guard) return guard.response;
   await connectDB();
+
+  const canViewProfit = guard.user.role === UserRole.OWNER || guard.user.role === UserRole.MANAGER;
   
   const { searchParams } = new URL(request.url);
   const type = searchParams.get("type") ?? "sales";
@@ -71,38 +73,44 @@ export async function GET(request: Request) {
     const grossSales = sales.reduce((sum, sale) => sum + sale.subtotal - sale.discountAmount, 0);
     const returnedSales = returns.reduce((sum, entry) => sum + entry.total, 0);
     const revenue = grossSales - returnedSales;
-    const soldCost = items.reduce((sum, item) => sum + (item.baseQuantity * item.costPerBaseUnit), 0);
     
-    // Calculate returned cost
-    let returnedCost = 0;
-    for (const ret of returns) {
-      const retItems = await SaleReturnItem.find({ returnId: ret._id }).lean();
-      for (const item of retItems) {
-        const saleItem = await SaleItem.findById(item.saleItemId).lean();
-        if (saleItem) {
-          returnedCost += item.baseQuantity * saleItem.costPerBaseUnit;
+    const summary: Record<string, string | number> = { 
+      invoiceCount: sales.length, 
+      grossSales: grossSales.toFixed(2), 
+      returns: returnedSales.toFixed(2), 
+      revenue: revenue.toFixed(2), 
+    };
+
+    if (canViewProfit) {
+      const soldCost = items.reduce((sum, item) => sum + (item.baseQuantity * item.costPerBaseUnit), 0);
+      let returnedCost = 0;
+      for (const ret of returns) {
+        const retItems = await SaleReturnItem.find({ returnId: ret._id }).lean();
+        for (const item of retItems) {
+          const saleItem = await SaleItem.findById(item.saleItemId).lean();
+          if (saleItem) {
+            returnedCost += item.baseQuantity * saleItem.costPerBaseUnit;
+          }
         }
       }
+      const cogs = soldCost - returnedCost;
+      summary.costOfGoods = cogs.toFixed(2);
+      summary.grossProfit = (revenue - cogs).toFixed(2);
     }
-    
-    const cogs = soldCost - returnedCost;
     
     return NextResponse.json({ 
       type, shop, currencyCode: settings?.currencyCode ?? "USD", 
       sales: salesWithCustomer, 
-      summary: { 
-        invoiceCount: sales.length, 
-        grossSales: grossSales.toFixed(2), 
-        returns: returnedSales.toFixed(2), 
-        revenue: revenue.toFixed(2), 
-        costOfGoods: cogs.toFixed(2), 
-        grossProfit: (revenue - cogs).toFixed(2) 
-      }, 
+      summary, 
       productItems: items 
     });
   }
 
   if (type === "profit-loss") {
+    if (!canViewProfit) {
+      return apiError(403, "FORBIDDEN", "Only shop owners and managers can view profit and loss reports.");
+    }
+
     const sales = await Sale.find({ status: saleStatuses, ...dateFilter })
       .select("_id invoiceNumber soldAt subtotal discountAmount")
       .sort({ soldAt: -1 })
@@ -214,15 +222,20 @@ export async function GET(request: Request) {
     
     const productList = [...totals.values()].map(item => {
       const product = productMap.get(item.productId);
-      return {
+      const row: Record<string, any> = {
         ...item,
         id: item.productId,
         unit: product?.baseUnit?.symbol || "",
         quantity: item.quantity.toString(),
         revenue: item.revenue.toFixed(2),
-        costOfGoods: item.costOfGoods.toFixed(2),
-        grossProfit: (item.revenue - item.costOfGoods).toFixed(2),
       };
+      if (canViewProfit) {
+        row.costOfGoods = item.costOfGoods.toFixed(2);
+        row.grossProfit = (item.revenue - item.costOfGoods).toFixed(2);
+      } else {
+        delete row.costOfGoods;
+      }
+      return row;
     }).sort((a, b) => parseFloat(b.revenue) - parseFloat(a.revenue));
     
     return NextResponse.json({ type, shop, currencyCode: settings?.currencyCode ?? "USD", products: productList });

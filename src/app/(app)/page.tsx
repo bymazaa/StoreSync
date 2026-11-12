@@ -1,9 +1,12 @@
 
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
+import { connection } from "next/server";
 
 import { Dashboard } from "@/components/dashboard/dashboard";
 import { getViewerUser } from "@/lib/auth/session";
+
+export const instant = false;
 
 export default function Home() {
   return (
@@ -22,6 +25,7 @@ export default function Home() {
 }
 
 async function HomeContent() {
+  await connection();
   const user = await getViewerUser();
 
   const permissions = new Set(
