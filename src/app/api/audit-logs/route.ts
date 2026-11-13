@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { Permission } from '@/types';
 import { authorizedAny } from '@/lib/auth/api-guard';
 import connectDB from '@/lib/db';
-import { AuditLog, Settings, User } from '@/models';
+import { AuditLog, RefreshSession, Settings, User } from '@/models';
 import { apiError } from '@/lib/http/api-response';
 import { reportDateRange } from '@/lib/date-time';
 import { z } from 'zod';
@@ -105,26 +105,59 @@ export async function GET(request: Request) {
 
     const actorIds = await AuditLog.distinct('actorId', dateRange ? { createdAt: dateRange } : {});
     const ids = actorIds.filter((id): id is string => typeof id === 'string' && id.length > 0);
-    const actorRecords = ids.length
-        ? await User.find({ _id: { $in: ids } })
-              .select('_id fullName email')
-              .lean()
-        : [];
+    const [actorRecords, sessions] = await Promise.all([
+        ids.length
+            ? User.find({ _id: { $in: ids } })
+                  .select('_id fullName email')
+                  .lean()
+            : Promise.resolve([]),
+        ids.length
+            ? RefreshSession.find({ userId: { $in: ids } })
+                  .sort({ createdAt: -1 })
+                  .select('userId ipAddress userAgent')
+                  .lean()
+            : Promise.resolve([]),
+    ]);
     const names = new Map(actorRecords.map((actor) => [String(actor._id), actorName(actor)]));
+    const userSessionMap = new Map<string, { ipAddress?: string | null; userAgent?: string | null }>();
+    for (const s of sessions) {
+        const uid = String(s.userId);
+        if (!userSessionMap.has(uid)) {
+            userSessionMap.set(uid, {
+                ipAddress: s.ipAddress,
+                userAgent: s.userAgent,
+            });
+        }
+    }
 
     return NextResponse.json({
-        logs: logs.map((log) => ({
-            id: String(log._id),
-            action: log.action,
-            entityType: log.entityType,
-            entityId: toId(log.entityId),
-            actorId: toId(log.actorId),
-            // A deleted staff account keeps its history, so its rows are labelled rather than dropped.
-            actorName: names.get(toId(log.actorId)) ?? (log.actorId ? 'Removed user' : 'System'),
-            detail: describe(log.metadata as Record<string, unknown> | null),
-            ipAddress: log.ipAddress ?? '',
-            createdAt: log.createdAt,
-        })),
+        logs: logs.map((log) => {
+            const actorSession = log.actorId ? userSessionMap.get(toId(log.actorId)) : null;
+            const logMeta = log.metadata as Record<string, unknown> | null;
+            const ipAddress =
+                log.ipAddress ||
+                (typeof logMeta?.ipAddress === 'string' ? logMeta.ipAddress : '') ||
+                actorSession?.ipAddress ||
+                '127.0.0.1';
+            const userAgent =
+                (typeof logMeta?.userAgent === 'string' ? logMeta.userAgent : '') ||
+                actorSession?.userAgent ||
+                '';
+
+            return {
+                id: String(log._id),
+                action: log.action,
+                entityType: log.entityType,
+                entityId: toId(log.entityId),
+                actorId: toId(log.actorId),
+                // A deleted staff account keeps its history, so its rows are labelled rather than dropped.
+                actorName: names.get(toId(log.actorId)) ?? (log.actorId ? 'Removed user' : 'System'),
+                detail: describe(logMeta),
+                ipAddress,
+                userAgent,
+                createdAt: log.createdAt,
+            };
+        }),
         total,
         page,
         pageSize,

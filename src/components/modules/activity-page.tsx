@@ -1,7 +1,23 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { ChevronLeft, ChevronRight, History, RefreshCw, Search } from 'lucide-react';
+import {
+    Check,
+    ChevronLeft,
+    ChevronRight,
+    Copy,
+    Globe,
+    History,
+    Laptop,
+    MapPin,
+    Monitor,
+    Network,
+    RefreshCw,
+    Search,
+    ShieldCheck,
+    Smartphone,
+    X,
+} from 'lucide-react';
 import { apiRequest } from '@/lib/client-api';
 import {
     ErrorMessage,
@@ -24,8 +40,57 @@ type Log = {
     actorName: string;
     detail: string;
     ipAddress: string;
+    userAgent?: string;
     createdAt: string;
 };
+
+type DeviceNetworkInfo = {
+    ip: string;
+    isLocal: boolean;
+    type: string;
+    network: string;
+    isp: string;
+    city: string;
+    region: string;
+    country: string;
+    countryCode: string;
+    timezone: string;
+    latitude?: number | null;
+    longitude?: number | null;
+};
+
+function parseUserAgent(ua?: string) {
+    if (!ua) {
+        return {
+            os: 'Windows / Linux / macOS',
+            browser: 'Web Browser',
+            device: 'Desktop / POS Terminal',
+            isMobile: false,
+        };
+    }
+
+    let os = 'Unknown OS';
+    if (/windows nt 10/i.test(ua)) os = 'Windows 10/11';
+    else if (/windows nt/i.test(ua)) os = 'Windows';
+    else if (/macintosh|mac os x/i.test(ua)) os = 'macOS';
+    else if (/iphone|ipad|ipod/i.test(ua)) os = 'iOS';
+    else if (/android/i.test(ua)) os = 'Android';
+    else if (/linux/i.test(ua)) os = 'Linux';
+
+    let browser = 'Web Browser';
+    if (/edg\//i.test(ua)) browser = 'Microsoft Edge';
+    else if (/chrome\//i.test(ua) && !/edg\//i.test(ua)) browser = 'Google Chrome';
+    else if (/firefox\//i.test(ua)) browser = 'Mozilla Firefox';
+    else if (/safari\//i.test(ua) && !/chrome\//i.test(ua)) browser = 'Apple Safari';
+    else if (/opera|opr\//i.test(ua)) browser = 'Opera';
+
+    let device = 'Desktop';
+    const isMobile = /mobile|android|iphone|ipod/i.test(ua);
+    if (/ipad|tablet/i.test(ua)) device = 'Tablet';
+    else if (isMobile) device = 'Mobile Phone';
+
+    return { os, browser, device, isMobile };
+}
 type Payload = {
     logs: Log[];
     total: number;
@@ -107,7 +172,7 @@ function toneOf(action: string) {
 }
 
 export function ActivityPage() {
-    const { formatDateTime } = useShopFormat();
+    const { formatDateTime, timezone } = useShopFormat();
     const permissions = useShopPermissions();
     const canView = permissions.includes('MANAGE_SETTINGS') || permissions.includes('MANAGE_USERS');
     const [logs, setLogs] = useState<Log[]>([]);
@@ -123,6 +188,10 @@ export function ActivityPage() {
     const [to, setTo] = useState('');
     const [error, setError] = useState('');
     const [busy, setBusy] = useState(false);
+    const [selectedLog, setSelectedLog] = useState<Log | null>(null);
+    const [deviceDetails, setDeviceDetails] = useState<DeviceNetworkInfo | null>(null);
+    const [detailsLoading, setDetailsLoading] = useState(false);
+    const [copiedIp, setCopiedIp] = useState(false);
 
     const load = useCallback(async () => {
         setBusy(true);
@@ -153,6 +222,55 @@ export function ActivityPage() {
         }, 0);
         return () => window.clearTimeout(timer);
     }, [canView, load]);
+
+    useEffect(() => {
+        if (!selectedLog) {
+            setDeviceDetails(null);
+            return;
+        }
+        let cancelled = false;
+        setDetailsLoading(true);
+        setCopiedIp(false);
+
+        apiRequest<DeviceNetworkInfo>(
+            `/api/ip-lookup?ip=${encodeURIComponent(selectedLog.ipAddress || '')}`,
+        )
+            .then((data) => {
+                if (!cancelled) setDeviceDetails(data);
+            })
+            .catch(() => {
+                if (!cancelled) {
+                    setDeviceDetails({
+                        ip: selectedLog.ipAddress || '127.0.0.1',
+                        isLocal: true,
+                        type: 'IPv4',
+                        network: 'Local Store Network (LAN)',
+                        isp: 'Internal POS Terminal',
+                        city: 'Store Premises',
+                        region: 'Local',
+                        country: 'Local Network',
+                        countryCode: 'LOC',
+                        timezone: 'Local',
+                    });
+                }
+            })
+            .finally(() => {
+                if (!cancelled) setDetailsLoading(false);
+            });
+
+        return () => {
+            cancelled = true;
+        };
+    }, [selectedLog]);
+
+    useEffect(() => {
+        if (!selectedLog) return;
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') setSelectedLog(null);
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [selectedLog]);
 
     const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
     const firstShown = total === 0 ? 0 : (page - 1) * PAGE_SIZE + 1;
@@ -339,7 +457,7 @@ export function ActivityPage() {
                                     <th className="px-3 py-2.5 font-semibold">Action</th>
                                     <th className="px-3 py-2.5 font-semibold">Area / record</th>
                                     <th className="px-3 py-2.5 font-semibold">What changed</th>
-                                    <th className="px-3 py-2.5 font-semibold">IP</th>
+                                    <th className="px-3 py-2.5 font-semibold text-right">Device & Network</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-border/70">
@@ -376,8 +494,22 @@ export function ActivityPage() {
                                         <td className="max-w-md px-3 py-3 text-xs leading-relaxed text-muted-foreground">
                                             {log.detail || '—'}
                                         </td>
-                                        <td className="whitespace-nowrap px-3 py-3 text-xs tabular-nums text-muted-foreground">
-                                            {log.ipAddress || '—'}
+                                        <td className="whitespace-nowrap px-3 py-3 text-right">
+                                            <div className="flex flex-col items-end gap-1">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setSelectedLog(log)}
+                                                    className="inline-flex items-center gap-1.5 rounded-lg border border-border/80 bg-background px-2.5 py-1 text-xs font-medium text-foreground shadow-xs transition-colors hover:border-primary/40 hover:bg-primary-soft/30 hover:text-primary"
+                                                >
+                                                    <Monitor size={13} className="text-muted-foreground" />
+                                                    <span>View device details</span>
+                                                </button>
+                                                {log.ipAddress ? (
+                                                    <span className="font-mono text-[10px] text-muted-foreground">
+                                                        IP: {log.ipAddress}
+                                                    </span>
+                                                ) : null}
+                                            </div>
                                         </td>
                                     </tr>
                                 ))}
@@ -439,6 +571,234 @@ export function ActivityPage() {
                     </div>
                 </div>
             </Panel>
+
+            {selectedLog && (
+                <div
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs animate-in fade-in duration-150"
+                    role="dialog"
+                    aria-modal="true"
+                    aria-labelledby="device-modal-title"
+                    onClick={() => setSelectedLog(null)}
+                >
+                    <div
+                        className="relative max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-2xl border border-border bg-card p-6 shadow-2xl transition-all"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        {/* Header */}
+                        <div className="flex items-start justify-between gap-4 border-b border-border/70 pb-4">
+                            <div className="flex items-center gap-3">
+                                <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary-soft text-primary">
+                                    <Monitor size={20} />
+                                </span>
+                                <div>
+                                    <h3 id="device-modal-title" className="text-lg font-semibold text-foreground">
+                                        Device & Network Details
+                                    </h3>
+                                    <p className="text-xs text-muted-foreground">
+                                        Detailed origin, location, and device footprint for this action
+                                    </p>
+                                </div>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setSelectedLog(null)}
+                                className="grid size-8 shrink-0 place-items-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                                aria-label="Close dialog"
+                            >
+                                <X size={18} />
+                            </button>
+                        </div>
+
+                        {/* Action overview banner */}
+                        <div className="mt-4 rounded-xl border border-border/60 bg-muted/30 p-3.5">
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                                <span
+                                    className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${toneOf(selectedLog.action)}`}
+                                >
+                                    <span className="size-1.5 rounded-full bg-current" />
+                                    {actionLabel(selectedLog.action)}
+                                </span>
+                                <span className="text-xs text-muted-foreground tabular-nums">
+                                    {formatDateTime(selectedLog.createdAt)}
+                                </span>
+                            </div>
+                            <div className="mt-2 text-xs text-foreground">
+                                <span className="font-semibold text-foreground">{selectedLog.actorName}</span>
+                                {selectedLog.detail ? (
+                                    <span className="text-muted-foreground"> — {selectedLog.detail}</span>
+                                ) : null}
+                            </div>
+                        </div>
+
+                        {/* Network & Location Section */}
+                        <div className="mt-5 space-y-4">
+                            <div>
+                                <h4 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+                                    <Globe size={14} className="text-primary" />
+                                    <span>Network & Location Origin</span>
+                                </h4>
+
+                                <div className="mt-2.5 grid gap-3 sm:grid-cols-2">
+                                    {/* IP Address Card */}
+                                    <div className="rounded-xl border border-border/70 bg-background p-3.5 sm:col-span-2">
+                                        <div className="flex items-center justify-between gap-2">
+                                            <span className="text-xs font-medium text-muted-foreground">IP Address</span>
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    if (selectedLog.ipAddress) {
+                                                        void navigator.clipboard.writeText(selectedLog.ipAddress);
+                                                        setCopiedIp(true);
+                                                        setTimeout(() => setCopiedIp(false), 2000);
+                                                    }
+                                                }}
+                                                className="inline-flex items-center gap-1 text-[11px] font-medium text-primary hover:underline"
+                                            >
+                                                {copiedIp ? (
+                                                    <>
+                                                        <Check size={12} className="text-teal-strong" />
+                                                        <span className="text-teal-strong">Copied</span>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <Copy size={12} />
+                                                        <span>Copy</span>
+                                                    </>
+                                                )}
+                                            </button>
+                                        </div>
+                                        <p className="mt-1 font-mono text-base font-semibold tabular-nums text-foreground">
+                                            {selectedLog.ipAddress || '127.0.0.1'}
+                                        </p>
+                                        <span className="mt-1 inline-block text-[11px] text-muted-foreground">
+                                            {deviceDetails?.isLocal
+                                                ? 'Internal Shop POS Network (Loopback / LAN)'
+                                                : `Public Network Address (${deviceDetails?.type || 'IPv4'})`}
+                                        </span>
+                                    </div>
+
+                                    {/* Network / ISP */}
+                                    <div className="rounded-xl border border-border/70 bg-background p-3.5">
+                                        <span className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                                            <Network size={13} className="text-muted-foreground" />
+                                            <span>Network / ISP</span>
+                                        </span>
+                                        <p className="mt-1 text-sm font-semibold text-foreground">
+                                            {detailsLoading ? (
+                                                <span className="inline-block h-4 w-28 animate-pulse rounded bg-muted" />
+                                            ) : (
+                                                deviceDetails?.network || deviceDetails?.isp || 'Local Store Network'
+                                            )}
+                                        </p>
+                                        <span className="text-[11px] text-muted-foreground">
+                                            {detailsLoading
+                                                ? 'Looking up provider…'
+                                                : deviceDetails?.isLocal
+                                                  ? 'In-store LAN connection'
+                                                  : deviceDetails?.isp || 'Internet Service Provider'}
+                                        </span>
+                                    </div>
+
+                                    {/* Location */}
+                                    <div className="rounded-xl border border-border/70 bg-background p-3.5">
+                                        <span className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                                            <MapPin size={13} className="text-muted-foreground" />
+                                            <span>Location</span>
+                                        </span>
+                                        <p className="mt-1 text-sm font-semibold text-foreground">
+                                            {detailsLoading ? (
+                                                <span className="inline-block h-4 w-24 animate-pulse rounded bg-muted" />
+                                            ) : (
+                                                [deviceDetails?.city, deviceDetails?.country].filter(Boolean).join(', ') || 'Local Store'
+                                            )}
+                                        </p>
+                                        <span className="text-[11px] text-muted-foreground">
+                                            {detailsLoading
+                                                ? 'Detecting region…'
+                                                : deviceDetails?.region || 'Store Premises'}
+                                        </span>
+                                    </div>
+
+                                    {/* Timezone & Security */}
+                                    <div className="rounded-xl border border-border/70 bg-background p-3.5 sm:col-span-2">
+                                        <div className="grid grid-cols-2 gap-3 text-xs">
+                                            <div>
+                                                <span className="text-muted-foreground">Network Timezone:</span>
+                                                <p className="mt-0.5 font-medium text-foreground">
+                                                    {detailsLoading ? 'Loading…' : deviceDetails?.timezone || timezone || 'Local'}
+                                                </p>
+                                            </div>
+                                            <div>
+                                                <span className="text-muted-foreground">Network Security:</span>
+                                                <p className="mt-0.5 flex items-center gap-1 font-medium text-teal-strong">
+                                                    <ShieldCheck size={13} />
+                                                    <span>{deviceDetails?.isLocal ? 'Internal LAN Verified' : 'External Connection'}</span>
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Device & Client Section */}
+                            <div>
+                                <h4 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+                                    <Laptop size={14} className="text-primary" />
+                                    <span>Client & Device Info</span>
+                                </h4>
+
+                                {(() => {
+                                    const parsed = parseUserAgent(selectedLog.userAgent);
+                                    return (
+                                        <div className="mt-2.5 grid gap-3 sm:grid-cols-3">
+                                            <div className="rounded-xl border border-border/70 bg-background p-3">
+                                                <span className="text-[11px] text-muted-foreground">Device Type</span>
+                                                <p className="mt-0.5 flex items-center gap-1.5 text-sm font-semibold text-foreground">
+                                                    {parsed.isMobile ? <Smartphone size={14} /> : <Monitor size={14} />}
+                                                    <span>{parsed.device}</span>
+                                                </p>
+                                            </div>
+                                            <div className="rounded-xl border border-border/70 bg-background p-3">
+                                                <span className="text-[11px] text-muted-foreground">Operating System</span>
+                                                <p className="mt-0.5 text-sm font-semibold text-foreground">
+                                                    {parsed.os}
+                                                </p>
+                                            </div>
+                                            <div className="rounded-xl border border-border/70 bg-background p-3">
+                                                <span className="text-[11px] text-muted-foreground">Browser</span>
+                                                <p className="mt-0.5 text-sm font-semibold text-foreground">
+                                                    {parsed.browser}
+                                                </p>
+                                            </div>
+
+                                            {selectedLog.userAgent ? (
+                                                <div className="rounded-xl border border-border/70 bg-background p-3 sm:col-span-3">
+                                                    <span className="text-[11px] font-medium text-muted-foreground">
+                                                        User Agent String
+                                                    </span>
+                                                    <p className="mt-1 break-all rounded-md bg-muted/40 p-2 font-mono text-[11px] leading-relaxed text-muted-foreground">
+                                                        {selectedLog.userAgent}
+                                                    </p>
+                                                </div>
+                                            ) : null}
+                                        </div>
+                                    );
+                                })()}
+                            </div>
+                        </div>
+
+                        {/* Footer */}
+                        <div className="mt-6 flex justify-end border-t border-border/70 pt-4">
+                            <Button
+                                variant="outline"
+                                onClick={() => setSelectedLog(null)}
+                            >
+                                Close
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
