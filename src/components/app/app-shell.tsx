@@ -26,6 +26,7 @@ import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { SnowfallToggle, SnowfallOverlay } from '@/components/ui/snow-effect';
+import { FullscreenToggle } from '@/components/ui/fullscreen-toggle';
 import { Button } from '@/components/ui/button';
 import { ErrorToastViewport } from '@/components/ui/error-toast';
 import { ShopProvider } from '@/components/app/shop-context';
@@ -408,6 +409,7 @@ export function AppShell({
                     </div>
                     <div className="flex items-center gap-2 sm:gap-3">
                         <SnowfallToggle />
+                        <FullscreenToggle />
                         <ThemeToggle />
                         <span className="hidden h-8 w-px bg-line sm:block" />
                         <div className="relative">

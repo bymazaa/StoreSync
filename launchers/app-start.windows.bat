@@ -1,7 +1,7 @@
 @echo off
 setlocal
 title StockPilot POS Control Hub
-cd /d "%~dp0"
+cd /d "%~dp0\.."
 
 :: Detect pnpm or npm
 where pnpm >nul 2>&1
@@ -21,11 +21,13 @@ echo   [1] Start StockPilot POS Application
 echo   [2] View Admin and Staff Account Details (Read-only)
 echo   [3] Reset Admin Password
 echo   [4] Change Admin / Staff Email
-echo   [5] Exit
+echo   [5] Database Reset (Fresh DB or Demo Data)
+echo   [6] Exit
 echo.
 echo =====================================================================
-choice /c 12345 /n /m "Please select an option [1-5]: "
-if errorlevel 5 goto exit_app
+choice /c 123456 /n /m "Please select an option [1-6]: "
+if errorlevel 6 goto exit_app
+if errorlevel 5 goto reset_database
 if errorlevel 4 goto change_email
 if errorlevel 3 goto reset_password
 if errorlevel 2 goto view_accounts
@@ -51,6 +53,73 @@ goto main_menu
 :change_email
 cls
 node scripts\change-email.js
+echo.
+echo Press any key to return to the main menu...
+pause >nul
+goto main_menu
+
+:reset_database
+cls
+echo =====================================================================
+echo                   DATABASE RESET UTILITY
+echo =====================================================================
+echo.
+echo   [!] WARNING: Database reset will PERMANENTLY DELETE all current
+echo       collections, transactions, sales, and accounts in the database!
+echo.
+echo   Please select a reset mode:
+echo.
+echo   [1] Fresh Clean Reset (db:reset)
+echo       - Deletes all data and prepares DB for fresh setup via /setup
+echo.
+echo   [2] Demo Seed Reset (db:demo)
+echo       - Deletes all data and seeds full demo store with sample products,
+echo         customers, and demo logins (Password: Test@123456)
+echo.
+echo   [3] Cancel and return to Main Menu
+echo.
+echo =====================================================================
+choice /c 123 /n /m "Please select an option [1-3]: "
+if errorlevel 3 goto main_menu
+if errorlevel 2 goto confirm_demo_reset
+if errorlevel 1 goto confirm_clean_reset
+goto main_menu
+
+:confirm_clean_reset
+cls
+echo =====================================================================
+echo                   CONFIRM FRESH CLEAN RESET
+echo =====================================================================
+echo.
+echo   ARE YOU ABSOLUTELY SURE?
+echo   All products, stock, sales, expenses, and users will be erased!
+echo.
+choice /c YN /n /m "Type Y to CONFIRM or N to CANCEL [Y/N]: "
+if errorlevel 2 goto main_menu
+echo.
+echo [*] Running Fresh Clean Database Reset (call %RUNNER% run db:reset)...
+echo.
+call %RUNNER% run db:reset
+echo.
+echo Press any key to return to the main menu...
+pause >nul
+goto main_menu
+
+:confirm_demo_reset
+cls
+echo =====================================================================
+echo                   CONFIRM DEMO SEED RESET
+echo =====================================================================
+echo.
+echo   ARE YOU SURE?
+echo   Current data will be erased and replaced with demo sample shop data!
+echo.
+choice /c YN /n /m "Type Y to CONFIRM or N to CANCEL [Y/N]: "
+if errorlevel 2 goto main_menu
+echo.
+echo [*] Running Demo Seed Database Reset (call %RUNNER% run db:demo)...
+echo.
+call %RUNNER% run db:demo
 echo.
 echo Press any key to return to the main menu...
 pause >nul
