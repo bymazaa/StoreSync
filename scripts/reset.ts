@@ -99,13 +99,15 @@ async function createDemoData() {
   );
 
   const passwordHash = await hash(DEMO_PASSWORD, 10);
+  const stockpilotPasswordHash = await hash('password@stockpilot', 10);
   const users = [
-    { fullName: 'Rakib Hasan', email: 'owner@bismillah.test', role: UserRole.OWNER },
-    { fullName: 'Sadia Islam', email: 'manager@bismillah.test', role: UserRole.MANAGER },
-    { fullName: 'Jamal Uddin', email: 'cashier@bismillah.test', role: UserRole.CASHIER },
-    { fullName: 'Anwar Hossain', email: 'stock@bismillah.test', role: UserRole.STOCK_CLERK },
+    { fullName: 'StockPilot Demo Admin', email: 'test@stockpilot.com', role: UserRole.OWNER, passwordHash: stockpilotPasswordHash },
+    { fullName: 'Rakib Hasan', email: 'owner@bismillah.test', role: UserRole.OWNER, passwordHash },
+    { fullName: 'Sadia Islam', email: 'manager@bismillah.test', role: UserRole.MANAGER, passwordHash },
+    { fullName: 'Jamal Uddin', email: 'cashier@bismillah.test', role: UserRole.CASHIER, passwordHash },
+    { fullName: 'Anwar Hossain', email: 'stock@bismillah.test', role: UserRole.STOCK_CLERK, passwordHash },
   ];
-  await User.insertMany(users.map((user) => ({ _id: randomUUID(), ...user, passwordHash, isActive: true, sessionVersion: 0 })));
+  await User.insertMany(users.map((user) => ({ _id: randomUUID(), ...user, isActive: true, sessionVersion: 0 })));
 
   const suppliers = [
     { name: 'Meghna Wholesale Traders', phoneE164: '+8801711223344', email: 'meghna@example.com', address: 'Gulistan, Dhaka' },
