@@ -2,16 +2,16 @@
 
 import { FormEvent, Fragment, useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { CreditCard, Plus, X } from "lucide-react";
+import { AlertTriangle, CheckCircle2, CreditCard, Database, Download, FileArchive, Plus, RotateCcw, X } from "lucide-react";
 import { apiRequest, jsonBody } from "@/lib/client-api";
 import { Button } from "@/components/ui/button";
 import { ErrorMessage, inputClass, Notice, PageHeader, Panel, selectClass } from "@/components/ui/page";
-import { useHasPermission, useShopCountryCode, useShopUserId } from "@/components/app/shop-context";
+import { useHasPermission, useShopCountryCode, useShopRole, useShopUserId } from "@/components/app/shop-context";
 import { PhoneInput } from "@/components/ui/phone-input";
 import { AddressInput } from "@/components/ui/address-input";
 import { countryOptions, currencyForCountry, currencyOptions } from "@/lib/country-options";
 
-type Settings = { shopName: string; logoUrl: string | null; address: string | null; phone: string | null; countryCode: string; currencyCode: string; locale: string; timezone: string; saleInvoicePrefix: string; purchaseInvoicePrefix: string; costingMethod: string };
+type Settings = { shopName: string; logoUrl: string | null; address: string | null; phone: string | null; countryCode: string; currencyCode: string; locale: string; timezone: string; saleInvoicePrefix: string; purchaseInvoicePrefix: string; costingMethod: string; lastBackupAt?: string | null };
 type Method = { id: string; code: string; name: string; kind: string; isEnabled: boolean; sortOrder: number };
 type User = { id: string; fullName: string; email: string; role: string; isActive: boolean };
 // Every code the API actually guards (src/models/RolePermission.ts) — a permission missing here cannot be granted to a role.
@@ -31,6 +31,18 @@ export function SettingsPage() {
   const canManageUsers = useHasPermission("MANAGE_USERS");
   const contextCountryCode = useShopCountryCode();
   const currentUserId = useShopUserId();
+  const userRole = useShopRole();
+  const isOwner = userRole === "OWNER";
+
+  const [downloadingBackup, setDownloadingBackup] = useState(false);
+  const [restoreFile, setRestoreFile] = useState<File | null>(null);
+  const [restoreFileError, setRestoreFileError] = useState("");
+  const [restorePassword, setRestorePassword] = useState("");
+  const [restoreConfirmText, setRestoreConfirmText] = useState("");
+  const [restoreBusy, setRestoreBusy] = useState(false);
+  const [restoreError, setRestoreError] = useState("");
+  const [restoreSuccess, setRestoreSuccess] = useState<string | null>(null);
+
   const [settings, setSettings] = useState<Settings | null>(null); const [methods, setMethods] = useState<Method[]>([]); const [methodUpdating, setMethodUpdating] = useState<string | null>(null); const [methodModalOpen, setMethodModalOpen] = useState(false); const [methodError, setMethodError] = useState(""); const [users, setUsers] = useState<User[]>([]);
   const [countryCode, setCountryCode] = useState(contextCountryCode); const [currencyCode, setCurrencyCode] = useState("USD"); const [shopPhone, setShopPhone] = useState(""); const [shopAddress, setShopAddress] = useState("");
   const [rolePermissions, setRolePermissions] = useState<{ role: string; permission: string }[]>([]);
@@ -93,11 +105,282 @@ export function SettingsPage() {
   const roleHas = (role: string, permission: string) => rolePermissions.some((item) => item.role === role && item.permission === permission);
   const setRoleAll = (role: string, codes: string[]) => setRolePermissions((old) => [...old.filter((item) => item.role !== role), ...codes.map((permission) => ({ role, permission }))]);
   const roleDirty = (role: string) => permissions.filter((permission) => roleHas(role, permission)).sort().join("|") !== (savedRolePermissions[role] ?? []).filter((permission) => permissions.includes(permission)).sort().join("|");
+
+  async function handleDownloadBackup(format: "gzip" | "json" = "gzip") {
+    setDownloadingBackup(true);
+    setError("");
+    setNotice("");
+    try {
+      const res = await fetch(`/api/backup?format=${format}`);
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error?.message || "Failed to download backup.");
+      }
+      const blob = await res.blob();
+      const disposition = res.headers.get("Content-Disposition");
+      let filename = `stockpilot-backup-${new Date().toISOString().slice(0, 10)}.${format === "json" ? "json" : "json.gz"}`;
+      if (disposition && disposition.includes("filename=")) {
+        const match = disposition.match(/filename="?([^";]+)"?/);
+        if (match && match[1]) filename = match[1];
+      }
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      setNotice("Database backup downloaded successfully.");
+      void load();
+    } catch (e: any) {
+      setError(e.message || "Failed to download database backup.");
+    } finally {
+      setDownloadingBackup(false);
+    }
+  }
+
+  function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    setRestoreFileError("");
+    setRestoreError("");
+    setRestoreSuccess(null);
+    const file = e.target.files?.[0];
+    if (!file) {
+      setRestoreFile(null);
+      return;
+    }
+
+    const name = file.name.toLowerCase();
+    const isValidExt = name.endsWith(".json.gz") || name.endsWith(".gz") || name.endsWith(".json");
+    if (!isValidExt) {
+      setRestoreFile(null);
+      setRestoreFileError("Invalid file type! Only .json.gz or .json files from StockPilot are accepted.");
+      e.target.value = "";
+      return;
+    }
+
+    if (file.size > 60 * 1024 * 1024) {
+      setRestoreFile(null);
+      setRestoreFileError("File is too large! Maximum allowed backup size is 60MB.");
+      e.target.value = "";
+      return;
+    }
+
+    setRestoreFile(file);
+  }
+
+  async function handleRestoreSubmit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (!restoreFile) {
+      setRestoreError("Please choose a valid backup file.");
+      return;
+    }
+    if (!restorePassword) {
+      setRestoreError("Owner password is required.");
+      return;
+    }
+    if (restoreConfirmText.trim().toUpperCase() !== "RESTORE") {
+      setRestoreError('Please type "RESTORE" to confirm.');
+      return;
+    }
+
+    setRestoreBusy(true);
+    setRestoreError("");
+    setRestoreSuccess(null);
+    setError("");
+    setNotice("");
+
+    try {
+      const formData = new FormData();
+      formData.append("file", restoreFile);
+      formData.append("password", restorePassword);
+      formData.append("confirmText", restoreConfirmText.trim());
+
+      const res = await fetch("/api/backup/restore", {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data.error?.message || "Failed to restore database.");
+      }
+
+      setRestoreSuccess("Database successfully restored! All records have been synchronized with the backup file.");
+      setRestoreFile(null);
+      setRestorePassword("");
+      setRestoreConfirmText("");
+      setNotice("Database successfully restored from backup.");
+
+      setTimeout(() => {
+        router.refresh();
+        void load();
+      }, 2000);
+    } catch (e: any) {
+      setRestoreError(e.message || "Failed to restore database.");
+    } finally {
+      setRestoreBusy(false);
+    }
+  }
+
   return <div className="settings-page space-y-5"><PageHeader eyebrow="Shop administration" title="Settings" description="Store identity, currency, invoices, payment methods, access and account security."/>{error && <ErrorMessage>{error}</ErrorMessage>}{notice && <Notice>{notice}</Notice>}
     {settings && canManageSettings && <Panel className="settings-panel" title="Shop & invoice settings" description="Choose your shop's country. StockPilot automatically sets its local currency, date and number format, and default time zone. The currency shown here is read-only and changes with the country."><form onSubmit={saveSettings} className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"><Field label="Shop name" name="shopName" defaultValue={settings.shopName}/><Field label="Logo URL" name="logoUrl" defaultValue={settings.logoUrl ?? ""}/><label className={fieldLabelClass}>Shop address<AddressInput value={shopAddress} onChange={setShopAddress} countryCode={countryCode} placeholder="Search address or type manually" className={fieldControlClass}/></label><label className={fieldLabelClass}>Shop phone (optional)<PhoneInput name="phone" countryCode={countryCode} value={shopPhone} onChange={setShopPhone} className={fieldControlClass}/></label><label className={fieldLabelClass}>Country<select name="countryCode" value={countryCode} onChange={(event) => { const next = event.target.value; setCountryCode(next); const suggested = currencyForCountry(next); if (suggested) setCurrencyCode(suggested); }} className={`${selectClass} ${fieldControlClass}`}>{countryOptions.map((country) => <option key={country.code} value={country.code}>{country.name} (+{country.callingCode})</option>)}</select><span className={`${fieldControlClass} block text-[11px]`}>Currency, date and time-zone defaults follow this country.</span></label><label className={fieldLabelClass}>Currency (automatic)<select aria-readonly="true" disabled value={currencyCode} className={`${selectClass} ${fieldControlClass} cursor-not-allowed opacity-80`}>{currencyOptions.map((currency) => <option key={currency.code} value={currency.code}>{currency.code} — {currency.name}</option>)}</select></label><Field label="Sale invoice prefix" name="saleInvoicePrefix" defaultValue={settings.saleInvoicePrefix}/><Field label="Purchase invoice prefix" name="purchaseInvoicePrefix" defaultValue={settings.purchaseInvoicePrefix}/><label className={fieldLabelClass}>How profit cost is calculated<select name="costingMethod" defaultValue={settings.costingMethod} className={`${selectClass} ${fieldControlClass}`}><option value="WEIGHTED_AVERAGE">Weighted average</option><option value="FIFO">FIFO</option></select></label><div className="flex items-end"><Button type="submit" disabled={busy}>{busy ? "Saving…" : "Save shop settings"}</Button></div></form></Panel>}
     {canManageSettings && <Panel className="settings-panel" title="Payment methods" description="These methods appear in checkout, payment collection and expense forms." action={<Button className="h-9 px-3 text-xs" icon={<Plus size={14} />} onClick={() => { setMethodError(""); setMethodModalOpen(true); }}>Add method</Button>}> <div className="mb-4 flex flex-wrap gap-2">{methods.length === 0 ? <p className="w-full rounded-[14px] border border-dashed border-border px-4 py-5 text-sm text-muted-foreground">No methods yet. Add a payment method to make it available in checkout.</p> : methods.map((method) => <div key={method.id} className="flex min-w-[200px] flex-1 items-center justify-between gap-3 rounded-[14px] border border-border/70 bg-background/70 px-3 py-2.5 text-sm"><span className="min-w-0"><span className="block truncate font-medium text-foreground">{method.name}</span><small className="text-[10px] font-medium uppercase tracking-[0.08em] text-muted-foreground">{method.kind.replaceAll("_", " ")}</small></span><div className="flex shrink-0 items-center gap-2"><span className={`text-[10px] font-semibold ${method.isEnabled ? "text-success" : "text-muted-foreground"}`}>{methodUpdating === method.id ? "Saving…" : method.isEnabled ? "On" : "Off"}</span><button type="button" role="switch" aria-checked={method.isEnabled} disabled={methodUpdating !== null} aria-label={`${method.isEnabled ? "Disable" : "Enable"} ${method.name}`} onClick={() => void toggleMethod(method)} className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:cursor-wait disabled:opacity-60 ${method.isEnabled ? "bg-success" : "bg-slate-400 dark:bg-slate-600"}`}><span aria-hidden="true" className={`size-5 rounded-full bg-white shadow-sm transition-transform ${method.isEnabled ? "translate-x-[22px]" : "translate-x-0.5"}`} /></button></div></div>)}</div></Panel>}
     {canManageUsers && <Panel className="settings-panel" title="Staff accounts" description={`${users.length.toLocaleString()} staff logins with role and access status.`}><form onSubmit={addUser} className="mb-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-5"><label className={fieldLabelClass}>Full name<input required name="fullName" minLength={2} className={`${inputClass} ${fieldControlClass}`} placeholder="Staff name"/></label><label className={fieldLabelClass}>Email<input required name="email" type="email" className={`${inputClass} ${fieldControlClass}`} placeholder="name@example.com"/></label><label className={fieldLabelClass}>Temporary password<input required name="password" type="password" minLength={12} className={`${inputClass} ${fieldControlClass}`} placeholder="12+ characters"/></label><label className={fieldLabelClass}>Role<select name="role" className={`${selectClass} ${fieldControlClass}`}>{roles.map((role) => <option key={role} value={role}>{role.replaceAll("_", " ")}</option>)}</select></label><div className="flex items-end"><Button disabled={busy}>Create account</Button></div></form><div className="overflow-hidden rounded-xl border border-border/70"><div className="overflow-x-auto"><table className="stock-table w-full min-w-[760px] text-left text-sm"><thead className="bg-muted/40 text-[11px] uppercase tracking-[0.08em] text-muted-foreground"><tr><th className="px-3 py-2.5 font-semibold">Name</th><th className="px-3 py-2.5 font-semibold">Email</th><th className="px-3 py-2.5 font-semibold">Role</th><th className="px-3 py-2.5 font-semibold">Status</th><th className="px-3 py-2.5 text-right font-semibold">Access</th></tr></thead><tbody className="divide-y divide-border/70">{users.map((user) => <Fragment key={user.id}><tr className="align-middle transition-colors hover:bg-teal-soft/40"><td className="px-3 py-2.5 font-medium">{user.fullName}</td><td className="px-3 py-2.5 text-muted-foreground">{user.email}</td><td className="px-3 py-2.5">{user.role === "OWNER" ? <span className="inline-flex items-center gap-1.5 rounded-full bg-violet-soft px-2.5 py-1 text-[11px] font-semibold text-violet-strong"><span className="size-1.5 rounded-full bg-current" />Owner</span> : <select value={user.role} onChange={(event) => void updateUser(user, { role: event.target.value })} className="rounded-lg border border-border bg-input px-2 py-1 text-xs">{roles.map((role) => <option key={role} value={role}>{role.replaceAll("_", " ")}</option>)}</select>}</td><td className="px-3 py-2.5"><span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold ${user.isActive ? "bg-success/10 text-success" : "bg-muted text-muted-foreground"}`}><span className="size-1.5 rounded-full bg-current" />{user.isActive ? "Active" : "Disabled"}</span></td><td className="px-3 py-2.5"><div className="flex flex-wrap justify-end gap-1">{user.role !== "OWNER" && <><Button variant="ghost" className="h-8 px-2 text-xs" onClick={() => { setError(""); setConfirmDelete(null); setNameFor(null); setResetFor((current) => current?.id === user.id ? null : user); }}>{resetFor?.id === user.id ? "Close" : "Reset password"}</Button><Button variant="ghost" className="h-8 px-2 text-xs" onClick={() => { setError(""); setConfirmDelete(null); setResetFor(null); setNameFor((current) => current?.id === user.id ? null : user); }}>{nameFor?.id === user.id ? "Close name" : "Change name"}</Button><Button variant="ghost" className="h-8 px-2 text-xs" onClick={() => void updateUser(user, { isActive: !user.isActive })}>{user.isActive ? "Disable" : "Enable"}</Button><Button variant="ghost" className="h-8 px-2 text-xs text-danger hover:bg-danger/10 hover:text-danger" onClick={() => { setError(""); setResetFor(null); setNameFor(null); setConfirmDelete((current) => current?.id === user.id ? null : user); }}>{confirmDelete?.id === user.id ? "Close" : "Delete"}</Button></>}{user.role === "OWNER" && user.id === currentUserId && <Button variant="ghost" className="h-8 px-2 text-xs" onClick={() => { setError(""); setConfirmDelete(null); setResetFor(null); setNameFor((current) => current?.id === user.id ? null : user); }}>{nameFor?.id === user.id ? "Close name" : "Change name"}</Button>}</div></td></tr>{resetFor?.id === user.id && <tr className="bg-muted/25"><td className="px-3 py-3" colSpan={5}><form onSubmit={(event) => void resetStaffPassword(event, user)} className="flex flex-wrap items-end gap-x-3 gap-y-2"><label className={fieldLabelClass}>New temporary password for {user.fullName}<input required autoFocus name="password" type="password" minLength={12} autoComplete="new-password" className={`${inputClass} ${fieldControlClass} min-w-[260px]`} placeholder="12+ characters"/></label><Button disabled={busy}>Set password</Button><Button type="button" variant="ghost" disabled={busy} onClick={() => setResetFor(null)}>Cancel</Button><span className="text-xs text-muted-foreground">The new password works on the next sign-in, and every session they were already signed in from is signed out.</span></form></td></tr>}{nameFor?.id === user.id && <tr className="bg-muted/25"><td className="px-3 py-3" colSpan={5}><form onSubmit={(event) => void saveUserName(event, user)} className="flex flex-wrap items-end gap-x-3 gap-y-2"><label className={fieldLabelClass}>Staff member name<input required autoFocus name="fullName" minLength={2} maxLength={120} defaultValue={user.fullName} className={`${inputClass} ${fieldControlClass} min-w-[260px]`} placeholder="Full name"/></label><Button disabled={busy}>{busy ? "Saving…" : "Save name"}</Button><Button type="button" variant="ghost" disabled={busy} onClick={() => setNameFor(null)}>Cancel</Button><span className="text-xs text-muted-foreground">This updates the name shown for the staff account. Password access stays the same.</span></form></td></tr>}{confirmDelete?.id === user.id && <tr className="bg-danger/5"><td className="px-3 py-3" colSpan={5}><div className="flex flex-wrap items-center gap-x-3 gap-y-2"><p className="text-sm"><span className="font-semibold">{user.fullName}</span> <span className="text-muted-foreground">&lt;{user.email}&gt;</span> will be removed and can no longer sign in.</p><Button className="bg-danger hover:bg-danger/90" disabled={busy} onClick={() => void deleteUser(user)}>Delete account</Button><Button variant="ghost" disabled={busy} onClick={() => setConfirmDelete(null)}>Keep the account</Button><span className="text-xs text-muted-foreground">Only an account that never recorded a sale, purchase, payment, stock change or expense can be deleted — use Disable for anyone who already traded, so the paper trail keeps its author.</span></div></td></tr>}</Fragment>)}</tbody></table></div></div></Panel>}
     {canManageUsers && <Panel className="settings-panel" title="Role permissions" description="Tick what each role may do. The same codes are enforced server-side, so an un-ticked action is refused even if the screen hides it.">{roles.map((role) => { const granted = permissions.filter((permission) => roleHas(role, permission)).length; const dirty = roleDirty(role); return <fieldset key={role} className="mb-4 rounded-[16px] border border-border/80 bg-background/45 p-4 last:mb-0 sm:p-5"><legend className="px-1 text-sm font-semibold">{role.replaceAll("_", " ")}<span className="ml-2 text-xs font-normal tabular-nums text-muted-foreground">{granted} of {permissions.length} allowed</span></legend><div className="mb-1 flex gap-3 text-[11px] font-semibold"><button type="button" className="text-primary hover:underline" onClick={() => setRoleAll(role, permissions)}>Select all</button><button type="button" className="text-muted-foreground hover:underline" onClick={() => setRoleAll(role, [])}>Clear</button></div>{permissionGroups.map((group) => <div key={group.title} className="grid gap-x-4 gap-y-2 border-t border-border/60 py-2 first:border-0 sm:grid-cols-[76px_minmax(0,1fr)] lg:grid-cols-[76px_repeat(4,minmax(0,1fr))]"><span className="pt-0.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">{group.title}</span>{group.items.map(([code, label]) => <label key={code} title={code} className="flex items-center gap-2 text-xs"><input type="checkbox" checked={roleHas(role, code)} onChange={(e) => setRolePermissions((old) => e.target.checked ? [...old, { role, permission: code }] : old.filter((item) => !(item.role === role && item.permission === code)))} className="accent-primary"/>{label}</label>)}</div>)}<div className="mt-3 flex flex-wrap items-center justify-between gap-3"><p className={`text-[11px] ${dirty ? "font-semibold text-amber-strong" : "text-muted-foreground"}`}>{dirty ? "Unsaved changes for this role" : "Changes apply the moment you save."}</p><Button variant="outline" disabled={busy || !dirty} onClick={() => void saveRole(role)}>Save role permissions</Button></div></fieldset>; })}</Panel>}
+    {isOwner && (
+      <Panel
+        className="settings-panel border-primary/20 shadow-sm"
+        title="Database Backup & Restore"
+        description="One-click full snapshot of your database and verified data restoration. Compatible with serverless Vercel."
+      >
+        <div className="grid gap-6 lg:grid-cols-2">
+          {/* Download Box */}
+          <div className="flex flex-col justify-between rounded-[18px] border border-border/80 bg-background/50 p-5">
+            <div>
+              <div className="flex items-center gap-3">
+                <span className="grid size-10 place-items-center rounded-xl bg-primary/10 text-primary">
+                  <Download size={20} />
+                </span>
+                <div>
+                  <h3 className="font-semibold text-foreground">1-Click Full Backup</h3>
+                  <p className="text-xs text-muted-foreground">Download live database snapshot</p>
+                </div>
+              </div>
+              <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
+                Exports all products, sales, customers, suppliers, inventory batches, expenses, and settings compressed in-memory as a secure .json.gz file. No server disk required.
+              </p>
+              <div className="mt-4 rounded-xl border border-border/70 bg-muted/30 px-3.5 py-2.5 text-xs">
+                <span className="text-muted-foreground">Last Backup: </span>
+                <span className="font-medium text-foreground">
+                  {settings?.lastBackupAt ? new Date(settings.lastBackupAt).toLocaleString() : "Never backed up yet"}
+                </span>
+              </div>
+            </div>
+            <div className="mt-5 flex flex-wrap gap-2 border-t border-border/50 pt-4">
+              <Button
+                type="button"
+                disabled={downloadingBackup || busy}
+                onClick={() => void handleDownloadBackup("gzip")}
+                icon={<Download size={14} />}
+              >
+                {downloadingBackup ? "Generating backup…" : "Download Backup (.json.gz)"}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                disabled={downloadingBackup || busy}
+                onClick={() => void handleDownloadBackup("json")}
+              >
+                JSON Format
+              </Button>
+            </div>
+          </div>
+
+          {/* Restore Box */}
+          <div className="flex flex-col justify-between rounded-[18px] border border-danger/30 bg-danger/5 p-5">
+            <div>
+              <div className="flex items-center gap-3">
+                <span className="grid size-10 place-items-center rounded-xl bg-danger/10 text-danger">
+                  <AlertTriangle size={20} />
+                </span>
+                <div>
+                  <h3 className="font-semibold text-danger">Restore Database</h3>
+                  <p className="text-xs text-muted-foreground">Replace current database with backup file</p>
+                </div>
+              </div>
+
+              <div className="mt-3 rounded-xl border border-danger/25 bg-danger/10 p-3 text-xs leading-relaxed text-danger dark:text-danger-foreground">
+                <strong>⚠️ Critical Warning:</strong> Restoring will permanently overwrite all current database records with data from the backup file. Ensure you have a recent backup before proceeding and do not upload an incorrect file.
+              </div>
+
+              <form onSubmit={handleRestoreSubmit} className="mt-4 space-y-3">
+                <label className={fieldLabelClass}>
+                  Select Backup File (.json.gz or .json)
+                  <input
+                    type="file"
+                    accept=".json.gz,.gz,.json,application/gzip,application/json"
+                    onChange={handleFileSelect}
+                    disabled={restoreBusy}
+                    className="mt-1.5 block w-full text-xs text-muted-foreground file:mr-3 file:cursor-pointer file:rounded-lg file:border-0 file:bg-primary file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-primary-foreground hover:file:bg-primary/90"
+                  />
+                </label>
+
+                {restoreFile && (
+                  <div className="flex items-center gap-2 rounded-lg border border-primary/30 bg-primary/5 px-2.5 py-1.5 text-xs text-primary">
+                    <FileArchive size={14} className="shrink-0" />
+                    <span className="font-medium truncate">{restoreFile.name}</span>
+                    <span className="ml-auto shrink-0 text-[11px] text-muted-foreground">
+                      {(restoreFile.size / 1024).toFixed(1)} KB
+                    </span>
+                  </div>
+                )}
+
+                {restoreFileError && (
+                  <p className="text-xs font-medium text-danger">{restoreFileError}</p>
+                )}
+
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <label className={fieldLabelClass}>
+                    Owner Password
+                    <input
+                      type="password"
+                      required
+                      placeholder="Enter owner password"
+                      value={restorePassword}
+                      onChange={(e) => setRestorePassword(e.target.value)}
+                      disabled={restoreBusy}
+                      className={`${inputClass} ${fieldControlClass}`}
+                    />
+                  </label>
+
+                  <label className={fieldLabelClass}>
+                    Type "RESTORE" to confirm
+                    <input
+                      type="text"
+                      required
+                      placeholder="RESTORE"
+                      value={restoreConfirmText}
+                      onChange={(e) => setRestoreConfirmText(e.target.value)}
+                      disabled={restoreBusy}
+                      className={`${inputClass} ${fieldControlClass}`}
+                    />
+                  </label>
+                </div>
+
+                {restoreError && (
+                  <p className="rounded-lg border border-danger/30 bg-danger/10 p-2.5 text-xs font-medium text-danger">
+                    {restoreError}
+                  </p>
+                )}
+
+                {restoreSuccess && (
+                  <p className="flex items-center gap-2 rounded-lg border border-success/30 bg-success/10 p-2.5 text-xs font-medium text-success">
+                    <CheckCircle2 size={16} /> {restoreSuccess}
+                  </p>
+                )}
+
+                <div className="flex justify-end border-t border-danger/20 pt-3">
+                  <Button
+                    type="submit"
+                    disabled={
+                      restoreBusy ||
+                      !restoreFile ||
+                      !restorePassword ||
+                      restoreConfirmText.trim().toUpperCase() !== "RESTORE"
+                    }
+                    className="bg-danger text-white hover:bg-danger/90"
+                    icon={<RotateCcw size={14} />}
+                  >
+                    {restoreBusy ? "Restoring Database…" : "Execute Restore"}
+                  </Button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      </Panel>
+    )}
     <Panel className="settings-panel" title="Change password" description="Use at least 12 characters. Other active sessions will be revoked."><form onSubmit={changePassword} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3"><label className={fieldLabelClass}>Current password<input required name="currentPassword" type="password" className={`${inputClass} ${fieldControlClass}`} placeholder="Current password"/></label><label className={fieldLabelClass}>New password<input required name="newPassword" type="password" minLength={12} className={`${inputClass} ${fieldControlClass}`} placeholder="12+ characters"/></label><div className="flex items-end"><Button disabled={busy}>Update password</Button></div></form></Panel>
     {methodModalOpen && <div className="fixed inset-0 z-50 flex items-center justify-center p-4 print:hidden" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !busy) setMethodModalOpen(false); }}><button type="button" aria-label="Close add payment method dialog" className="absolute inset-0 bg-slate-950/45 backdrop-blur-sm" onClick={() => { if (!busy) setMethodModalOpen(false); }} /><section role="dialog" aria-modal="true" aria-labelledby="add-method-title" className="relative w-full max-w-[420px] overflow-hidden rounded-[22px] border border-line bg-card p-5 shadow-2xl shadow-slate-950/20 dark:shadow-none sm:p-6"><div aria-hidden="true" className="pointer-events-none absolute -right-16 -top-20 size-48 rounded-full bg-primary-soft/60 blur-3xl dark:bg-primary-soft/25" /><div className="relative z-10"><div className="flex items-start justify-between gap-3"><div className="flex items-center gap-3"><span className="grid size-10 place-items-center rounded-[13px] bg-primary-soft text-primary"><CreditCard size={18} /></span><div><p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-primary">Checkout setup</p><h2 id="add-method-title" className="mt-0.5 text-lg font-semibold text-foreground">Add payment method</h2></div></div><button type="button" aria-label="Close dialog" disabled={busy} onClick={() => setMethodModalOpen(false)} className="grid size-8 place-items-center rounded-[10px] text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-50"><X size={16} /></button></div><p className="mt-2 text-[13px] leading-5 text-muted-foreground">Add a method for sale, purchase and payment collection screens.</p><form onSubmit={addMethod} className="mt-5 grid gap-3"><label className={fieldLabelClass}>Method name<input name="name" required maxLength={80} className={`${inputClass} ${fieldControlClass}`} placeholder="e.g. Mobile payment" autoFocus /></label><label className={fieldLabelClass}>Unique code<input name="code" pattern="[a-z0-9-]+" required maxLength={40} className={`${inputClass} ${fieldControlClass}`} placeholder="e.g. mobile-money" /></label><label className={fieldLabelClass}>Method type<select name="kind" className={`${selectClass} ${fieldControlClass}`}><option value="CASH">Cash</option><option value="CARD">Card</option><option value="BANK_TRANSFER">Bank transfer</option><option value="MOBILE_PAYMENT">Mobile payment</option><option value="OTHER">Other</option></select></label>{methodError && <ErrorMessage>{methodError}</ErrorMessage>}<div className="mt-2 flex justify-end gap-2 border-t border-line pt-4"><Button type="button" variant="outline" className="h-10 px-3 text-[13px]" disabled={busy} onClick={() => setMethodModalOpen(false)}>Cancel</Button><Button type="submit" className="h-10 px-4 text-[13px]" disabled={busy} icon={<Plus size={14} />}>{busy ? "Adding…" : "Add method"}</Button></div></form></div></section></div>}
   </div>;

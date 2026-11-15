@@ -16,6 +16,7 @@ export interface ISettings {
   nextSaleNumber: number;
   nextPurchaseNumber: number;
   costingMethod: 'WEIGHTED_AVERAGE' | 'FIFO';
+  lastBackupAt?: Date | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -92,6 +93,10 @@ const SettingsSchema = new Schema<ISettings>(
       required: true,
       enum: ['WEIGHTED_AVERAGE', 'FIFO'],
       default: 'WEIGHTED_AVERAGE',
+    },
+    lastBackupAt: {
+      type: Date,
+      default: null,
     },
   },
   {

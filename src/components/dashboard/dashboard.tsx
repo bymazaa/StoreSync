@@ -2,13 +2,13 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
-import { Activity, ArrowRight, BarChart3, Boxes, CircleAlert, PackagePlus, Receipt, RefreshCw, ShoppingBag, TrendingUp, Wallet } from "lucide-react";
+import { Activity, ArrowRight, BarChart3, Boxes, CircleAlert, Database, PackagePlus, Receipt, RefreshCw, ShoppingBag, TrendingUp, Wallet, X } from "lucide-react";
 import { InventoryPanel } from "@/components/dashboard/inventory-panel";
 import { RecentActivity } from "@/components/dashboard/recent-activity";
 import { SalesChart } from "@/components/dashboard/sales-chart";
 import { StatCard } from "@/components/dashboard/stat-card";
 import { Surface } from "@/components/ui/surface";
-import { useCanViewProfit, useShopFormat, useShopPermissions } from "@/components/app/shop-context";
+import { useCanViewProfit, useShopFormat, useShopPermissions, useShopRole } from "@/components/app/shop-context";
 import { apiRequest } from "@/lib/client-api";
 
 type DashboardPayload = {
@@ -33,11 +33,35 @@ export function Dashboard() {
   const { locale, formatMoney, formatNumber, formatDate } = useShopFormat();
   const permissions = useShopPermissions();
   const hasProfitRole = useCanViewProfit();
+  const role = useShopRole();
+  const isOwner = role === "OWNER";
   const links = quickLinks.filter((link) => link.requires.some((permission) => permissions.includes(permission)));
   const [data, setData] = useState<DashboardPayload | null>(null);
   const [updatedAt, setUpdatedAt] = useState<Date | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
+  const [backupBannerDismissed, setBackupBannerDismissed] = useState(true);
+
+  useEffect(() => {
+    const today = new Date();
+    // 1st day of month check
+    if (today.getDate() === 1) {
+      const key = `dismiss_backup_reminder_${today.getFullYear()}_${today.getMonth() + 1}`;
+      const dismissed = typeof window !== "undefined" ? localStorage.getItem(key) : null;
+      if (!dismissed) {
+        setBackupBannerDismissed(false);
+      }
+    }
+  }, []);
+
+  const dismissBackupBanner = () => {
+    const today = new Date();
+    const key = `dismiss_backup_reminder_${today.getFullYear()}_${today.getMonth() + 1}`;
+    if (typeof window !== "undefined") {
+      localStorage.setItem(key, "true");
+    }
+    setBackupBannerDismissed(true);
+  };
 
   const canViewProfit = Boolean(hasProfitRole && (data ? data.today.profitEstimate !== null && data.canViewProfit !== false : true));
 
@@ -90,6 +114,48 @@ export function Dashboard() {
           <Link href="/sales" className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-primary px-4 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"><PackagePlus size={16} /> New sale</Link>
         </div>
       </div>
+
+      {isOwner && !backupBannerDismissed ? (
+        <aside aria-label="Monthly backup reminder" className="mt-5 relative overflow-hidden rounded-2xl border border-amber-500/35 bg-gradient-to-r from-amber-500/15 via-amber-500/10 to-transparent p-4 text-foreground shadow-sm">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-start gap-3">
+              <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-amber-500/20 text-amber-600 dark:text-amber-400">
+                <Database size={18} />
+              </span>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-sm font-semibold text-foreground">
+                    📅 Monthly Database Backup Reminder
+                  </h2>
+                  <span className="rounded-full bg-amber-500/20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-300">
+                    1st of Month
+                  </span>
+                </div>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  Today is the 1st of the month! Please download this month&apos;s database backup from Settings to keep all your store data, products, and sales secure.
+                </p>
+              </div>
+            </div>
+            <div className="flex shrink-0 items-center gap-2 self-end sm:self-center">
+              <Link
+                href="/settings"
+                className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-amber-600 px-3 text-xs font-semibold text-white shadow transition-colors hover:bg-amber-700"
+              >
+                <Database size={13} /> Download Backup
+              </Link>
+              <button
+                type="button"
+                onClick={dismissBackupBanner}
+                aria-label="Dismiss monthly backup reminder"
+                className="grid size-8 place-items-center rounded-lg text-muted-foreground transition-colors hover:bg-amber-500/10 hover:text-foreground"
+                title="Dismiss"
+              >
+                <X size={15} />
+              </button>
+            </div>
+          </div>
+        </aside>
+      ) : null}
 
       {error ? (
         <div role="alert" className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-danger/20 bg-danger/10 px-4 py-3 text-sm text-danger">
