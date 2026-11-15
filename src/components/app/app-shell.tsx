@@ -25,6 +25,7 @@ import {
 import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { ThemeToggle } from '@/components/theme-toggle';
+import { SnowfallToggle, SnowfallOverlay } from '@/components/ui/snow-effect';
 import { Button } from '@/components/ui/button';
 import { ErrorToastViewport } from '@/components/ui/error-toast';
 import { ShopProvider } from '@/components/app/shop-context';
@@ -406,6 +407,7 @@ export function AppShell({
                         </p>
                     </div>
                     <div className="flex items-center gap-2 sm:gap-3">
+                        <SnowfallToggle />
                         <ThemeToggle />
                         <span className="hidden h-8 w-px bg-line sm:block" />
                         <div className="relative">
@@ -560,6 +562,7 @@ export function AppShell({
                     </div>
                 </div>
             )}
+            <SnowfallOverlay />
         </div>
     );
 }

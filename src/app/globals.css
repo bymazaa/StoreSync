@@ -1108,39 +1108,37 @@
 }
 :root {
     color-scheme: light;
-    /* White app surface — depth comes from card borders and the sidebar shadow, not gray panels. */
-    --canvas: #ffffff;
-    --background: #ffffff;
-    --foreground: #1a1c1f;
-    --card: #ffffff;
-    --border: #ededed;
-    --line: #f0f0f0;
-    --shell-border: #e8ecf0;
-    /* A whisper of the brand teal, so the nav column reads as its own zone without going gray. */
-    --sidebar: #f8fafc;
-    --input: #f7f7f8;
-    --table-head: #f7f7f8;
-    --muted: #f1f1f3;
-    --muted-foreground: #6b6b6b;
-    --primary: #0a9f94;
-    --primary-foreground: #ffffff;
-    --primary-soft: #e0f5f2;
-    --ring: #1ba69b;
-    --success: #0e8a73;
-    --danger: #d45151;
-    --teal-soft: #e0f5f2;
-    --teal-strong: #07857c;
-    --blue-soft: #eaf1fb;
-    --blue-strong: #4b75ba;
-    --amber-soft: #fff3dc;
-    --amber-strong: #bd811e;
-    --violet-soft: #f0ebfb;
-    --violet-strong: #8264bd;
-    --chart-primary: #0a9f94;
-    --chart-secondary: #93a9cc;
-    --chart-grid: #e9efed;
-    --chart-label: #8b9794;
-    --tooltip-bg: #ffffff;
+    --canvas: #F8FAFC;
+    --background: #F8FAFC;
+    --foreground: #172B27;
+    --card: #FFFFFF;
+    --border: #E5ECE9;
+    --line: #EEF3F0;
+    --shell-border: #E5ECE9;
+    --sidebar: #F8FAFC;
+    --input: #FFFFFF;
+    --table-head: #F1F6F4;
+    --muted: #EDF4F1;
+    --muted-foreground: #5E7570;
+    --primary: #0A9F94;
+    --primary-foreground: #FFFFFF;
+    --primary-soft: #E0F5F2;
+    --ring: #0A9F94;
+    --success: #0A9F94;
+    --danger: #DE4343;
+    --teal-soft: #E0F5F2;
+    --teal-strong: #0A9F94;
+    --blue-soft: #EAF1FA;
+    --blue-strong: #2B6EA0;
+    --amber-soft: #FEF3C7;
+    --amber-strong: #B45309;
+    --violet-soft: #F2EBF9;
+    --violet-strong: #7C4FA6;
+    --chart-primary: #0A9F94;
+    --chart-secondary: #74A79E;
+    --chart-grid: #E5ECE9;
+    --chart-label: #5E7570;
+    --tooltip-bg: #FFFFFF;
     /* DM Sans is self-hosted at build; system fonts provide language glyph fallbacks. */
     --app-font-sans:
         var(--font-dm-sans), 'Noto Sans Bengali', ui-sans-serif, system-ui, 'Segoe UI', sans-serif;
@@ -1165,6 +1163,8 @@
     --color-primary: var(--primary);
     --color-primary-foreground: var(--primary-foreground);
     --color-primary-soft: var(--primary-soft);
+    --color-accent: var(--accent);
+    --color-accent-soft: var(--accent-soft);
     --color-ring: var(--ring);
     --color-success: var(--success);
     --color-danger: var(--danger);
@@ -1198,37 +1198,37 @@
 
 .dark {
     color-scheme: dark;
-    --canvas: #16181a;
-    --background: #16181a;
-    --foreground: #e8eaec;
-    --card: #1d1f21;
-    --border: #2e3032;
-    --line: #26282a;
-    --shell-border: #1e2227;
-    --sidebar: #121417;
-    --input: #222426;
-    --table-head: #212325;
-    --muted: #232527;
-    --muted-foreground: #9ea0a3;
-    --primary: #4fbbab;
-    --primary-foreground: #082a26;
-    --primary-soft: #183b35;
-    --ring: #4fbbab;
-    --success: #60c6a6;
-    --danger: #f17b79;
-    --teal-soft: #183b35;
-    --teal-strong: #70d2bf;
-    --blue-soft: #1d3047;
-    --blue-strong: #9bb7e5;
-    --amber-soft: #3d321e;
-    --amber-strong: #e9b658;
-    --violet-soft: #302742;
-    --violet-strong: #bca4ec;
-    --chart-primary: #55c8b4;
-    --chart-secondary: #839ac0;
-    --chart-grid: #2a3935;
-    --chart-label: #9aa9a4;
-    --tooltip-bg: #17211f;
+    --canvas: #0D1716;
+    --background: #0D1716;
+    --foreground: #E5EDE9;
+    --card: #142220;
+    --border: #1F3633;
+    --line: #182C29;
+    --shell-border: #1F3633;
+    --sidebar: #091211;
+    --input: #1A2F2C;
+    --table-head: #1A2F2C;
+    --muted: #1A312E;
+    --muted-foreground: #829D97;
+    --primary: #12B3A7;
+    --primary-foreground: #FFFFFF;
+    --primary-soft: #143B36;
+    --ring: #12B3A7;
+    --success: #12B3A7;
+    --danger: #F25C5C;
+    --teal-soft: #143B36;
+    --teal-strong: #12B3A7;
+    --blue-soft: #152B3C;
+    --blue-strong: #6BA8D9;
+    --amber-soft: #382408;
+    --amber-strong: #FBBF24;
+    --violet-soft: #2B173B;
+    --violet-strong: #B584E8;
+    --chart-primary: #12B3A7;
+    --chart-secondary: #829D97;
+    --chart-grid: #1F3633;
+    --chart-label: #829D97;
+    --tooltip-bg: #142220;
 }
 
 body {
