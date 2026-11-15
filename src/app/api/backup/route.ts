@@ -98,7 +98,7 @@ export async function GET(request: Request) {
       PurchaseReturnItem.find({}).lean(),
       StockMovement.find({}).lean(),
       Expense.find({}).lean(),
-      AuditLog.find({}).sort({ createdAt: -1 }).limit(1000).lean(),
+      AuditLog.find({}).sort({ createdAt: -1 }).lean(),
     ]);
 
     const backupPayload = {
