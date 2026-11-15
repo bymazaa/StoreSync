@@ -1,6 +1,31 @@
 @import 'tailwindcss';
 
 @media print {
+    :root,
+    .dark,
+    [data-theme='dark'] {
+        color-scheme: light !important;
+        --canvas: #ffffff !important;
+        --background: #ffffff !important;
+        --foreground: #172B27 !important;
+        --card: #ffffff !important;
+        --border: #DDE5E2 !important;
+        --line: #DDE5E2 !important;
+        --shell-border: #DDE5E2 !important;
+        --input: #ffffff !important;
+        --table-head: #F1F6F4 !important;
+        --muted: #F1F6F4 !important;
+        --muted-foreground: #4D615D !important;
+        --primary: #0A9F94 !important;
+        --primary-soft: #E0F5F2 !important;
+        --danger: #DC2626 !important;
+        --teal-soft: #E0F5F2 !important;
+        --teal-strong: #0A9F94 !important;
+        --blue-soft: #E6F0FA !important;
+        --blue-strong: #1E40AF !important;
+        --amber-soft: #FEF3C7 !important;
+        --amber-strong: #92400E !important;
+    }
     @page {
         size: A4;
         margin: 8mm;
@@ -340,6 +365,49 @@
         font-size: 8.2pt;
         line-height: 1.4;
     }
+    .receipt-mode .receipt-item-name,
+    .receipt-coupon-paper .receipt-item-name,
+    .receipt-mode .print-document .receipt-item-name {
+        font-size: 7pt !important;
+        line-height: 1.25 !important;
+        letter-spacing: 0.01em;
+    }
+    .receipt-mode th.receipt-th-item,
+    .receipt-coupon-paper th.receipt-th-item {
+        width: 48% !important;
+    }
+    .receipt-mode th.receipt-th-qty,
+    .receipt-coupon-paper th.receipt-th-qty {
+        width: 14% !important;
+    }
+    .receipt-mode th.receipt-th-rate,
+    .receipt-coupon-paper th.receipt-th-rate {
+        width: 18% !important;
+    }
+    .receipt-mode th.receipt-th-total,
+    .receipt-coupon-paper th.receipt-th-total {
+        width: 20% !important;
+    }
+    .receipt-mode .receipt-notes,
+    .receipt-coupon-paper .receipt-notes,
+    .receipt-mode .print-document .receipt-notes {
+        margin-top: 1.8mm !important;
+        padding-top: 1.4mm !important;
+        font-size: 6.8pt !important;
+    }
+    .receipt-mode .receipt-notes p:first-child,
+    .receipt-coupon-paper .receipt-notes p:first-child {
+        font-size: 6.8pt !important;
+        font-weight: 700 !important;
+    }
+    .receipt-mode .receipt-notes-val,
+    .receipt-coupon-paper .receipt-notes-val,
+    .receipt-mode .receipt-notes p:last-child,
+    .receipt-coupon-paper .receipt-notes p:last-child {
+        font-size: 6.2pt !important;
+        line-height: 1.25 !important;
+        color: #2b3b37 !important;
+    }
     .print-document thead {
         display: table-header-group;
     }
@@ -563,8 +631,14 @@
     .report-print td {
         padding: 1.7mm 2.2mm;
         line-height: 1.45;
-        color: #1a2a26;
+        color: #1a2a26 !important;
         vertical-align: middle;
+    }
+    .report-print td.text-danger {
+        color: #b91c1c !important;
+    }
+    .report-print td.text-amber-strong {
+        color: #92400e !important;
     }
     .report-print tbody tr:nth-child(even) td {
         background: #f7faf9 !important;
@@ -692,7 +766,7 @@
         gap: 6mm;
         margin-top: 3.5mm;
         padding: 2.5mm 4mm;
-        border: 0 !important;
+        border: 0.2mm solid #d5e2de !important;
         border-radius: 2mm;
         background: #f1f6f5 !important;
         print-color-adjust: exact;
@@ -745,26 +819,35 @@
         background: transparent !important;
     }
     .report-summary > div {
-        padding: 2.2mm 3mm !important;
+        padding: 2.6mm 3.2mm !important;
         margin: 0 !important;
-        border: 0 !important;
+        border: 0.25mm solid #cddcd7 !important;
         border-radius: 2mm !important;
-        background: #f6faf9 !important;
+        background: #f4f8f7 !important;
         print-color-adjust: exact;
         -webkit-print-color-adjust: exact;
+        box-shadow: none !important;
     }
+    .report-summary > div > div:first-child > p,
     .report-summary p:first-child {
-        font-size: 6.2pt;
-        font-weight: 700;
-        letter-spacing: 0.06em;
-        text-transform: uppercase;
-        color: #586965 !important;
+        font-size: 6.5pt !important;
+        font-weight: 700 !important;
+        letter-spacing: 0.05em !important;
+        text-transform: uppercase !important;
+        color: #405751 !important;
+        line-height: 1.3 !important;
     }
-    .report-summary p:last-child {
-        margin-top: 1.2mm !important;
-        font-size: 9.5pt;
-        font-weight: 700;
-        color: #0a4f47 !important;
+    .report-summary > div > p:nth-child(2),
+    .report-summary > div > p:nth-of-type(1),
+    .report-summary > div > p {
+        margin-top: 1.5mm !important;
+        font-size: 10.5pt !important;
+        font-weight: 800 !important;
+        color: #084841 !important;
+        line-height: 1.2 !important;
+    }
+    .report-summary > div > p.text-danger {
+        color: #b91c1c !important;
     }
     .report-footnote {
         display: flex;
@@ -950,12 +1033,30 @@
     print-color-adjust: exact;
     -webkit-print-color-adjust: exact;
 }
+.receipt-mode .print-document th.receipt-th-item {
+    width: 48% !important;
+}
+.receipt-mode .print-document th.receipt-th-qty {
+    width: 14% !important;
+}
+.receipt-mode .print-document th.receipt-th-rate {
+    width: 18% !important;
+}
+.receipt-mode .print-document th.receipt-th-total {
+    width: 20% !important;
+}
 .receipt-mode .print-document td {
     padding: 1.5mm 0.7mm !important;
     border: 0 !important;
     border-bottom: 0.12mm solid #e1e6e4 !important;
     vertical-align: top !important;
     overflow-wrap: anywhere;
+}
+.receipt-mode .print-document .receipt-item-name,
+.receipt-coupon-paper .receipt-item-name {
+    font-size: 0.85em !important;
+    line-height: 1.25 !important;
+    letter-spacing: 0.015em;
 }
 .receipt-mode .print-document tbody tr:last-child td {
     border-bottom: 0 !important;
@@ -975,6 +1076,22 @@
     border-top: 0.2mm solid #82908c !important;
     border-bottom: 0.2mm solid #82908c !important;
     letter-spacing: 0.02em !important;
+}
+.receipt-mode .print-document .receipt-notes {
+    margin-top: 2mm !important;
+    padding-top: 1.5mm !important;
+    font-size: 0.75em !important;
+    line-height: 1.25 !important;
+}
+.receipt-mode .print-document .receipt-notes p:first-child {
+    font-size: 0.75em !important;
+    font-weight: 700 !important;
+}
+.receipt-mode .print-document .receipt-notes p:last-child,
+.receipt-mode .print-document .receipt-notes-val {
+    font-size: 0.70em !important;
+    line-height: 1.25 !important;
+    color: #334440 !important;
 }
 .receipt-mode .print-document footer {
     margin-top: 2.5mm !important;

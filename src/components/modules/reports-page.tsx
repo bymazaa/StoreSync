@@ -360,16 +360,16 @@ export function ReportsPage() {
                                 ? 'bg-danger/10 text-danger'
                                 : summaryTones[key] ?? (money ? 'bg-teal-soft text-teal-strong' : 'bg-blue-soft text-blue-strong');
                             return (
-                                <div key={key} className="rounded-[16px] border border-line bg-card p-5 shadow-2xl shadow-gray-100 dark:shadow-none">
+                                <div key={key} className="rounded-[16px] border border-line bg-card p-5 shadow-2xl shadow-gray-100 dark:shadow-none print:border-[#cddcd7] print:bg-[#f4f8f7] print:p-2.5 print:shadow-none">
                                     <div className="flex items-start justify-between gap-4">
-                                        <p className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+                                        <p className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground print:text-[#405751]">
                                             {columnLabel(key)}
                                         </p>
                                         <span className={`grid size-9 shrink-0 place-items-center rounded-xl print:hidden ${tone}`}>
                                             <Icon size={17} strokeWidth={1.9} />
                                         </span>
                                     </div>
-                                    <p className={`mt-4 text-[clamp(1.5rem,2.2vw,2rem)] font-medium leading-none tracking-[-0.03em] tabular-nums [overflow-wrap:anywhere] ${negative ? 'text-danger' : 'text-foreground'}`}>
+                                    <p className={`mt-4 text-[clamp(1.5rem,2.2vw,2rem)] font-medium leading-none tracking-[-0.03em] tabular-nums [overflow-wrap:anywhere] print:mt-1.5 print:text-[11pt] print:font-bold ${negative ? 'text-danger print:text-[#b91c1c]' : 'text-foreground print:text-[#084841]'}`}>
                                         {shown}
                                     </p>
                                     <span className="mt-2 block text-[11px] text-muted-foreground print:hidden">

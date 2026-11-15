@@ -459,19 +459,40 @@ export function InvoiceView({ mode }: { mode: 'sale' | 'purchase' }) {
                     {/* Items table: clear headers, borderless look, comfortable spacing */}
                     <div className="receipt-items-wrap overflow-x-auto py-2">
                         <table className={`a4-invoice-table w-full min-w-[500px] text-left text-xs sm:min-w-0 sm:text-sm print:min-w-0 ${!receiptPrint ? 'a4-print-invoice-table' : ''} ${mode === 'sale' && !receiptPrint ? 'a4-sales-invoice-table' : ''}`}>
+                            {receiptPrint && (
+                                <colgroup>
+                                    {completedReturns.length > 0 ? (
+                                        <>
+                                            <col style={{ width: '36%' }} />
+                                            <col style={{ width: '11%' }} />
+                                            <col style={{ width: '11%' }} />
+                                            <col style={{ width: '11%' }} />
+                                            <col style={{ width: '14%' }} />
+                                            <col style={{ width: '17%' }} />
+                                        </>
+                                    ) : (
+                                        <>
+                                            <col style={{ width: '48%' }} />
+                                            <col style={{ width: '14%' }} />
+                                            <col style={{ width: '18%' }} />
+                                            <col style={{ width: '20%' }} />
+                                        </>
+                                    )}
+                                </colgroup>
+                            )}
                             <thead>
                                 <tr className="border-b border-border/80 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
                                     {!receiptPrint && <th className="py-2.5 px-2 w-[24mm]">SKU</th>}
-                                    <th className="py-2.5 px-2">Item</th>
-                                    <th className="py-2.5 px-2 text-right">Qty</th>
+                                    <th className={`py-2.5 px-2 ${receiptPrint ? 'receipt-th-item' : ''}`}>Item</th>
+                                    <th className={`py-2.5 px-2 text-right ${receiptPrint ? 'receipt-th-qty' : ''}`}>Qty</th>
                                     {completedReturns.length > 0 && (
                                         <>
                                             <th className="py-2.5 px-2 text-right">Ret</th>
                                             <th className="py-2.5 px-2 text-right">Net</th>
                                         </>
                                     )}
-                                    <th className="py-2.5 px-2 text-right">Rate</th>
-                                    <th className="py-2.5 px-2 text-right">Total</th>
+                                    <th className={`py-2.5 px-2 text-right ${receiptPrint ? 'receipt-th-rate' : ''}`}>Rate</th>
+                                    <th className={`py-2.5 px-2 text-right ${receiptPrint ? 'receipt-th-total' : ''}`}>Total</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-border/40">
@@ -479,7 +500,7 @@ export function InvoiceView({ mode }: { mode: 'sale' | 'purchase' }) {
                                     <tr key={item.id} className="align-top">
                                         {!receiptPrint && <td className="break-words py-2.5 px-2 text-muted-foreground text-xs">{item.skuSnapshot}</td>}
                                         <td className="py-2.5 px-2">
-                                            <p className={`font-medium text-foreground ${receiptPrint ? 'uppercase' : ''}`}>
+                                            <p className={`receipt-item-name font-medium text-foreground ${receiptPrint ? 'uppercase text-[11px] leading-tight sm:text-xs' : ''}`}>
                                                 {item.productName}
                                             </p>
                                             {!receiptPrint && item.batchNumber && <p className="receipt-item-meta text-[11px] text-muted-foreground">
@@ -610,9 +631,9 @@ export function InvoiceView({ mode }: { mode: 'sale' | 'purchase' }) {
 
                     {/* Notes */}
                     {invoice.notes && (
-                        <div className="mt-4 border-t border-border/60 pt-3 text-xs text-muted-foreground">
-                            <p className="font-semibold text-foreground">Note:</p>
-                            <p className="mt-0.5 leading-relaxed">{invoice.notes}</p>
+                        <div className={`receipt-notes border-t border-border/60 text-muted-foreground ${receiptPrint ? 'mt-2.5 pt-2 text-[10px] leading-snug' : 'mt-4 pt-3 text-xs'}`}>
+                            <p className={`font-semibold text-foreground ${receiptPrint ? 'text-[10px]' : ''}`}>Note:</p>
+                            <p className={`mt-0.5 leading-relaxed ${receiptPrint ? 'receipt-notes-val text-[9.5px] leading-tight text-foreground/80' : ''}`}>{invoice.notes}</p>
                         </div>
                     )}
 
