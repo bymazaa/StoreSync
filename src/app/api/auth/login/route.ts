@@ -34,8 +34,7 @@ export async function POST(request: Request) {
     const parsed = loginSchema.safeParse(body);
     if (!parsed.success) return invalidBody(parsed.error.issues);
 
-    // Only trust the proxy-sanitized single IP header; never parse a client-controlled forwarding chain.
-    const ipAddress = request.headers.get('x-real-ip')?.trim().slice(0, 64) || 'unknown';
+    const ipAddress = getClientIp(request);
     const retryAfter = await loginRetryAfterSeconds(parsed.data.email, ipAddress);
     if (retryAfter > 0) {
         const response = apiError(
@@ -100,7 +99,7 @@ export async function POST(request: Request) {
         tokenHash: hashRefreshToken(refreshToken),
         expiresAt,
         userAgent: request.headers.get('user-agent')?.slice(0, 500),
-        ipAddress: request.headers.get('x-real-ip')?.trim().slice(0, 64) || null,
+        ipAddress: clientIp === 'unknown' ? null : clientIp,
     });
 
     const accessToken = await createAccessToken({ 

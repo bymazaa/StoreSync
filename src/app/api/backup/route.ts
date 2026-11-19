@@ -3,6 +3,7 @@ import zlib from "zlib";
 import connectDB from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/session";
 import { UserRole } from "@/types";
+import { getClientIp } from "@/lib/auth/login-history";
 import {
   Settings,
   User,
@@ -166,7 +167,8 @@ export async function GET(request: Request) {
     await Settings.findByIdAndUpdate("shop", { lastBackupAt: now });
 
     // Log the backup action
-    const ipAddress = request.headers.get("x-real-ip")?.trim().slice(0, 64) || null;
+    const clientIp = getClientIp(request);
+    const ipAddress = clientIp === "unknown" ? null : clientIp;
     await AuditLog.create({
       actorId: user.id,
       action: "BACKUP_DOWNLOADED",

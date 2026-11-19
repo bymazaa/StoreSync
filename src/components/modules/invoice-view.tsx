@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { DateField } from '@/components/ui/date-field';
 import { useHasPermission, useShopFormat } from '@/components/app/shop-context';
 import { usesWholeQuantity } from '@/lib/quantity';
-import { Scissors } from 'lucide-react';
+import { ClipboardList, CreditCard, Scissors, UserRound } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 
 function formatQuantity(value: number | string) {
@@ -356,7 +356,7 @@ export function InvoiceView({ mode }: { mode: 'sale' | 'purchase' }) {
             <Panel className="invoice-panel overflow-hidden">
                 <div className={`print-document invoice-paper mx-auto w-full min-w-0 max-w-4xl break-words px-4 py-6 sm:px-8 sm:py-8 print:px-0 print:py-0 ${receiptPrint ? 'receipt-coupon-paper' : ''}`}>
                     {/* Header: Brand details + Invoice title */}
-                    <header className="invoice-brand-header pb-4 sm:pb-5">
+                    <header className="invoice-brand-header invoice-editorial-header pb-4 sm:pb-5">
                         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                             <div className="flex items-start gap-3.5">
                                 {shop?.logoUrl ? (
@@ -389,17 +389,15 @@ export function InvoiceView({ mode }: { mode: 'sale' | 'purchase' }) {
                                 <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
                                     {mode === 'sale' ? (receiptPrint ? 'Sales Receipt' : 'Sales Invoice') : 'Purchase Invoice'}
                                 </p>
-                                {receiptPrint && (
-                                    <p className="receipt-doc-no mt-1 text-base font-bold tabular-nums text-foreground sm:text-xl">
-                                        {invoice.invoiceNumber}
-                                    </p>
-                                )}
-                                {mode === 'purchase' && receiptPrint && invoice.supplierInvoiceNumber && (
+                                <p className="receipt-doc-no mt-1 text-base font-bold tabular-nums text-foreground sm:text-xl">
+                                    #{invoice.invoiceNumber}
+                                </p>
+                                {mode === 'purchase' && invoice.supplierInvoiceNumber && (
                                     <p className="mt-0.5 text-xs text-muted-foreground">
                                         Supplier Ref: {invoice.supplierInvoiceNumber}
                                     </p>
                                 )}
-                                <p className="mt-0.5 text-xs text-muted-foreground">
+                                <p className="invoice-date mt-0.5 text-xs text-muted-foreground">
                                     Date: {date ? formatDateTime(date) : ''}
                                 </p>
                             </div>
@@ -408,9 +406,10 @@ export function InvoiceView({ mode }: { mode: 'sale' | 'purchase' }) {
 
                     {/* Party information: clean 2-column without boxed backgrounds */}
                     <section className="receipt-party-section py-4 sm:py-5 border-t border-b border-border/70">
-                        <div className="grid grid-cols-2 gap-4 sm:gap-8">
-                            <div className="min-w-0">
-                                <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                        <div className="invoice-party-grid grid grid-cols-2 gap-4 sm:gap-8">
+                            <div className="invoice-party-cell min-w-0">
+                                <p className="invoice-section-label text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                                    <UserRound size={13} aria-hidden="true" />
                                     {mode === 'sale' ? 'Bill To' : 'Supplier'}
                                 </p>
                                 <p className="receipt-party-name mt-1 text-sm font-semibold capitalize text-foreground sm:text-base">
@@ -428,21 +427,10 @@ export function InvoiceView({ mode }: { mode: 'sale' | 'purchase' }) {
                                 )}
                             </div>
 
-                            <div className="min-w-0 text-right">
-                                {!receiptPrint && (
-                                    <div className="invoice-payment-reference a4-invoice-reference mb-3">
-                                        <p className="receipt-doc-no text-sm font-bold tabular-nums text-foreground">
-                                            {invoice.invoiceNumber}
-                                        </p>
-                                        {mode === 'purchase' && invoice.supplierInvoiceNumber && (
-                                            <p className="mt-0.5 text-xs text-muted-foreground">
-                                                Supplier Ref: {invoice.supplierInvoiceNumber}
-                                            </p>
-                                        )}
-                                    </div>
-                                )}
+                            <div className="invoice-party-cell invoice-payment-cell min-w-0 text-right">
                                 <div className="payment-status-content">
-                                    <p className="payment-status-label text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                                    <p className="invoice-section-label payment-status-label text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                                        <CreditCard size={13} aria-hidden="true" />
                                         Payment Status
                                     </p>
                                     <p className={`payment-status-value mt-1 text-sm font-bold sm:text-base ${isPaid ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'}`}>
@@ -452,6 +440,19 @@ export function InvoiceView({ mode }: { mode: 'sale' | 'purchase' }) {
                                         {isPaid ? 'Amount Settled' : `${formatMoney(invoice.dueAmount)} due`}
                                     </p>
                                 </div>
+                            </div>
+                            <div className="invoice-party-cell invoice-order-cell hidden min-w-0 text-right">
+                                <p className="invoice-section-label text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                                    <ClipboardList size={13} aria-hidden="true" />Order info
+                                </p>
+                                <p className="invoice-order-status mt-1 text-sm font-semibold capitalize text-foreground">
+                                    {invoice.status.replaceAll('_', ' ').toLowerCase()}
+                                </p>
+                                {invoice.payments.length > 0 && (
+                                    <p className="mt-0.5 text-xs text-muted-foreground">
+                                        Paid via {invoice.payments[invoice.payments.length - 1].method.name}
+                                    </p>
+                                )}
                             </div>
                         </div>
                     </section>
@@ -543,6 +544,7 @@ export function InvoiceView({ mode }: { mode: 'sale' | 'purchase' }) {
                     </div>
 
                     {/* Summary & Totals: clean aligned figures, no box */}
+                    <div className="invoice-settlement-grid">
                     <section className="receipt-totals ml-auto mt-4 w-full max-w-xs space-y-1.5 text-xs sm:text-sm border-t border-border/80 pt-3">
                         <div className="flex justify-between">
                             <span className="text-muted-foreground">Subtotal</span>
@@ -579,6 +581,32 @@ export function InvoiceView({ mode }: { mode: 'sale' | 'purchase' }) {
                         </div>
                     </section>
 
+                    {/* Payment details sit beside totals on A4 and stack on thermal paper. */}
+                    {invoice.payments.length > 0 && (
+                        <section className="receipt-payment-history mt-5 border-t border-border/70 pt-3 text-xs">
+                            <p className="font-bold uppercase tracking-wider text-muted-foreground text-[10px]">
+                                Payment History
+                            </p>
+                            <div className="mt-1.5 divide-y divide-border/30">
+                                {invoice.payments.map((payment, index) => (
+                                    <div
+                                        key={`${payment.paidAt}-${index}`}
+                                        className="receipt-payment-row flex items-center justify-between py-1.5 text-muted-foreground"
+                                    >
+                                        <span>
+                                            {payment.method.name} · {formatDate(payment.paidAt)}
+                                            {payment.reference ? ` (${payment.reference})` : ''}
+                                        </span>
+                                        <span className="font-medium text-foreground tabular-nums">
+                                            {formatMoney(Math.abs(Number(payment.amount)))}
+                                        </span>
+                                    </div>
+                                ))}
+                            </div>
+                        </section>
+                    )}
+                    </div>
+
                     {/* Returns summary (if any) */}
                     {completedReturns.length > 0 && (
                         <section className="receipt-return-summary mt-6 border-t border-border/80 pt-4 text-xs">
@@ -598,31 +626,6 @@ export function InvoiceView({ mode }: { mode: 'sale' | 'purchase' }) {
                                             <p className="font-medium tabular-nums">{formatMoney(returned.total)}</p>
                                             <p className="text-[11px] text-muted-foreground">{formatDateTime(returned.returnedAt)}</p>
                                         </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </section>
-                    )}
-
-                    {/* Payment methods history */}
-                    {invoice.payments.length > 0 && (
-                        <section className="receipt-payment-history mt-5 border-t border-border/70 pt-3 text-xs">
-                            <p className="font-bold uppercase tracking-wider text-muted-foreground text-[10px]">
-                                Payment History
-                            </p>
-                            <div className="mt-1.5 divide-y divide-border/30">
-                                {invoice.payments.map((payment, index) => (
-                                    <div
-                                        key={`${payment.paidAt}-${index}`}
-                                        className="receipt-payment-row flex items-center justify-between py-1.5 text-muted-foreground"
-                                    >
-                                        <span>
-                                            {payment.method.name} · {formatDate(payment.paidAt)}
-                                            {payment.reference ? ` (${payment.reference})` : ''}
-                                        </span>
-                                        <span className="font-medium text-foreground tabular-nums">
-                                            {formatMoney(Math.abs(Number(payment.amount)))}
-                                        </span>
                                     </div>
                                 ))}
                             </div>

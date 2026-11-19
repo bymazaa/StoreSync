@@ -3,6 +3,7 @@ import { Permission } from '@/types';
 import { authorizedAny } from '@/lib/auth/api-guard';
 import connectDB from '@/lib/db';
 import { Settings } from '@/models';
+import { getClientIp } from '@/lib/auth/login-history';
 
 function isPrivateIp(ip: string): boolean {
     if (!ip || ip === '::1' || ip === '127.0.0.1' || ip === 'localhost') return true;
@@ -18,22 +19,35 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     let ip = searchParams.get('ip')?.trim() || '';
 
-    // If no IP is given, grab client IP from request headers
-    if (!ip) {
-        const forwarded = request.headers.get('x-forwarded-for');
-        if (forwarded) ip = forwarded.split(',')[0].trim();
-        if (!ip) ip = request.headers.get('x-real-ip')?.trim() || '';
-        if (!ip) ip = request.headers.get('cf-connecting-ip')?.trim() || '127.0.0.1';
-    }
+    // Forwarded IPs are trusted only when the deployment explicitly enables
+    // them and its reverse proxy overwrites the incoming forwarding headers.
+    if (!ip) ip = getClientIp(request);
 
     await connectDB();
     const settings = await Settings.findById('shop').select('timezone countryCode').lean();
     const defaultTimezone = settings?.timezone ?? 'Asia/Dhaka';
     const defaultCountry = settings?.countryCode ?? 'BD';
 
+    if (ip === 'unknown') {
+        return NextResponse.json({
+            ip: '',
+            isLocal: false,
+            type: 'Unknown',
+            network: 'Client IP unavailable',
+            isp: 'Unknown',
+            city: 'Unknown Location',
+            region: 'Unknown',
+            country: 'Unknown',
+            countryCode: '',
+            timezone: defaultTimezone,
+            latitude: null,
+            longitude: null,
+        });
+    }
+
     if (isPrivateIp(ip)) {
         return NextResponse.json({
-            ip: ip || '127.0.0.1',
+            ip,
             isLocal: true,
             type: ip.includes(':') ? 'IPv6' : 'IPv4',
             network: 'Local Store Network (LAN / POS Terminal)',

@@ -5,14 +5,16 @@ import type { UserRole } from "@/types";
 export const ACCESS_COOKIE = "stockpilot_access";
 export const REFRESH_COOKIE = "stockpilot_refresh";
 export const ACCESS_TTL_SECONDS = 15 * 60;
-export const SESSION_REFRESH_DAYS=30;
-/** A shop device keeps its sign-in for this many days; SESSION_REFRESH_DAYS in .env overrides it (1–180, default 30). */
-function refreshDays() {
-  const configured = Number(SESSION_REFRESH_DAYS);
-  return Number.isFinite(configured) && configured >= 1 && configured <= 180 ? Math.trunc(configured) : 30;
-}
+const DEFAULT_SESSION_REFRESH_DAYS = 30;
+const configuredRefreshDays = Number(process.env.SESSION_REFRESH_DAYS ?? DEFAULT_SESSION_REFRESH_DAYS);
+/** A shop device stays signed in for 1–180 days; defaults to 30. */
+export const SESSION_REFRESH_DAYS = Number.isFinite(configuredRefreshDays)
+  && configuredRefreshDays >= 1
+  && configuredRefreshDays <= 180
+  ? Math.trunc(configuredRefreshDays)
+  : DEFAULT_SESSION_REFRESH_DAYS;
 
-export const REFRESH_TTL_SECONDS = refreshDays() * 24 * 60 * 60;
+export const REFRESH_TTL_SECONDS = SESSION_REFRESH_DAYS * 24 * 60 * 60;
 
 function secretBytes(name: "JWT_ACCESS_SECRET" | "JWT_REFRESH_SECRET") {
   const secret = process.env[name];

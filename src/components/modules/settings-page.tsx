@@ -203,9 +203,9 @@ export function SettingsPage() {
       return;
     }
 
-    if (file.size > 60 * 1024 * 1024) {
+    if (file.size > 4_000_000) {
       setRestoreFile(null);
-      setRestoreFileError("File is too large! Maximum allowed backup size is 60MB.");
+      setRestoreFileError("File is too large for Vercel restore. Maximum backup file size is 4 MB.");
       e.target.value = "";
       return;
     }
@@ -522,6 +522,7 @@ export function SettingsPage() {
               <form onSubmit={handleRestoreSubmit} className="mt-4 space-y-3">
                 <label className={fieldLabelClass}>
                   Select Backup File (.json.gz or .json)
+                  <span className="mt-1 block text-[11px] font-normal text-muted-foreground">Vercel restore limit: 4 MB per backup file. Larger backup support needs direct object storage.</span>
                   <input
                     type="file"
                     accept=".json.gz,.gz,.json,application/gzip,application/json"

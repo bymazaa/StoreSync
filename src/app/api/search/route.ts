@@ -9,6 +9,20 @@ type Group = { key: string; label: string; items: Suggestion[] };
 
 const LIMIT = 5;
 
+function escapeRegex(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function baseUnitSymbol(value: unknown) {
+  if (!value || typeof value !== "object" || !("symbol" in value)) return "";
+  return typeof value.symbol === "string" ? value.symbol : "";
+}
+
+function populatedName(value: unknown, fallback: string) {
+  if (!value || typeof value !== "object" || !("name" in value)) return fallback;
+  return typeof value.name === "string" ? value.name : fallback;
+}
+
 export async function GET(request: Request) {
   await connectDB();
   const user = await getCurrentUser();
@@ -16,6 +30,7 @@ export async function GET(request: Request) {
   
   const query = new URL(request.url).searchParams.get("q")?.trim().slice(0, 60) ?? "";
   if (query.length < 2) return NextResponse.json({ groups: [] });
+  const literalQuery = escapeRegex(query);
 
   const permissions = new Set(user.rolePermissions.map((entry) => entry.permission));
   const has = (...needed: Permission[]) => needed.some((permission) => permissions.has(permission));
@@ -26,41 +41,30 @@ export async function GET(request: Request) {
     ? Product.find({ 
         isActive: true, 
         $or: [
-          { name: { $regex: query, $options: 'i' } }, 
-          { sku: { $regex: query, $options: 'i' } }, 
-          { barcode: { $regex: query, $options: 'i' } }
+          { name: { $regex: literalQuery, $options: 'i' } },
+          { sku: { $regex: literalQuery, $options: 'i' } },
+          { barcode: { $regex: literalQuery, $options: 'i' } }
         ] 
       })
+      .populate('baseUnitId', 'symbol')
       .sort({ name: 1 })
       .limit(LIMIT)
       .lean()
-      .then(async (rows) => {
-        // Fetch base units for each product
-        const productsWithUnits = await Promise.all(
-          rows.map(async (row) => {
-            const product = await import('@/models').then(m => 
-              m.Product.findById(row._id).populate('baseUnitId', 'symbol').lean()
-            );
-            return { row, unitSymbol: product?.baseUnitId?.symbol || '' };
-          })
-        );
-        
-        return productsWithUnits.map(({ row, unitSymbol }) => ({
+      .then((rows) => rows.map((row) => ({
           type: "product",
           id: row._id,
           title: row.name,
-          subtitle: `${row.sku} · ${row.stockOnHand} ${unitSymbol} in stock`,
+          subtitle: `${row.sku} · ${row.stockOnHand} ${baseUnitSymbol(row.baseUnitId)} in stock`,
           href: `/products?q=${encodeURIComponent(row.sku)}`,
-        }));
-      })
+      })))
     : Promise.resolve([]);
 
   const customerQuery: Promise<Suggestion[]> = has(Permission.CREATE_SALES)
     ? Customer.find({ 
         $or: [
-          { name: { $regex: query, $options: 'i' } }, 
-          { phoneE164: { $regex: query } }, 
-          { email: { $regex: query, $options: 'i' } }
+          { name: { $regex: literalQuery, $options: 'i' } },
+          { phoneE164: { $regex: literalQuery } },
+          { email: { $regex: literalQuery, $options: 'i' } }
         ] 
       })
       .sort({ name: 1 })
@@ -78,9 +82,9 @@ export async function GET(request: Request) {
   const supplierQuery: Promise<Suggestion[]> = has(Permission.CREATE_PURCHASES)
     ? Supplier.find({ 
         $or: [
-          { name: { $regex: query, $options: 'i' } }, 
-          { phoneE164: { $regex: query } }, 
-          { email: { $regex: query, $options: 'i' } }
+          { name: { $regex: literalQuery, $options: 'i' } },
+          { phoneE164: { $regex: literalQuery } },
+          { email: { $regex: literalQuery, $options: 'i' } }
         ] 
       })
       .sort({ name: 1 })
@@ -98,7 +102,7 @@ export async function GET(request: Request) {
   const saleQuery: Promise<Suggestion[]> = has(Permission.VIEW_REPORTS, Permission.CREATE_SALES)
     ? Sale.find({ 
         $or: [
-          { invoiceNumber: { $regex: query, $options: 'i' } },
+          { invoiceNumber: { $regex: literalQuery, $options: 'i' } },
         ] 
       })
       .populate('customerId', 'name')
@@ -109,7 +113,7 @@ export async function GET(request: Request) {
         type: "sale",
         id: row._id,
         title: row.invoiceNumber,
-        subtitle: (row.customerId as any)?.name ?? "Walk-in",
+        subtitle: populatedName(row.customerId, "Walk-in"),
         amount: String(row.total),
         href: `/sales/${row._id}`,
       })))
@@ -118,7 +122,7 @@ export async function GET(request: Request) {
   const purchaseQuery: Promise<Suggestion[]> = has(Permission.VIEW_REPORTS, Permission.CREATE_PURCHASES)
     ? Purchase.find({ 
         $or: [
-          { invoiceNumber: { $regex: query, $options: 'i' } },
+          { invoiceNumber: { $regex: literalQuery, $options: 'i' } },
         ] 
       })
       .populate('supplierId', 'name')
@@ -129,7 +133,7 @@ export async function GET(request: Request) {
         type: "purchase",
         id: row._id,
         title: row.invoiceNumber,
-        subtitle: (row.supplierId as any)?.name ?? "Supplier",
+        subtitle: populatedName(row.supplierId, "Supplier"),
         amount: String(row.total),
         href: `/purchases/${row._id}`,
       })))

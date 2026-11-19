@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import connectDB from "@/lib/db";
 import { RefreshSession } from "@/models";
 import { apiError } from "@/lib/http/api-response";
+import { getClientIp } from "@/lib/auth/login-history";
 import { assertSameOrigin, clearAuthCookies, setAuthCookies } from "@/lib/auth/cookies";
 import {
   createAccessToken,
@@ -47,13 +48,14 @@ export async function POST(request: Request) {
   }
   
   // Create new refresh session
+  const clientIp = getClientIp(request);
   await RefreshSession.create({
     _id: crypto.randomUUID(),
     userId: user._id,
     tokenHash: hashRefreshToken(nextRefreshToken),
     expiresAt: nextExpiresAt,
     userAgent: request.headers.get("user-agent")?.slice(0, 500),
-    ipAddress: request.headers.get("x-real-ip")?.trim().slice(0, 64) || null,
+    ipAddress: clientIp === "unknown" ? null : clientIp,
   });
   
   const accessToken = await createAccessToken({ 

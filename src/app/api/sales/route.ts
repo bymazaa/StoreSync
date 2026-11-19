@@ -135,10 +135,13 @@ export async function POST(request: Request) {
   const parsed = saleSchema.safeParse(body);
   if (!parsed.success) return invalidBody(parsed.error.issues);
   const input = parsed.data;
+  const canAdjustPrices = guard.user.rolePermissions.some(
+    (entry) => entry.permission === Permission.APPLY_DISCOUNTS,
+  );
   
   // Check discount permission
   if (input.discountType && input.discountValue && parseDecimalString(input.discountValue) > 0
-      && !guard.user.rolePermissions.some((entry) => entry.permission === Permission.APPLY_DISCOUNTS)) {
+      && !canAdjustPrices) {
     return apiError(403, "FORBIDDEN", "You do not have permission to apply discounts.");
   }
 
@@ -200,7 +203,15 @@ export async function POST(request: Request) {
       const sellingPriceNum = toNumber(product.sellingPrice);
       const purchasePriceNum = toNumber(product.purchasePrice);
       const overridePrice = line.unitPrice !== undefined ? parseDecimalString(line.unitPrice) : null;
-      const unitPrice = overridePrice !== null ? overridePrice : parseFloat((sellingPriceNum * conversion).toFixed(4));
+      const configuredUnitPrice = parseFloat((sellingPriceNum * conversion).toFixed(4));
+      if (
+        overridePrice !== null
+        && overridePrice.toFixed(8) !== configuredUnitPrice.toFixed(8)
+        && !canAdjustPrices
+      ) {
+        throw new SaleInputError("You do not have permission to change product prices.");
+      }
+      const unitPrice = overridePrice ?? configuredUnitPrice;
       const lineTotal = money(unitPrice * quantity);
       subtotal += lineTotal;
       
