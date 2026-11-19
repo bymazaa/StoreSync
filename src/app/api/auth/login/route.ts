@@ -17,6 +17,7 @@ import {
     hashRefreshToken,
     REFRESH_TTL_SECONDS,
 } from '@/lib/auth/tokens';
+import { getClientIp, getClientLocation, parseUserAgent } from '@/lib/auth/login-history';
 
 import { loginSchema } from '@/lib/validation/api';
 
@@ -62,6 +63,34 @@ export async function POST(request: Request) {
         return apiError(401, 'UNAUTHENTICATED', 'Email or password is incorrect.');
     }
     await clearLoginFailures(parsed.data.email, ipAddress);
+
+    const clientIp = getClientIp(request);
+    const userAgent = request.headers.get('user-agent')?.slice(0, 500) || '';
+    const device = parseUserAgent(userAgent);
+    const location = getClientLocation(request, clientIp);
+    const loginTime = new Date();
+
+    const historyRecord = {
+      _id: randomUUID(),
+      timestamp: loginTime,
+      ip: clientIp,
+      device,
+      location,
+      userAgent,
+    };
+
+    await User.updateOne(
+      { _id: user._id },
+      {
+        $set: { lastLoginAt: loginTime },
+        $push: {
+          loginHistory: {
+            $each: [historyRecord],
+            $slice: -5,
+          },
+        },
+      }
+    );
 
     const refreshToken = createRefreshToken();
     const expiresAt = new Date(Date.now() + REFRESH_TTL_SECONDS * 1000);

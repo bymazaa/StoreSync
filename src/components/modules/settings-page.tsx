@@ -2,7 +2,7 @@
 
 import { FormEvent, Fragment, useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { AlertTriangle, CheckCircle2, CreditCard, Database, Download, FileArchive, Plus, RotateCcw, X } from "lucide-react";
+import { AlertTriangle, Check, CheckCircle2, ChevronDown, ChevronUp, Copy, CreditCard, Database, Download, FileArchive, Globe, History, Laptop, MapPin, Plus, RotateCcw, Trash2, X } from "lucide-react";
 import { apiRequest, jsonBody } from "@/lib/client-api";
 import { Button } from "@/components/ui/button";
 import { ErrorMessage, inputClass, Notice, PageHeader, Panel, selectClass } from "@/components/ui/page";
@@ -13,7 +13,8 @@ import { countryOptions, currencyForCountry, currencyOptions } from "@/lib/count
 
 type Settings = { shopName: string; logoUrl: string | null; address: string | null; phone: string | null; countryCode: string; currencyCode: string; locale: string; timezone: string; saleInvoicePrefix: string; purchaseInvoicePrefix: string; costingMethod: string; lastBackupAt?: string | null };
 type Method = { id: string; code: string; name: string; kind: string; isEnabled: boolean; sortOrder: number };
-type User = { id: string; fullName: string; email: string; role: string; isActive: boolean };
+type LoginHistoryItem = { id?: string; _id?: string; timestamp: string | Date; ip: string; device: string; location?: string; userAgent?: string };
+type User = { id: string; fullName: string; email: string; role: string; isActive: boolean; lastLoginAt?: string | Date | null; loginHistory?: LoginHistoryItem[] };
 // Every code the API actually guards (src/models/RolePermission.ts) — a permission missing here cannot be granted to a role.
 const permissionGroups: { title: string; items: [string, string][] }[] = [
   { title: "Counter", items: [["CREATE_SALES", "New sale / POS"], ["COLLECT_PAYMENTS", "Payments and due collection"], ["PROCESS_RETURNS", "Returns and invoice cancel"], ["APPLY_DISCOUNTS", "Discount on invoice"]] },
@@ -24,6 +25,46 @@ const permissions = permissionGroups.flatMap((group) => group.items.map(([code])
 const roles = ["MANAGER", "CASHIER", "STOCK_CLERK"] as const;
 const fieldLabelClass = "text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground";
 const fieldControlClass = "mt-1.5 font-normal normal-case tracking-normal";
+
+function formatLocalLastLogin(dateInput?: string | Date | null) {
+  if (!dateInput) return null;
+  const date = new Date(dateInput);
+  if (isNaN(date.getTime())) return null;
+
+  // Local device date and time format (browser-native local time, NOT server)
+  const dateStr = date.toLocaleDateString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+  const timeStr = date.toLocaleTimeString(undefined, {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+  });
+
+  // Relative indicator based on current local time
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMinutes = Math.floor(diffMs / (1000 * 60));
+  const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+  let relative = "";
+  if (diffMinutes < 1) {
+    relative = "Just now";
+  } else if (diffMinutes < 60) {
+    relative = `${diffMinutes}m ago`;
+  } else if (diffHours < 24 && date.getDate() === now.getDate() && date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear()) {
+    relative = "Today";
+  } else if (diffDays === 1 || (diffHours < 48 && (new Date(now.getTime() - 86400000).getDate() === date.getDate()))) {
+    relative = "Yesterday";
+  } else if (diffDays < 7) {
+    relative = `${diffDays}d ago`;
+  }
+
+  return { dateStr, timeStr, fullStr: `${dateStr}, ${timeStr}`, relative };
+}
 
 export function SettingsPage() {
   const router = useRouter();
@@ -49,6 +90,9 @@ export function SettingsPage() {
   const [savedRolePermissions, setSavedRolePermissions] = useState<Record<string, string[]>>({});
   const [error, setError] = useState(""); const [notice, setNotice] = useState(""); const [busy, setBusy] = useState(false);
   const [resetFor, setResetFor] = useState<User | null>(null); const [nameFor, setNameFor] = useState<User | null>(null); const [confirmDelete, setConfirmDelete] = useState<User | null>(null);
+  const [historyForUser, setHistoryForUser] = useState<User | null>(null);
+  const [expandedHistoryIds, setExpandedHistoryIds] = useState<Record<string, boolean>>({});
+  const [copiedIp, setCopiedIp] = useState<string | null>(null);
   const load = useCallback(async () => {
     setError("");
     const [settingsResult, methodsResult, usersResult] = await Promise.allSettled([
@@ -226,7 +270,188 @@ export function SettingsPage() {
   return <div className="settings-page space-y-5"><PageHeader eyebrow="Shop administration" title="Settings" description="Store identity, currency, invoices, payment methods, access and account security."/>{error && <ErrorMessage>{error}</ErrorMessage>}{notice && <Notice>{notice}</Notice>}
     {settings && canManageSettings && <Panel className="settings-panel" title="Shop & invoice settings" description="Choose your shop's country. StockPilot automatically sets its local currency, date and number format, and default time zone. The currency shown here is read-only and changes with the country."><form onSubmit={saveSettings} className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"><Field label="Shop name" name="shopName" defaultValue={settings.shopName}/><Field label="Logo URL" name="logoUrl" defaultValue={settings.logoUrl ?? ""}/><label className={fieldLabelClass}>Shop address<AddressInput value={shopAddress} onChange={setShopAddress} countryCode={countryCode} placeholder="Search address or type manually" className={fieldControlClass}/></label><label className={fieldLabelClass}>Shop phone (optional)<PhoneInput name="phone" countryCode={countryCode} value={shopPhone} onChange={setShopPhone} className={fieldControlClass}/></label><label className={fieldLabelClass}>Country<select name="countryCode" value={countryCode} onChange={(event) => { const next = event.target.value; setCountryCode(next); const suggested = currencyForCountry(next); if (suggested) setCurrencyCode(suggested); }} className={`${selectClass} ${fieldControlClass}`}>{countryOptions.map((country) => <option key={country.code} value={country.code}>{country.name} (+{country.callingCode})</option>)}</select><span className={`${fieldControlClass} block text-[11px]`}>Currency, date and time-zone defaults follow this country.</span></label><label className={fieldLabelClass}>Currency (automatic)<select aria-readonly="true" disabled value={currencyCode} className={`${selectClass} ${fieldControlClass} cursor-not-allowed opacity-80`}>{currencyOptions.map((currency) => <option key={currency.code} value={currency.code}>{currency.code} — {currency.name}</option>)}</select></label><Field label="Sale invoice prefix" name="saleInvoicePrefix" defaultValue={settings.saleInvoicePrefix}/><Field label="Purchase invoice prefix" name="purchaseInvoicePrefix" defaultValue={settings.purchaseInvoicePrefix}/><label className={fieldLabelClass}>How profit cost is calculated<select name="costingMethod" defaultValue={settings.costingMethod} className={`${selectClass} ${fieldControlClass}`}><option value="WEIGHTED_AVERAGE">Weighted average</option><option value="FIFO">FIFO</option></select></label><div className="flex items-end"><Button type="submit" disabled={busy}>{busy ? "Saving…" : "Save shop settings"}</Button></div></form></Panel>}
     {canManageSettings && <Panel className="settings-panel" title="Payment methods" description="These methods appear in checkout, payment collection and expense forms." action={<Button className="h-9 px-3 text-xs" icon={<Plus size={14} />} onClick={() => { setMethodError(""); setMethodModalOpen(true); }}>Add method</Button>}> <div className="mb-4 flex flex-wrap gap-2">{methods.length === 0 ? <p className="w-full rounded-[14px] border border-dashed border-border px-4 py-5 text-sm text-muted-foreground">No methods yet. Add a payment method to make it available in checkout.</p> : methods.map((method) => <div key={method.id} className="flex min-w-[200px] flex-1 items-center justify-between gap-3 rounded-[14px] border border-border/70 bg-background/70 px-3 py-2.5 text-sm"><span className="min-w-0"><span className="block truncate font-medium text-foreground">{method.name}</span><small className="text-[10px] font-medium uppercase tracking-[0.08em] text-muted-foreground">{method.kind.replaceAll("_", " ")}</small></span><div className="flex shrink-0 items-center gap-2"><span className={`text-[10px] font-semibold ${method.isEnabled ? "text-success" : "text-muted-foreground"}`}>{methodUpdating === method.id ? "Saving…" : method.isEnabled ? "On" : "Off"}</span><button type="button" role="switch" aria-checked={method.isEnabled} disabled={methodUpdating !== null} aria-label={`${method.isEnabled ? "Disable" : "Enable"} ${method.name}`} onClick={() => void toggleMethod(method)} className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:cursor-wait disabled:opacity-60 ${method.isEnabled ? "bg-success" : "bg-slate-400 dark:bg-slate-600"}`}><span aria-hidden="true" className={`size-5 rounded-full bg-white shadow-sm transition-transform ${method.isEnabled ? "translate-x-[22px]" : "translate-x-0.5"}`} /></button></div></div>)}</div></Panel>}
-    {canManageUsers && <Panel className="settings-panel" title="Staff accounts" description={`${users.length.toLocaleString()} staff logins with role and access status.`}><form onSubmit={addUser} className="mb-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-5"><label className={fieldLabelClass}>Full name<input required name="fullName" minLength={2} className={`${inputClass} ${fieldControlClass}`} placeholder="Staff name"/></label><label className={fieldLabelClass}>Email<input required name="email" type="email" className={`${inputClass} ${fieldControlClass}`} placeholder="name@example.com"/></label><label className={fieldLabelClass}>Temporary password<input required name="password" type="password" minLength={12} className={`${inputClass} ${fieldControlClass}`} placeholder="12+ characters"/></label><label className={fieldLabelClass}>Role<select name="role" className={`${selectClass} ${fieldControlClass}`}>{roles.map((role) => <option key={role} value={role}>{role.replaceAll("_", " ")}</option>)}</select></label><div className="flex items-end"><Button disabled={busy}>Create account</Button></div></form><div className="overflow-hidden rounded-xl border border-border/70"><div className="overflow-x-auto"><table className="stock-table w-full min-w-[760px] text-left text-sm"><thead className="bg-muted/40 text-[11px] uppercase tracking-[0.08em] text-muted-foreground"><tr><th className="px-3 py-2.5 font-semibold">Name</th><th className="px-3 py-2.5 font-semibold">Email</th><th className="px-3 py-2.5 font-semibold">Role</th><th className="px-3 py-2.5 font-semibold">Status</th><th className="px-3 py-2.5 text-right font-semibold">Access</th></tr></thead><tbody className="divide-y divide-border/70">{users.map((user) => <Fragment key={user.id}><tr className="align-middle transition-colors hover:bg-teal-soft/40"><td className="px-3 py-2.5 font-medium">{user.fullName}</td><td className="px-3 py-2.5 text-muted-foreground">{user.email}</td><td className="px-3 py-2.5">{user.role === "OWNER" ? <span className="inline-flex items-center gap-1.5 rounded-full bg-violet-soft px-2.5 py-1 text-[11px] font-semibold text-violet-strong"><span className="size-1.5 rounded-full bg-current" />Owner</span> : <select value={user.role} onChange={(event) => void updateUser(user, { role: event.target.value })} className="rounded-lg border border-border bg-input px-2 py-1 text-xs">{roles.map((role) => <option key={role} value={role}>{role.replaceAll("_", " ")}</option>)}</select>}</td><td className="px-3 py-2.5"><span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold ${user.isActive ? "bg-success/10 text-success" : "bg-muted text-muted-foreground"}`}><span className="size-1.5 rounded-full bg-current" />{user.isActive ? "Active" : "Disabled"}</span></td><td className="px-3 py-2.5"><div className="flex flex-wrap justify-end gap-1">{user.role !== "OWNER" && <><Button variant="ghost" className="h-8 px-2 text-xs" onClick={() => { setError(""); setConfirmDelete(null); setNameFor(null); setResetFor((current) => current?.id === user.id ? null : user); }}>{resetFor?.id === user.id ? "Close" : "Reset password"}</Button><Button variant="ghost" className="h-8 px-2 text-xs" onClick={() => { setError(""); setConfirmDelete(null); setResetFor(null); setNameFor((current) => current?.id === user.id ? null : user); }}>{nameFor?.id === user.id ? "Close name" : "Change name"}</Button><Button variant="ghost" className="h-8 px-2 text-xs" onClick={() => void updateUser(user, { isActive: !user.isActive })}>{user.isActive ? "Disable" : "Enable"}</Button><Button variant="ghost" className="h-8 px-2 text-xs text-danger hover:bg-danger/10 hover:text-danger" onClick={() => { setError(""); setResetFor(null); setNameFor(null); setConfirmDelete((current) => current?.id === user.id ? null : user); }}>{confirmDelete?.id === user.id ? "Close" : "Delete"}</Button></>}{user.role === "OWNER" && user.id === currentUserId && <Button variant="ghost" className="h-8 px-2 text-xs" onClick={() => { setError(""); setConfirmDelete(null); setResetFor(null); setNameFor((current) => current?.id === user.id ? null : user); }}>{nameFor?.id === user.id ? "Close name" : "Change name"}</Button>}</div></td></tr>{resetFor?.id === user.id && <tr className="bg-muted/25"><td className="px-3 py-3" colSpan={5}><form onSubmit={(event) => void resetStaffPassword(event, user)} className="flex flex-wrap items-end gap-x-3 gap-y-2"><label className={fieldLabelClass}>New temporary password for {user.fullName}<input required autoFocus name="password" type="password" minLength={12} autoComplete="new-password" className={`${inputClass} ${fieldControlClass} min-w-[260px]`} placeholder="12+ characters"/></label><Button disabled={busy}>Set password</Button><Button type="button" variant="ghost" disabled={busy} onClick={() => setResetFor(null)}>Cancel</Button><span className="text-xs text-muted-foreground">The new password works on the next sign-in, and every session they were already signed in from is signed out.</span></form></td></tr>}{nameFor?.id === user.id && <tr className="bg-muted/25"><td className="px-3 py-3" colSpan={5}><form onSubmit={(event) => void saveUserName(event, user)} className="flex flex-wrap items-end gap-x-3 gap-y-2"><label className={fieldLabelClass}>Staff member name<input required autoFocus name="fullName" minLength={2} maxLength={120} defaultValue={user.fullName} className={`${inputClass} ${fieldControlClass} min-w-[260px]`} placeholder="Full name"/></label><Button disabled={busy}>{busy ? "Saving…" : "Save name"}</Button><Button type="button" variant="ghost" disabled={busy} onClick={() => setNameFor(null)}>Cancel</Button><span className="text-xs text-muted-foreground">This updates the name shown for the staff account. Password access stays the same.</span></form></td></tr>}{confirmDelete?.id === user.id && <tr className="bg-danger/5"><td className="px-3 py-3" colSpan={5}><div className="flex flex-wrap items-center gap-x-3 gap-y-2"><p className="text-sm"><span className="font-semibold">{user.fullName}</span> <span className="text-muted-foreground">&lt;{user.email}&gt;</span> will be removed and can no longer sign in.</p><Button className="bg-danger hover:bg-danger/90" disabled={busy} onClick={() => void deleteUser(user)}>Delete account</Button><Button variant="ghost" disabled={busy} onClick={() => setConfirmDelete(null)}>Keep the account</Button><span className="text-xs text-muted-foreground">Only an account that never recorded a sale, purchase, payment, stock change or expense can be deleted — use Disable for anyone who already traded, so the paper trail keeps its author.</span></div></td></tr>}</Fragment>)}</tbody></table></div></div></Panel>}
+    {canManageUsers && (
+      <Panel className="settings-panel" title="Staff accounts" description={`${users.length.toLocaleString()} staff logins with role and access status.`}>
+        <form onSubmit={addUser} className="mb-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+          <label className={fieldLabelClass}>Full name<input required name="fullName" minLength={2} className={`${inputClass} ${fieldControlClass}`} placeholder="Staff name"/></label>
+          <label className={fieldLabelClass}>Email<input required name="email" type="email" className={`${inputClass} ${fieldControlClass}`} placeholder="name@example.com"/></label>
+          <label className={fieldLabelClass}>Temporary password<input required name="password" type="password" minLength={12} className={`${inputClass} ${fieldControlClass}`} placeholder="12+ characters"/></label>
+          <label className={fieldLabelClass}>Role<select name="role" className={`${selectClass} ${fieldControlClass}`}>{roles.map((role) => <option key={role} value={role}>{role.replaceAll("_", " ")}</option>)}</select></label>
+          <div className="flex items-end"><Button disabled={busy}>Create account</Button></div>
+        </form>
+        <div className="overflow-hidden rounded-xl border border-border/70">
+          <div className="overflow-x-auto">
+            <table className="stock-table w-full min-w-[840px] text-left text-sm">
+              <thead className="bg-muted/40 text-[11px] uppercase tracking-[0.08em] text-muted-foreground">
+                <tr>
+                  <th className="px-3 py-2.5 font-semibold">Name</th>
+                  <th className="px-3 py-2.5 font-semibold">Email</th>
+                  <th className="px-3 py-2.5 font-semibold">Role</th>
+                  <th className="px-3 py-2.5 font-semibold">Status</th>
+                  <th className="px-3 py-2.5 font-semibold">Last login</th>
+                  <th className="px-3 py-2.5 text-right font-semibold">Access</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border/70">
+                {users.map((user) => (
+                  <Fragment key={user.id}>
+                    <tr className="align-middle transition-colors hover:bg-teal-soft/40">
+                      <td className="px-3 py-2.5 font-medium">{user.fullName}</td>
+                      <td className="px-3 py-2.5 text-muted-foreground">{user.email}</td>
+                      <td className="px-3 py-2.5">
+                        {user.role === "OWNER" ? (
+                          <span className="inline-flex items-center gap-1.5 rounded-full bg-violet-soft px-2.5 py-1 text-[11px] font-semibold text-violet-strong">
+                            <span className="size-1.5 rounded-full bg-current" />Owner
+                          </span>
+                        ) : (
+                          <select value={user.role} onChange={(event) => void updateUser(user, { role: event.target.value })} className="rounded-lg border border-border bg-input px-2 py-1 text-xs">
+                            {roles.map((role) => <option key={role} value={role}>{role.replaceAll("_", " ")}</option>)}
+                          </select>
+                        )}
+                      </td>
+                      <td className="px-3 py-2.5 whitespace-nowrap">
+                        {user.role === "OWNER" ? (
+                          <span className="inline-flex items-center gap-1.5 rounded-full bg-success/10 px-2.5 py-1 text-[11px] font-semibold text-success">
+                            <span className="size-1.5 rounded-full bg-current" />Active
+                          </span>
+                        ) : (
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              role="switch"
+                              aria-checked={user.isActive}
+                              disabled={busy}
+                              aria-label={`${user.isActive ? "Disable" : "Enable"} ${user.fullName}`}
+                              onClick={() => void updateUser(user, { isActive: !user.isActive })}
+                              className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:cursor-not-allowed disabled:opacity-50 ${
+                                user.isActive ? "bg-success" : "bg-slate-300 dark:bg-slate-600"
+                              }`}
+                              title={user.isActive ? "Click to disable staff login" : "Click to enable staff login"}
+                            >
+                              <span
+                                aria-hidden="true"
+                                className={`size-3.5 rounded-full bg-white shadow-sm transition-transform ${
+                                  user.isActive ? "translate-x-[18px]" : "translate-x-0.5"
+                                }`}
+                              />
+                            </button>
+                            <span className={`text-[11px] font-semibold select-none ${user.isActive ? "text-success" : "text-muted-foreground"}`}>
+                              {user.isActive ? "Active" : "Disabled"}
+                            </span>
+                          </div>
+                        )}
+                      </td>
+                      <td className="px-3 py-2.5 whitespace-nowrap">
+                        {user.lastLoginAt ? (() => {
+                          const formatted = formatLocalLastLogin(user.lastLoginAt);
+                          if (!formatted) return <span className="text-xs text-muted-foreground">—</span>;
+                          return (
+                            <div className="flex flex-col text-xs leading-tight" title={formatted.fullStr}>
+                              <span className="font-medium text-foreground tabular-nums">{formatted.dateStr}</span>
+                              <span className="text-[11px] text-muted-foreground tabular-nums">
+                                {formatted.timeStr} {formatted.relative && <span className="font-medium text-primary">({formatted.relative})</span>}
+                              </span>
+                            </div>
+                          );
+                        })() : (
+                          <span className="inline-flex items-center gap-1 rounded-md bg-muted/60 px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+                            Never
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-3 py-2.5">
+                        <div className="flex flex-wrap justify-end gap-1.5">
+                          <Button
+                            variant="outline"
+                            icon={<History size={13} className="text-primary" />}
+                            className="h-8 px-2.5 text-xs bg-background hover:bg-muted border-border/80 shadow-xs"
+                            onClick={() => { setError(""); setConfirmDelete(null); setResetFor(null); setNameFor(null); setHistoryForUser(user); }}
+                            title="View last 5 login sessions"
+                          >
+                            History
+                          </Button>
+                          {user.role !== "OWNER" && (
+                            <>
+                              <Button
+                                variant="outline"
+                                className="h-8 px-2.5 text-xs bg-background hover:bg-muted border-border/80 shadow-xs"
+                                onClick={() => { setError(""); setConfirmDelete(null); setNameFor(null); setResetFor((current) => current?.id === user.id ? null : user); }}
+                              >
+                                {resetFor?.id === user.id ? "Close" : "Reset password"}
+                              </Button>
+                              <Button
+                                variant="outline"
+                                className="h-8 px-2.5 text-xs bg-background hover:bg-muted border-border/80 shadow-xs"
+                                onClick={() => { setError(""); setConfirmDelete(null); setResetFor(null); setNameFor((current) => current?.id === user.id ? null : user); }}
+                              >
+                                {nameFor?.id === user.id ? "Close name" : "Change name"}
+                              </Button>
+                              <Button
+                                variant="outline"
+                                icon={<Trash2 size={13} className="text-danger" />}
+                                className="h-8 px-2.5 text-xs border-danger/30 bg-danger/5 text-danger hover:bg-danger/15 hover:border-danger/40 hover:text-danger shadow-xs"
+                                onClick={() => { setError(""); setResetFor(null); setNameFor(null); setConfirmDelete((current) => current?.id === user.id ? null : user); }}
+                              >
+                                {confirmDelete?.id === user.id ? "Close" : "Delete"}
+                              </Button>
+                            </>
+                          )}
+                          {user.role === "OWNER" && user.id === currentUserId && (
+                            <Button
+                              variant="outline"
+                              className="h-8 px-2.5 text-xs bg-background hover:bg-muted border-border/80 shadow-xs"
+                              onClick={() => { setError(""); setConfirmDelete(null); setResetFor(null); setNameFor((current) => current?.id === user.id ? null : user); }}
+                            >
+                              {nameFor?.id === user.id ? "Close name" : "Change name"}
+                            </Button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                    {resetFor?.id === user.id && (
+                      <tr className="bg-muted/25">
+                        <td className="px-3 py-3" colSpan={6}>
+                          <form onSubmit={(event) => void resetStaffPassword(event, user)} className="flex flex-wrap items-end gap-x-3 gap-y-2">
+                            <label className={fieldLabelClass}>New temporary password for {user.fullName}<input required autoFocus name="password" type="password" minLength={12} autoComplete="new-password" className={`${inputClass} ${fieldControlClass} min-w-[260px]`} placeholder="12+ characters"/></label>
+                            <Button disabled={busy}>Set password</Button>
+                            <Button type="button" variant="outline" className="bg-background hover:bg-muted" disabled={busy} onClick={() => setResetFor(null)}>Cancel</Button>
+                            <span className="text-xs text-muted-foreground">The new password works on the next sign-in, and every session they were already signed in from is signed out.</span>
+                          </form>
+                        </td>
+                      </tr>
+                    )}
+                    {nameFor?.id === user.id && (
+                      <tr className="bg-muted/25">
+                        <td className="px-3 py-3" colSpan={6}>
+                          <form onSubmit={(event) => void saveUserName(event, user)} className="flex flex-wrap items-end gap-x-3 gap-y-2">
+                            <label className={fieldLabelClass}>Staff member name<input required autoFocus name="fullName" minLength={2} maxLength={120} defaultValue={user.fullName} className={`${inputClass} ${fieldControlClass} min-w-[260px]`} placeholder="Full name"/></label>
+                            <Button disabled={busy}>{busy ? "Saving…" : "Save name"}</Button>
+                            <Button type="button" variant="outline" className="bg-background hover:bg-muted" disabled={busy} onClick={() => setNameFor(null)}>Cancel</Button>
+                            <span className="text-xs text-muted-foreground">This updates the name shown for the staff account. Password access stays the same.</span>
+                          </form>
+                        </td>
+                      </tr>
+                    )}
+                    {confirmDelete?.id === user.id && (
+                      <tr className="bg-danger/5">
+                        <td className="px-3 py-3" colSpan={6}>
+                          <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+                            <p className="text-sm"><span className="font-semibold">{user.fullName}</span> <span className="text-muted-foreground">&lt;{user.email}&gt;</span> will be removed and can no longer sign in.</p>
+                            <Button className="bg-danger hover:bg-danger/90" icon={<Trash2 size={13} />} disabled={busy} onClick={() => void deleteUser(user)}>Delete account</Button>
+                            <Button variant="outline" className="bg-background hover:bg-muted" disabled={busy} onClick={() => setConfirmDelete(null)}>Keep the account</Button>
+                            <span className="text-xs text-muted-foreground">Only an account that never recorded a sale, purchase, payment, stock change or expense can be deleted — use Disable for anyone who already traded, so the paper trail keeps its author.</span>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </Panel>
+    )}
     {canManageUsers && <Panel className="settings-panel" title="Role permissions" description="Tick what each role may do. The same codes are enforced server-side, so an un-ticked action is refused even if the screen hides it.">{roles.map((role) => { const granted = permissions.filter((permission) => roleHas(role, permission)).length; const dirty = roleDirty(role); return <fieldset key={role} className="mb-4 rounded-[16px] border border-border/80 bg-background/45 p-4 last:mb-0 sm:p-5"><legend className="px-1 text-sm font-semibold">{role.replaceAll("_", " ")}<span className="ml-2 text-xs font-normal tabular-nums text-muted-foreground">{granted} of {permissions.length} allowed</span></legend><div className="mb-1 flex gap-3 text-[11px] font-semibold"><button type="button" className="text-primary hover:underline" onClick={() => setRoleAll(role, permissions)}>Select all</button><button type="button" className="text-muted-foreground hover:underline" onClick={() => setRoleAll(role, [])}>Clear</button></div>{permissionGroups.map((group) => <div key={group.title} className="grid gap-x-4 gap-y-2 border-t border-border/60 py-2 first:border-0 sm:grid-cols-[76px_minmax(0,1fr)] lg:grid-cols-[76px_repeat(4,minmax(0,1fr))]"><span className="pt-0.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">{group.title}</span>{group.items.map(([code, label]) => <label key={code} title={code} className="flex items-center gap-2 text-xs"><input type="checkbox" checked={roleHas(role, code)} onChange={(e) => setRolePermissions((old) => e.target.checked ? [...old, { role, permission: code }] : old.filter((item) => !(item.role === role && item.permission === code)))} className="accent-primary"/>{label}</label>)}</div>)}<div className="mt-3 flex flex-wrap items-center justify-between gap-3"><p className={`text-[11px] ${dirty ? "font-semibold text-amber-strong" : "text-muted-foreground"}`}>{dirty ? "Unsaved changes for this role" : "Changes apply the moment you save."}</p><Button variant="outline" disabled={busy || !dirty} onClick={() => void saveRole(role)}>Save role permissions</Button></div></fieldset>; })}</Panel>}
     {isOwner && (
       <Panel
@@ -383,6 +608,306 @@ export function SettingsPage() {
     )}
     <Panel className="settings-panel" title="Change password" description="Use at least 12 characters. Other active sessions will be revoked."><form onSubmit={changePassword} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3"><label className={fieldLabelClass}>Current password<input required name="currentPassword" type="password" className={`${inputClass} ${fieldControlClass}`} placeholder="Current password"/></label><label className={fieldLabelClass}>New password<input required name="newPassword" type="password" minLength={12} className={`${inputClass} ${fieldControlClass}`} placeholder="12+ characters"/></label><div className="flex items-end"><Button disabled={busy}>Update password</Button></div></form></Panel>
     {methodModalOpen && <div className="fixed inset-0 z-50 flex items-center justify-center p-4 print:hidden" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !busy) setMethodModalOpen(false); }}><button type="button" aria-label="Close add payment method dialog" className="absolute inset-0 bg-slate-950/45 backdrop-blur-sm" onClick={() => { if (!busy) setMethodModalOpen(false); }} /><section role="dialog" aria-modal="true" aria-labelledby="add-method-title" className="relative w-full max-w-[420px] overflow-hidden rounded-[22px] border border-line bg-card p-5 shadow-2xl shadow-slate-950/20 dark:shadow-none sm:p-6"><div aria-hidden="true" className="pointer-events-none absolute -right-16 -top-20 size-48 rounded-full bg-primary-soft/60 blur-3xl dark:bg-primary-soft/25" /><div className="relative z-10"><div className="flex items-start justify-between gap-3"><div className="flex items-center gap-3"><span className="grid size-10 place-items-center rounded-[13px] bg-primary-soft text-primary"><CreditCard size={18} /></span><div><p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-primary">Checkout setup</p><h2 id="add-method-title" className="mt-0.5 text-lg font-semibold text-foreground">Add payment method</h2></div></div><button type="button" aria-label="Close dialog" disabled={busy} onClick={() => setMethodModalOpen(false)} className="grid size-8 place-items-center rounded-[10px] text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-50"><X size={16} /></button></div><p className="mt-2 text-[13px] leading-5 text-muted-foreground">Add a method for sale, purchase and payment collection screens.</p><form onSubmit={addMethod} className="mt-5 grid gap-3"><label className={fieldLabelClass}>Method name<input name="name" required maxLength={80} className={`${inputClass} ${fieldControlClass}`} placeholder="e.g. Mobile payment" autoFocus /></label><label className={fieldLabelClass}>Unique code<input name="code" pattern="[a-z0-9-]+" required maxLength={40} className={`${inputClass} ${fieldControlClass}`} placeholder="e.g. mobile-money" /></label><label className={fieldLabelClass}>Method type<select name="kind" className={`${selectClass} ${fieldControlClass}`}><option value="CASH">Cash</option><option value="CARD">Card</option><option value="BANK_TRANSFER">Bank transfer</option><option value="MOBILE_PAYMENT">Mobile payment</option><option value="OTHER">Other</option></select></label>{methodError && <ErrorMessage>{methodError}</ErrorMessage>}<div className="mt-2 flex justify-end gap-2 border-t border-line pt-4"><Button type="button" variant="outline" className="h-10 px-3 text-[13px]" disabled={busy} onClick={() => setMethodModalOpen(false)}>Cancel</Button><Button type="submit" className="h-10 px-4 text-[13px]" disabled={busy} icon={<Plus size={14} />}>{busy ? "Adding…" : "Add method"}</Button></div></form></div></section></div>}
+    {historyForUser && (() => {
+      const historyList = [...(historyForUser.loginHistory || [])]
+        .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+        .slice(0, 5);
+      const allExpanded = historyList.length > 0 && historyList.every((item, idx) => expandedHistoryIds[item.id || item._id || String(idx)]);
+
+      const toggleExpandAll = () => {
+        if (allExpanded) {
+          setExpandedHistoryIds({});
+        } else {
+          const next: Record<string, boolean> = {};
+          historyList.forEach((item, idx) => {
+            next[item.id || item._id || String(idx)] = true;
+          });
+          setExpandedHistoryIds(next);
+        }
+      };
+
+      const handleCopyIp = (ip: string) => {
+        if (typeof navigator !== "undefined" && navigator.clipboard) {
+          void navigator.clipboard.writeText(ip);
+          setCopiedIp(ip);
+          setTimeout(() => setCopiedIp((cur) => (cur === ip ? null : cur)), 2000);
+        }
+      };
+
+      return (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 print:hidden"
+          role="presentation"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) setHistoryForUser(null);
+          }}
+        >
+          <button
+            type="button"
+            aria-label="Close login history dialog"
+            className="absolute inset-0 bg-slate-950/45 backdrop-blur-sm"
+            onClick={() => setHistoryForUser(null)}
+          />
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="login-history-title"
+            className="relative w-full max-w-[620px] overflow-hidden rounded-[22px] border border-line bg-card p-5 shadow-2xl sm:p-6"
+          >
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute -right-16 -top-20 size-48 rounded-full bg-primary-soft/60 blur-3xl dark:bg-primary-soft/25"
+            />
+            <div className="relative z-10">
+              <div className="flex items-start justify-between gap-3 border-b border-border/70 pb-4">
+                <div className="flex items-center gap-3">
+                  <span className="grid size-10 place-items-center rounded-[13px] bg-primary-soft text-primary">
+                    <History size={18} />
+                  </span>
+                  <div>
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-primary">
+                      Security &amp; Audit Log
+                    </p>
+                    <h2 id="login-history-title" className="text-base font-semibold text-foreground">
+                      Last 5 Login Details
+                    </h2>
+                    <p className="text-xs text-muted-foreground">
+                      <span className="font-medium text-foreground">{historyForUser.fullName}</span> ({historyForUser.email})
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  aria-label="Close dialog"
+                  onClick={() => setHistoryForUser(null)}
+                  className="grid size-8 place-items-center rounded-[10px] text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+
+              <div className="mt-4">
+                <div className="flex items-center justify-between pb-2 text-[11px] text-muted-foreground">
+                  <span>Recent logins (FIFO LRU buffer · 5 max)</span>
+                  <div className="flex items-center gap-3">
+                    <span className="font-semibold text-foreground">
+                      {historyList.length} / 5 recorded
+                    </span>
+                    {historyList.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={toggleExpandAll}
+                        className="font-medium text-primary hover:underline"
+                      >
+                        {allExpanded ? "Collapse all" : "Expand all"}
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {historyList.length === 0 ? (
+                  <div className="my-4 rounded-xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
+                    No login history recorded yet for this user.
+                  </div>
+                ) : (
+                  <div className="max-h-[420px] space-y-3 overflow-y-auto pr-1">
+                    {historyList.map((item, index) => {
+                      const itemId = item.id || item._id || String(index);
+                      const isExpanded = !!expandedHistoryIds[itemId];
+                      const formatted = formatLocalLastLogin(item.timestamp);
+                      const isLatest = index === 0;
+
+                      return (
+                        <div
+                          key={itemId}
+                          className={`rounded-xl border transition-all ${
+                            isLatest
+                              ? "border-primary/40 bg-primary/5"
+                              : "border-border/70 bg-background/60 hover:bg-muted/30"
+                          } p-3.5`}
+                        >
+                          {/* Header row */}
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span
+                                className={`rounded-md px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
+                                  isLatest
+                                    ? "bg-primary text-primary-foreground"
+                                    : "bg-muted text-muted-foreground"
+                                }`}
+                              >
+                                #{index + 1} {isLatest && "· Latest"}
+                              </span>
+                              <span className="text-xs font-semibold text-foreground">
+                                {formatted ? formatted.fullStr : new Date(item.timestamp).toLocaleString()}
+                              </span>
+                              {formatted?.relative && (
+                                <span className="text-[11px] font-medium text-primary">
+                                  ({formatted.relative})
+                                </span>
+                              )}
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setExpandedHistoryIds((prev) => ({
+                                  ...prev,
+                                  [itemId]: !prev[itemId],
+                                }))
+                              }
+                              className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-medium text-primary hover:bg-primary/10 transition-colors"
+                              aria-label={isExpanded ? "Collapse details" : "Expand details"}
+                            >
+                              <span>{isExpanded ? "Collapse" : "Expand"}</span>
+                              {isExpanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+                            </button>
+                          </div>
+
+                          {/* Quick summary grid */}
+                          <div className="mt-2.5 grid grid-cols-1 gap-2 text-xs sm:grid-cols-3">
+                            {/* Device */}
+                            <div className="flex items-start gap-2 rounded-lg bg-muted/40 px-2.5 py-1.5">
+                              <Laptop size={14} className="mt-0.5 shrink-0 text-muted-foreground" />
+                              <div className="min-w-0 flex-1">
+                                <span className="block text-[9px] font-semibold uppercase tracking-wider text-muted-foreground">
+                                  Device / OS
+                                </span>
+                                <span className="block font-medium text-foreground break-words leading-snug">
+                                  {item.device || "Unknown Device"}
+                                </span>
+                              </div>
+                            </div>
+
+                            {/* IP */}
+                            <div className="flex items-start gap-2 rounded-lg bg-muted/40 px-2.5 py-1.5">
+                              <Globe size={14} className="mt-0.5 shrink-0 text-muted-foreground" />
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center justify-between">
+                                  <span className="block text-[9px] font-semibold uppercase tracking-wider text-muted-foreground">
+                                    IP Address
+                                  </span>
+                                  {item.ip && (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleCopyIp(item.ip)}
+                                      className="inline-flex items-center gap-0.5 text-[9px] text-muted-foreground hover:text-foreground"
+                                      title="Copy IP"
+                                    >
+                                      {copiedIp === item.ip ? (
+                                        <Check size={11} className="text-success" />
+                                      ) : (
+                                        <Copy size={11} />
+                                      )}
+                                    </button>
+                                  )}
+                                </div>
+                                <span className="block font-mono font-medium text-foreground break-all">
+                                  {item.ip || "Unknown"}
+                                </span>
+                              </div>
+                            </div>
+
+                            {/* Location (wraps and expands on click) */}
+                            <div
+                              onClick={() =>
+                                setExpandedHistoryIds((prev) => ({
+                                  ...prev,
+                                  [itemId]: !prev[itemId],
+                                }))
+                              }
+                              className="flex cursor-pointer items-start gap-2 rounded-lg bg-muted/40 px-2.5 py-1.5 hover:bg-muted/70 transition-colors"
+                              title="Click to view full location"
+                            >
+                              <MapPin size={14} className="mt-0.5 shrink-0 text-primary" />
+                              <div className="min-w-0 flex-1">
+                                <span className="block text-[9px] font-semibold uppercase tracking-wider text-muted-foreground">
+                                  Location
+                                </span>
+                                <span className="block font-medium text-foreground break-words leading-snug">
+                                  {item.location || "Unknown"}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Expanded Full Details Panel */}
+                          {isExpanded && (
+                            <div className="mt-3 space-y-2.5 border-t border-border/70 pt-3">
+                              {/* Full Location Box */}
+                              <div className="rounded-lg border border-border/80 bg-background/90 p-2.5">
+                                <span className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                                  <MapPin size={13} className="text-primary" /> Full Location Info
+                                </span>
+                                <p className="mt-1 text-xs font-semibold text-foreground break-words select-all leading-relaxed">
+                                  {item.location || "Unknown Location"}
+                                </p>
+                              </div>
+
+                              {/* Full Device Specs & User Agent */}
+                              <div className="rounded-lg border border-border/80 bg-background/90 p-2.5">
+                                <span className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                                  <Laptop size={13} className="text-primary" /> Device &amp; System Specs
+                                </span>
+                                <p className="mt-1 text-xs font-medium text-foreground break-words">
+                                  {item.device || "Unknown Device"}
+                                </p>
+                                {item.userAgent && (
+                                  <div className="mt-2">
+                                    <span className="block text-[9px] uppercase tracking-wider text-muted-foreground font-mono">
+                                      Raw User-Agent Header:
+                                    </span>
+                                    <code className="mt-1 block max-h-24 overflow-y-auto rounded bg-muted/70 p-2 text-[10px] font-mono text-muted-foreground break-all select-all leading-normal">
+                                      {item.userAgent}
+                                    </code>
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Detailed Timestamps */}
+                              <div className="rounded-lg border border-border/80 bg-background/90 p-2.5 text-xs text-muted-foreground">
+                                <div className="flex flex-wrap items-center justify-between gap-2">
+                                  <span>
+                                    Full Device Time:{" "}
+                                    <strong className="text-foreground">
+                                      {new Date(item.timestamp).toLocaleString(undefined, {
+                                        dateStyle: "full",
+                                        timeStyle: "medium",
+                                      })}
+                                    </strong>
+                                  </span>
+                                  <span className="font-mono text-[11px]">
+                                    ISO: {new Date(item.timestamp).toISOString()}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              <div className="mt-5 flex items-center justify-between border-t border-border/70 pt-4">
+                <p className="text-[11px] text-muted-foreground">
+                  Automatic LRU: Oldest login is pruned once 5 logins are exceeded.
+                </p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-9 px-4 text-xs bg-background hover:bg-muted"
+                  onClick={() => setHistoryForUser(null)}
+                >
+                  Close
+                </Button>
+              </div>
+            </div>
+          </section>
+        </div>
+      );
+    })()}
   </div>;
 }
 

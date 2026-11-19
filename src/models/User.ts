@@ -2,6 +2,16 @@ import { randomUUID } from 'crypto';
 import mongoose, { Schema } from 'mongoose';
 import { UserRole } from '@/types';
 
+export interface ILoginHistoryItem {
+  _id?: string;
+  id?: string;
+  timestamp: Date;
+  ip: string;
+  device: string;
+  location?: string;
+  userAgent?: string;
+}
+
 export interface IUser {
   _id: string;
   id?: string;
@@ -12,6 +22,8 @@ export interface IUser {
   role: UserRole;
   isActive: boolean;
   sessionVersion: number;
+  lastLoginAt?: Date | null;
+  loginHistory?: ILoginHistoryItem[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -58,6 +70,26 @@ const UserSchema = new Schema<IUser>(
       required: true,
       default: 0,
       min: 0,
+    },
+    lastLoginAt: {
+      type: Date,
+      default: null,
+    },
+    loginHistory: {
+      type: [
+        new Schema(
+          {
+            _id: { type: String, default: () => randomUUID() },
+            timestamp: { type: Date, required: true, default: () => new Date() },
+            ip: { type: String, required: true, default: 'unknown' },
+            device: { type: String, required: true, default: 'Unknown Device' },
+            location: { type: String, default: 'Unknown Location' },
+            userAgent: { type: String, default: '' },
+          },
+          { _id: true }
+        ),
+      ],
+      default: [],
     },
   },
   {
