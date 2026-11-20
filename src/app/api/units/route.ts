@@ -46,7 +46,15 @@ export async function POST(request: Request) {
       metadata: { code: unit.code } 
     });
     
-    return NextResponse.json({ unit }, { status: 201 });
+    return NextResponse.json({
+      unit: {
+        id,
+        code: unit.code,
+        name: unit.name,
+        symbol: unit.symbol,
+        isActive: unit.isActive,
+      },
+    }, { status: 201 });
   } catch (error: any) {
     if (error.code === 11000) {
       return NextResponse.json({ error: { code: "CONFLICT", message: "A unit with this code already exists." } }, { status: 409 });

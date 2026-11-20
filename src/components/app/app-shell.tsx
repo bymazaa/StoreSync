@@ -3,26 +3,29 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
-    Activity,
+    BookOpenCheck,
     Boxes,
+    ChartNoAxesCombined,
     ChevronDown,
-    CircleHelp,
-    FileChartColumnIncreasing,
+    ContactRound,
     History,
     LayoutDashboard,
     LogOut,
     Menu,
+    PackageSearch,
     PanelLeftClose,
     PanelLeftOpen,
+    ScanLine,
     Settings2,
-    ShoppingBag,
-    ShoppingCart,
+    SlidersHorizontal,
+    ShoppingBasket,
+    Store,
     Truck,
-    UsersRound,
-    Wallet,
+    WalletCards,
     X,
+    type LucideIcon,
 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { SnowfallToggle, SnowfallOverlay } from '@/components/ui/snow-effect';
@@ -38,26 +41,26 @@ import { cn } from '@/lib/utils';
 
 const navigation = [
     { label: 'Dashboard', href: '/', icon: LayoutDashboard, requires: ['VIEW_REPORTS'] },
-    { label: 'Sales & POS', href: '/sales', icon: ShoppingCart, requires: ['CREATE_SALES'] },
-    { label: 'Purchases', href: '/purchases', icon: ShoppingBag, requires: ['CREATE_PURCHASES'] },
+    { label: 'Sales & POS', href: '/sales', icon: ScanLine, requires: ['CREATE_SALES'] },
+    { label: 'Purchases', href: '/purchases', icon: ShoppingBasket, requires: ['CREATE_PURCHASES'] },
     {
         label: 'Products',
         href: '/products',
-        icon: Boxes,
+        icon: PackageSearch,
         requires: ['MANAGE_PRODUCTS', 'CREATE_SALES', 'CREATE_PURCHASES'],
     },
     {
         label: 'Inventory',
         href: '/inventory',
-        icon: Activity,
+        icon: Boxes,
         requires: ['ADJUST_STOCK', 'VIEW_REPORTS', 'MANAGE_PRODUCTS'],
     },
-    { label: 'Customers', href: '/customers', icon: UsersRound, requires: ['CREATE_SALES'] },
+    { label: 'Customers', href: '/customers', icon: ContactRound, requires: ['CREATE_SALES'] },
     { label: 'Suppliers', href: '/suppliers', icon: Truck, requires: ['CREATE_PURCHASES'] },
     {
         label: 'Reports',
         href: '/reports',
-        icon: FileChartColumnIncreasing,
+        icon: ChartNoAxesCombined,
         requires: ['VIEW_REPORTS'],
     },
     {
@@ -69,19 +72,19 @@ const navigation = [
     {
         label: 'Expenses',
         href: '/expenses',
-        icon: Wallet,
+        icon: WalletCards,
         requires: ['MANAGE_EXPENSES', 'VIEW_REPORTS'],
     },
     {
         label: 'Settings',
         href: '/settings',
-        icon: Settings2,
+        icon: SlidersHorizontal,
         requires: ['MANAGE_SETTINGS', 'MANAGE_USERS'],
     },
     {
         label: 'Guide & setup',
         href: '/guide',
-        icon: CircleHelp,
+        icon: BookOpenCheck,
         requires: [
             'VIEW_REPORTS',
             'MANAGE_PRODUCTS',
@@ -99,6 +102,7 @@ const COLLAPSE_STORAGE_KEY = 'stockpilot:sidebar-collapsed';
 type AppShellProps = {
     user: { id: string; fullName: string; email: string; role: string };
     shopName: string;
+    logoUrl: string | null;
     countryCode: string;
     currencyCode: string;
     locale: string;
@@ -117,6 +121,7 @@ const roleLabels: Record<string, string> = {
 export function AppShell({
     user,
     shopName,
+    logoUrl,
     countryCode,
     currencyCode,
     locale,
@@ -127,6 +132,7 @@ export function AppShell({
     const [menuOpen, setMenuOpen] = useState(false);
     const [collapsed, setCollapsed] = useState(false);
     const [profileOpen, setProfileOpen] = useState(false);
+    const profileMenuRef = useRef<HTMLDivElement>(null);
     const [logoutOpen, setLogoutOpen] = useState(false);
     const [loggingOut, setLoggingOut] = useState(false);
     const [logoutError, setLogoutError] = useState("");
@@ -159,6 +165,24 @@ export function AppShell({
         window.addEventListener('stockpilot:unauthorized', handleUnauthorized);
         return () => window.removeEventListener('stockpilot:unauthorized', handleUnauthorized);
     }, [router]);
+
+    useEffect(() => {
+        if (!profileOpen) return;
+        const closeOnOutsidePointer = (event: PointerEvent) => {
+            if (event.target instanceof Node && !profileMenuRef.current?.contains(event.target)) {
+                setProfileOpen(false);
+            }
+        };
+        const closeOnEscape = (event: KeyboardEvent) => {
+            if (event.key === 'Escape') setProfileOpen(false);
+        };
+        document.addEventListener('pointerdown', closeOnOutsidePointer);
+        document.addEventListener('keydown', closeOnEscape);
+        return () => {
+            document.removeEventListener('pointerdown', closeOnOutsidePointer);
+            document.removeEventListener('keydown', closeOnEscape);
+        };
+    }, [profileOpen]);
 
     // The preference is read after mount so the server render always matches the client's first paint.
     useEffect(() => {
@@ -234,7 +258,7 @@ export function AppShell({
         return () => window.removeEventListener('keydown', onKey);
     }, [logoutOpen, loggingOut]);
 
-    function renderNavItem(href: string, label: string, icon: typeof Settings2, active: boolean) {
+    function renderNavItem(href: string, label: string, icon: LucideIcon, active: boolean) {
         const Icon = icon;
         return (
             <Link
@@ -412,7 +436,7 @@ export function AppShell({
                         <FullscreenToggle />
                         <ThemeToggle />
                         <span className="hidden h-8 w-px bg-line sm:block" />
-                        <div className="relative">
+                        <div ref={profileMenuRef} className="relative">
                             <button
                                 onClick={() => setProfileOpen((open) => !open)}
                                 className="flex items-center gap-2 rounded-[15px] border border-shell-border/70 bg-card/80 py-1.5 pl-1.5 pr-2.5 text-left transition-colors hover:border-primary/25 hover:bg-card"
@@ -437,24 +461,40 @@ export function AppShell({
                                 />
                             </button>
                             {profileOpen && (
-                                <div className="absolute right-0 top-12 z-30 w-56 rounded-2xl border border-line bg-card p-2 shadow-2xl">
-                                    <p className="truncate px-3 py-2 text-xs text-muted-foreground">
-                                        {user.email}
-                                    </p>
+                                <div className="absolute right-0 top-12 z-30 w-72 max-w-[calc(100vw-2rem)] rounded-[20px] border border-line bg-card p-2.5 shadow-2xl">
+                                    <div className="flex min-w-0 items-center gap-3 rounded-[15px] border border-primary/10 bg-gradient-to-br from-primary/[0.09] via-card to-card p-3">
+                                        <span className="grid size-11 shrink-0 place-items-center overflow-hidden rounded-[13px] border border-line bg-card p-1.5 text-primary shadow-2xl shadow-gray-100 dark:shadow-none">
+                                            {logoUrl ? <img src={logoUrl} alt={`${shopName} logo`} className="max-h-full max-w-full object-contain" /> : <Store size={19} />}
+                                        </span>
+                                        <span className="min-w-0">
+                                            <span className="block text-[9px] font-bold uppercase tracking-[0.12em] text-primary">Shop workspace</span>
+                                            <span className="mt-0.5 block truncate text-[13px] font-semibold text-foreground">{shopName}</span>
+                                        </span>
+                                    </div>
+                                    <div className="my-2.5 border-t border-line/80" />
+                                    <div className="flex min-w-0 items-center gap-2.5 px-2.5 py-1.5">
+                                        <span className="grid size-9 shrink-0 place-items-center rounded-full bg-primary-soft text-[11px] font-bold text-primary">{initials}</span>
+                                        <span className="min-w-0 flex-1">
+                                            <span className="block truncate text-xs font-semibold text-foreground">{user.fullName}</span>
+                                            <span className="mt-0.5 block truncate text-[10px] text-muted-foreground">{user.email}</span>
+                                        </span>
+                                        <span className="max-w-20 truncate rounded-full bg-muted px-2 py-1 text-[9px] font-semibold text-muted-foreground">{roleLabels[user.role] ?? user.role}</span>
+                                    </div>
                                     <Link
                                         href="/settings?tab=team"
                                         onClick={() => setProfileOpen(false)}
-                                        className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-foreground hover:bg-muted"
+                                        className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-sm text-foreground transition-colors hover:bg-muted"
                                     >
                                         <Settings2 size={15} /> Account settings
                                     </Link>
+                                    <div className="my-1.5 border-t border-line/80" />
                                     <button
                                         onClick={() => {
                                             setProfileOpen(false);
                                             setLogoutError("");
                                             setLogoutOpen(true);
                                         }}
-                                        className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-danger hover:bg-danger/10"
+                                        className="mt-0.5 flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-sm text-danger transition-colors hover:bg-danger/10"
                                         type="button"
                                     >
                                         <LogOut size={15} /> Sign out

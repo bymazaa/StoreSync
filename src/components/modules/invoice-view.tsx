@@ -354,7 +354,7 @@ export function InvoiceView({ mode }: { mode: 'sale' | 'purchase' }) {
 
             {/* ── Printable Paper Document (No heavy boxes, clean typography & generous spacing) ── */}
             <Panel className="invoice-panel overflow-hidden">
-                <div className={`print-document invoice-paper mx-auto w-full min-w-0 max-w-4xl break-words px-4 py-6 sm:px-8 sm:py-8 print:px-0 print:py-0 ${receiptPrint ? 'receipt-coupon-paper' : ''}`}>
+                <div className={`print-document invoice-paper mx-auto w-full min-w-0 max-w-4xl break-words px-4 py-6 sm:px-8 sm:py-8 print:px-0 print:py-0 ${mode === 'purchase' ? 'invoice-purchase' : 'invoice-sale'} ${receiptPrint ? 'receipt-coupon-paper' : ''}`}>
                     {/* Header: Brand details + Invoice title */}
                     <header className="invoice-brand-header invoice-editorial-header pb-4 sm:pb-5">
                         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">

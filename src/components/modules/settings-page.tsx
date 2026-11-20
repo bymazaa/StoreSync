@@ -2,7 +2,7 @@
 
 import { FormEvent, Fragment, useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { AlertTriangle, Check, CheckCircle2, ChevronDown, ChevronUp, Copy, CreditCard, Database, Download, FileArchive, Globe, History, Laptop, MapPin, Plus, RotateCcw, Trash2, X } from "lucide-react";
+import { AlertTriangle, Check, CheckCircle2, ChevronDown, ChevronUp, Copy, CreditCard, Database, Download, FileArchive, Globe, HardDrive, History, Laptop, MapPin, Plus, RotateCcw, Trash2, X } from "lucide-react";
 import { apiRequest, jsonBody } from "@/lib/client-api";
 import { Button } from "@/components/ui/button";
 import { ErrorMessage, inputClass, Notice, PageHeader, Panel, selectClass } from "@/components/ui/page";
@@ -15,6 +15,17 @@ type Settings = { shopName: string; logoUrl: string | null; address: string | nu
 type Method = { id: string; code: string; name: string; kind: string; isEnabled: boolean; sortOrder: number };
 type LoginHistoryItem = { id?: string; _id?: string; timestamp: string | Date; ip: string; device: string; location?: string; userAgent?: string };
 type User = { id: string; fullName: string; email: string; role: string; isActive: boolean; lastLoginAt?: string | Date | null; loginHistory?: LoginHistoryItem[] };
+type StorageMetrics = { dataBytes: number; indexBytes: number; usedBytes: number; atlasFreeLimitBytes: number; measuredAt: string };
+
+function formatStorageSize(bytes: number) {
+  if (bytes < 1024) return `${bytes} B`;
+  const units = ["KB", "MB", "GB", "TB"];
+  let value = bytes / 1024;
+  let unit = 0;
+  while (value >= 1024 && unit < units.length - 1) { value /= 1024; unit += 1; }
+  return `${value.toFixed(value >= 100 ? 0 : value >= 10 ? 1 : 2)} ${units[unit]}`;
+}
+
 // Every code the API actually guards (src/models/RolePermission.ts) — a permission missing here cannot be granted to a role.
 const permissionGroups: { title: string; items: [string, string][] }[] = [
   { title: "Counter", items: [["CREATE_SALES", "New sale / POS"], ["COLLECT_PAYMENTS", "Payments and due collection"], ["PROCESS_RETURNS", "Returns and invoice cancel"], ["APPLY_DISCOUNTS", "Discount on invoice"]] },
@@ -83,6 +94,9 @@ export function SettingsPage() {
   const [restoreBusy, setRestoreBusy] = useState(false);
   const [restoreError, setRestoreError] = useState("");
   const [restoreSuccess, setRestoreSuccess] = useState<string | null>(null);
+  const [storageMetrics, setStorageMetrics] = useState<StorageMetrics | null>(null);
+  const [storageLoading, setStorageLoading] = useState(false);
+  const [storageError, setStorageError] = useState("");
 
   const [settings, setSettings] = useState<Settings | null>(null); const [methods, setMethods] = useState<Method[]>([]); const [methodUpdating, setMethodUpdating] = useState<string | null>(null); const [methodModalOpen, setMethodModalOpen] = useState(false); const [methodError, setMethodError] = useState(""); const [users, setUsers] = useState<User[]>([]);
   const [countryCode, setCountryCode] = useState(contextCountryCode); const [currencyCode, setCurrencyCode] = useState("USD"); const [shopPhone, setShopPhone] = useState(""); const [shopAddress, setShopAddress] = useState("");
@@ -93,6 +107,18 @@ export function SettingsPage() {
   const [historyForUser, setHistoryForUser] = useState<User | null>(null);
   const [expandedHistoryIds, setExpandedHistoryIds] = useState<Record<string, boolean>>({});
   const [copiedIp, setCopiedIp] = useState<string | null>(null);
+  const loadStorageMetrics = useCallback(async () => {
+    if (!isOwner) return;
+    setStorageLoading(true);
+    setStorageError("");
+    try {
+      setStorageMetrics(await apiRequest<StorageMetrics>("/api/settings/storage"));
+    } catch (caught) {
+      setStorageError(caught instanceof Error ? caught.message : "Storage metrics could not be loaded.");
+    } finally {
+      setStorageLoading(false);
+    }
+  }, [isOwner]);
   const load = useCallback(async () => {
     setError("");
     const [settingsResult, methodsResult, usersResult] = await Promise.allSettled([
@@ -107,6 +133,7 @@ export function SettingsPage() {
     if (failedRequest?.status === "rejected") setError(failedRequest.reason instanceof Error ? failedRequest.reason.message : "Some settings could not be loaded.");
   }, [canManageSettings, canManageUsers]);
   useEffect(() => { const timer = window.setTimeout(() => { void load(); }, 0); return () => window.clearTimeout(timer); }, [load]);
+  useEffect(() => { const timer = window.setTimeout(() => { void loadStorageMetrics(); }, 0); return () => window.clearTimeout(timer); }, [loadStorageMetrics]);
   async function saveSettings(event: FormEvent<HTMLFormElement>) { event.preventDefault(); setBusy(true); setError(""); setNotice(""); const form = new FormData(event.currentTarget); const payload = Object.fromEntries([...form.entries()].map(([key, value]) => [key, String(value).trim() || null])); try { const response = await apiRequest<{ settings: Settings }>("/api/settings", { method: "PATCH", body: jsonBody({ ...payload, countryCode, currencyCode, address: shopAddress || null, phone: shopPhone || null, costingMethod: form.get("costingMethod") }) }); setSettings(response.settings); setCountryCode(response.settings.countryCode); setCurrencyCode(response.settings.currencyCode); setShopPhone(response.settings.phone ?? ""); setShopAddress(response.settings.address ?? ""); setNotice("Shop settings saved."); router.refresh(); } catch (e) { setError(e instanceof Error ? e.message : "Settings could not be saved."); } finally { setBusy(false); } }
   async function addMethod(event: FormEvent<HTMLFormElement>) { event.preventDefault(); setBusy(true); setMethodError(""); const formElement = event.currentTarget; const f = new FormData(formElement); try { const result = await apiRequest<{ paymentMethod: Method }>("/api/payment-methods", { method: "POST", body: jsonBody({ code: f.get("code"), name: f.get("name"), kind: f.get("kind"), isEnabled: true, sortOrder: methods.length + 1 }) }); formElement.reset(); setMethods((current) => [...current, result.paymentMethod].sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name))); window.dispatchEvent(new Event("stockpilot:payment-methods-changed")); setMethodModalOpen(false); setNotice("Payment method added and made available in checkout."); } catch (e) { setMethodError(e instanceof Error ? e.message : "Payment method could not be added."); } finally { setBusy(false); } }
   async function toggleMethod(method: Method) {
@@ -453,6 +480,27 @@ export function SettingsPage() {
       </Panel>
     )}
     {canManageUsers && <Panel className="settings-panel" title="Role permissions" description="Tick what each role may do. The same codes are enforced server-side, so an un-ticked action is refused even if the screen hides it.">{roles.map((role) => { const granted = permissions.filter((permission) => roleHas(role, permission)).length; const dirty = roleDirty(role); return <fieldset key={role} className="mb-4 rounded-[16px] border border-border/80 bg-background/45 p-4 last:mb-0 sm:p-5"><legend className="px-1 text-sm font-semibold">{role.replaceAll("_", " ")}<span className="ml-2 text-xs font-normal tabular-nums text-muted-foreground">{granted} of {permissions.length} allowed</span></legend><div className="mb-1 flex gap-3 text-[11px] font-semibold"><button type="button" className="text-primary hover:underline" onClick={() => setRoleAll(role, permissions)}>Select all</button><button type="button" className="text-muted-foreground hover:underline" onClick={() => setRoleAll(role, [])}>Clear</button></div>{permissionGroups.map((group) => <div key={group.title} className="grid gap-x-4 gap-y-2 border-t border-border/60 py-2 first:border-0 sm:grid-cols-[76px_minmax(0,1fr)] lg:grid-cols-[76px_repeat(4,minmax(0,1fr))]"><span className="pt-0.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">{group.title}</span>{group.items.map(([code, label]) => <label key={code} title={code} className="flex items-center gap-2 text-xs"><input type="checkbox" checked={roleHas(role, code)} onChange={(e) => setRolePermissions((old) => e.target.checked ? [...old, { role, permission: code }] : old.filter((item) => !(item.role === role && item.permission === code)))} className="accent-primary"/>{label}</label>)}</div>)}<div className="mt-3 flex flex-wrap items-center justify-between gap-3"><p className={`text-[11px] ${dirty ? "font-semibold text-amber-strong" : "text-muted-foreground"}`}>{dirty ? "Unsaved changes for this role" : "Changes apply the moment you save."}</p><Button variant="outline" disabled={busy || !dirty} onClick={() => void saveRole(role)}>Save role permissions</Button></div></fieldset>; })}</Panel>}
+    {isOwner && (
+      <Panel
+        className="settings-panel"
+        title="Database storage"
+        description="See how much storage the shop’s records currently use."
+        action={<Button type="button" variant="outline" className="h-9 px-3 text-xs" icon={<RotateCcw size={14} className={storageLoading ? "animate-spin" : ""} />} disabled={storageLoading} onClick={() => void loadStorageMetrics()}>{storageLoading ? "Refreshing…" : "Refresh"}</Button>}
+      >
+        {storageError && <ErrorMessage>{storageError}</ErrorMessage>}
+        {!storageMetrics && storageLoading ? (
+          <div className="h-24 w-full animate-pulse rounded-2xl bg-muted" />
+        ) : storageMetrics ? (
+          <>
+            <div className="w-full rounded-2xl border border-border/70 bg-background/50 p-4">
+              <div className="flex flex-wrap items-center justify-between gap-2"><div className="flex items-center gap-2 text-xs font-semibold text-foreground"><HardDrive size={15} className="text-primary"/>Storage used</div><span className="inline-flex rounded-full border border-border/70 bg-muted/60 px-3 py-1 text-sm font-semibold tabular-nums">{formatStorageSize(storageMetrics.usedBytes)} <span className="ml-1 font-normal text-muted-foreground">of {formatStorageSize(storageMetrics.atlasFreeLimitBytes)}</span></span></div>
+              <div className="mt-2 h-2 overflow-hidden rounded-full bg-muted"><div className="h-full rounded-full bg-primary transition-[width]" style={{ width: `${Math.min(100, storageMetrics.usedBytes / storageMetrics.atlasFreeLimitBytes * 100)}%` }} /></div>
+              <p className="mt-2 text-[11px] leading-5 text-muted-foreground">Compared with the Atlas Free 512 MB limit. Actual available space depends on your database plan or server. Downloaded backups are not included.</p>
+            </div>
+          </>
+        ) : !storageError ? <p className="text-sm text-muted-foreground">Storage metrics are not available yet.</p> : null}
+      </Panel>
+    )}
     {isOwner && (
       <Panel
         className="settings-panel border-primary/20 shadow-sm"

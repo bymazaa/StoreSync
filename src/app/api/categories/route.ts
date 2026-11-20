@@ -60,7 +60,15 @@ export async function POST(request: Request) {
       entityId: id,
     });
     
-    return NextResponse.json({ category }, { status: 201 });
+    return NextResponse.json({
+      category: {
+        id,
+        name: category.name,
+        description: category.description,
+        parentId: category.parentId,
+        isActive: category.isActive,
+      },
+    }, { status: 201 });
   } catch (error: any) {
     if (error.code === 11000) {
       return NextResponse.json({ error: { code: "CONFLICT", message: "That category name already exists." } }, { status: 409 });

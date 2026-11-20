@@ -863,6 +863,18 @@
         color: #61706c !important;
     }
 }
+
+/* Keep the purchase receipt divider close to the invoice date. */
+.receipt-mode .print-document.invoice-purchase > header.invoice-brand-header {
+    padding-bottom: 0 !important;
+}
+.receipt-mode .print-document.invoice-purchase > section.receipt-party-section {
+    margin-top: 0.5mm !important;
+    padding-top: 0 !important;
+}
+.receipt-mode .print-document.invoice-purchase > section.receipt-party-section > .invoice-party-grid {
+    margin-top: 0 !important;
+}
 /* 80 mm thermal receipt: compact content inside a light dashed coupon frame. */
 .receipt-mode .print-document {
     --spacing: 0.35mm;
@@ -1824,9 +1836,13 @@ label:has(
 }
 .invoice-editorial-header .receipt-shop-name {
     color: #123e38 !important;
+    font-family: var(--font-brand), var(--app-font-sans) !important;
     font-size: 16pt !important;
     line-height: 1.15 !important;
     letter-spacing: 0.025em !important;
+}
+.print-document:not(.receipt-coupon-paper) .invoice-editorial-header .receipt-shop-name {
+    text-transform: uppercase !important;
 }
 .invoice-editorial-header .truncate-receipt,
 .invoice-editorial-header p:not(.receipt-shop-name) {
@@ -1957,6 +1973,22 @@ label:has(
     table-layout: fixed !important;
     border-collapse: collapse !important;
 }
+.print-document:not(.receipt-coupon-paper),
+.print-document:not(.receipt-coupon-paper) * {
+    border-style: dashed !important;
+}
+.print-document:not(.receipt-coupon-paper) .invoice-editorial-header {
+    border-bottom: 0.35mm solid #0a9f94 !important;
+    border-bottom-style: solid !important;
+}
+.print-document:not(.receipt-coupon-paper) .a4-print-invoice-table thead,
+.print-document:not(.receipt-coupon-paper) .a4-print-invoice-table thead tr,
+.print-document:not(.receipt-coupon-paper) .a4-print-invoice-table thead th {
+    border: 0 !important;
+    border-style: none !important;
+    border-width: 0 !important;
+    border-color: transparent !important;
+}
 .print-document:not(.receipt-coupon-paper) .a4-print-invoice-table thead th {
     padding: 2mm 1.8mm !important;
     border: 0 !important;
@@ -1994,7 +2026,7 @@ label:has(
 
 /* Thermal receipt keeps the same hierarchy in a narrow, ink-friendly single column. */
 .receipt-mode .print-document .invoice-brand-header {
-    padding-bottom: 2.5mm !important;
+    padding-bottom: 1mm !important;
 }
 .receipt-mode .print-document .invoice-brand-header > div {
     flex-direction: column !important;
@@ -2005,6 +2037,9 @@ label:has(
     width: 100% !important;
     align-items: center !important;
     text-align: center !important;
+}
+.receipt-mode .print-document .invoice-logo-frame {
+    display: none !important;
 }
 .receipt-mode .print-document .invoice-brand-header .invoice-number-block {
     margin-top: 1mm !important;
@@ -2030,10 +2065,20 @@ label:has(
     align-items: flex-start !important;
     justify-content: space-between !important;
     gap: 2mm !important;
-    margin: 1.5mm 0 2mm !important;
+    margin: 0.5mm 0 2mm !important;
     padding: 1.5mm 0 !important;
-    border-top: 0.15mm solid #cbd3d0 !important;
+    border-top: 0.15mm dashed #cbd3d0 !important;
     border-bottom: 0.15mm solid #cbd3d0 !important;
+}
+.receipt-mode .print-document.invoice-purchase .invoice-brand-header {
+    padding-bottom: 0.5mm !important;
+}
+.receipt-mode .print-document.invoice-purchase .receipt-party-section {
+    margin-top: 0.5mm !important;
+    padding-top: 0 !important;
+}
+.receipt-mode .print-document.invoice-purchase .invoice-party-grid {
+    margin-top: 0 !important;
 }
 .receipt-mode .print-document .invoice-party-grid > .invoice-party-cell {
     flex: 1 1 50% !important;
@@ -2051,6 +2096,12 @@ label:has(
     max-width: 48% !important;
     margin-left: auto !important;
     text-align: right !important;
+}
+.receipt-mode .print-document.invoice-purchase .invoice-party-grid > .invoice-payment-cell {
+    transform: translateY(-0.8mm);
+}
+.receipt-mode .print-document.invoice-purchase .invoice-party-grid .receipt-party-name {
+    font-size: 6.5pt !important;
 }
 .receipt-mode .print-document .invoice-payment-cell .invoice-section-label {
     justify-content: flex-end !important;
@@ -2140,6 +2191,7 @@ label:has(
     .print-document:not(.receipt-coupon-paper) .invoice-editorial-header {
         padding-bottom: 4mm !important;
         border-bottom: 0.35mm solid #0a9f94 !important;
+        border-bottom-style: solid !important;
     }
     .print-document:not(.receipt-coupon-paper) .invoice-editorial-header > div {
         display: flex !important;

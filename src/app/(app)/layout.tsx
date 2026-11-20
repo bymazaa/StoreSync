@@ -46,13 +46,14 @@ async function AuthenticatedContent({
   }
 
   const settings = await Settings.findById("shop")
-    .select("shopName countryCode currencyCode locale timezone")
+    .select("shopName logoUrl countryCode currencyCode locale timezone")
     .lean();
 
   return (
     <AppShell
       user={user}
       shopName={settings?.shopName ?? "My Grocery Shop"}
+      logoUrl={settings?.logoUrl ?? null}
       countryCode={settings?.countryCode ?? "US"}
       currencyCode={settings?.currencyCode ?? "USD"}
       locale={settings?.locale ?? "en-US"}
