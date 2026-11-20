@@ -1387,6 +1387,30 @@ body {
     border-bottom: 0;
 }
 
+.inventory-movement-table thead {
+    background: color-mix(in srgb, var(--primary) 7%, var(--card));
+}
+.inventory-movement-table thead th {
+    color: var(--muted-foreground);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    padding-top: 0.75rem;
+    padding-bottom: 0.75rem;
+    white-space: nowrap;
+}
+.inventory-movement-table tbody td {
+    height: 66px;
+    padding-top: 0.75rem;
+    padding-bottom: 0.75rem;
+}
+.inventory-movement-table tbody tr {
+    transition: background-color 150ms ease;
+}
+.inventory-movement-table tbody tr:hover {
+    background: color-mix(in srgb, var(--primary-soft) 32%, transparent);
+}
 /* Keep invoice rows compact while leaving enough height to scan names and amounts comfortably. */
 .recent-table thead th {
     padding-top: 0.625rem;

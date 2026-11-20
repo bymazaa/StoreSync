@@ -21,8 +21,8 @@ services:
         exec docker-entrypoint.sh mongod --replSet rs0 --bind_ip_all --keyFile "$$KEYFILE"
 
     environment:
-      MONGO_INITDB_ROOT_USERNAME: root
-      MONGO_INITDB_ROOT_PASSWORD: "stockpilot321"
+      MONGO_INITDB_ROOT_USERNAME: "sp_admin_156ba86bacf19a8cba711e10"
+      MONGO_INITDB_ROOT_PASSWORD: "68c053b792b26ce8cad252f894c143615cce3a7cfc132ab42c1e92ff6246f37c"
       MONGO_INITDB_DATABASE: stockpilot
 
     volumes:
@@ -49,8 +49,8 @@ services:
       mongodb:
         condition: service_started
     environment:
-      MONGO_ROOT_USERNAME: root
-      MONGO_ROOT_PASSWORD: "stockpilot321"
+      MONGO_ROOT_USERNAME: "sp_admin_156ba86bacf19a8cba711e10"
+      MONGO_ROOT_PASSWORD: "68c053b792b26ce8cad252f894c143615cce3a7cfc132ab42c1e92ff6246f37c"
       REPLICA_SET_NAME: rs0
       REPLICA_SET_HOST: "mongodb:27017"
     networks:
@@ -105,9 +105,9 @@ services:
       PORT: 3000
       HOSTNAME: 0.0.0.0
       APP_URL: ${APP_URL:-http://localhost:3000}
-      MONGODB_URI: "mongodb://root:stockpilot321@mongodb:27017/stockpilot?authSource=admin&replicaSet=rs0"
-      JWT_ACCESS_SECRET: "avQm2xL9pR5kT8wN4yH6cF1zB4aD0lE7uJ9iK2mL"
-      JWT_REFRESH_SECRET: "eA8nZ3rW6pY1tK9vC4xH7qP2dF5sB0eU8kG6iR4"
+      MONGODB_URI: "mongodb://sp_admin_156ba86bacf19a8cba711e10:68c053b792b26ce8cad252f894c143615cce3a7cfc132ab42c1e92ff6246f37c@mongodb:27017/stockpilot?authSource=admin&replicaSet=rs0"
+      JWT_ACCESS_SECRET: "4d0bfca0df43b733daf38c60562aa69fdf1127e68f10e79504c8e0da2a9951f2d7ff1896555b530fe6c39dc5731bcc42"
+      JWT_REFRESH_SECRET: "cf9ed570b9fce2bd22f14af415dd3e6c4da4354ec1ec64ef81316b388e1ab3ec196753bc9943b120e20ed45c05ada670"
 
     depends_on:
       mongodb:
@@ -134,10 +134,10 @@ services:
     ports:
       - "127.0.0.1:8081:8081"
     environment:
-      ME_CONFIG_MONGODB_URL: "mongodb://root:stockpilot321@mongodb:27017/?authSource=admin&directConnection=true"
+      ME_CONFIG_MONGODB_URL: "mongodb://sp_admin_156ba86bacf19a8cba711e10:68c053b792b26ce8cad252f894c143615cce3a7cfc132ab42c1e92ff6246f37c@mongodb:27017/?authSource=admin&directConnection=true"
       ME_CONFIG_BASICAUTH_ENABLED: "true"
-      ME_CONFIG_BASICAUTH_USERNAME: "admin"
-      ME_CONFIG_BASICAUTH_PASSWORD: "pass"
+      ME_CONFIG_BASICAUTH_USERNAME: "sp_console_98fda466f7f52ff9"
+      ME_CONFIG_BASICAUTH_PASSWORD: "b2bb97f3cbec5090cf2e840e0144e3ae7d397b75271afcfc54e7115768e90f93"
     depends_on:
       mongodb:
         condition: service_healthy

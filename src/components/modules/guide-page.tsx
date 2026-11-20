@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import {
-  Activity, ArrowDownToLine, BadgeCheck, BookOpen, Boxes, ChartNoAxesCombined, CircleAlert, CircleDollarSign,
+  Activity, ArrowDownToLine, ArrowRight, BadgeCheck, BookOpen, Boxes, ChartNoAxesCombined, CircleAlert, CircleDollarSign,
   CircleHelp, FileText, History, Hourglass, KeyRound, LayoutDashboard, ListChecks, MapPin, MousePointerClick,
   PackageSearch, Printer, RotateCcw, Settings2, ShieldCheck, ShoppingBag, ShoppingCart, Truck, UsersRound,
 } from "lucide-react";
@@ -32,84 +32,105 @@ const roles = [
 
 const setupSteps = [
   {
-    title: "Name the shop and pick its country",
-    where: "Sidebar → Settings → panel “Shop & invoice settings”",
+    title: "Create the owner account",
+    where: "First launch → /setup",
+    href: "/setup",
     actions: [
-      "Fill Shop name, Shop address and Shop phone (optional), and a Logo URL if you want the logo on invoices.",
-      "Choose Country — StockPilot then sets Currency (automatic), date, number and time-zone formats for you; the currency box is read-only on purpose.",
-      "Set Sale invoice prefix (default SP) and Purchase invoice prefix (default PO) so invoice numbers match how you already write bills.",
-      "Choose How profit cost is calculated: Weighted average is the safe default for a general store; FIFO suits goods whose cost changes per batch.",
-      "Press Save shop settings and wait for the “Shop settings saved.” message.",
+      "On a new shop, enter the owner's name, an email you can access, and a password with at least 12 characters.",
+      "StockPilot signs you in after setup. If the shop already has an owner, skip this step and sign in instead.",
     ],
-    next: "Next, stay on the same page and open the “Payment methods” panel — see step 2.",
+    next: "Use step 2 to open StockPilot on your other shop devices.",
   },
   {
-    title: "Turn on the payment methods you actually take",
-    where: "Sidebar → Settings → panel “Payment methods”",
+    title: "Open StockPilot on the shop devices",
+    where: "Use the same shop address on every device",
+    href: "/",
     actions: [
-      "Cash, Card, Bank transfer and Mobile payment already exist. Use the Enabled / Disabled button to switch one off — methods are not deleted, so old invoices keep their history.",
-      "To add one, type a Unique code such as mobile-money (lowercase letters, numbers and hyphens only), a Display name, pick the kind, then Add method.",
+      "For a Docker shop server, keep the server computer running. On a phone or counter PC on the same Wi-Fi, open http://<server-IP>:3000. Do not use localhost on another device.",
+      "For a Vercel shop, open the deployed website address instead.",
+      "Use one address consistently. Ask whoever manages the router to reserve the server's local IP so it does not change.",
     ],
-    next: "Then go to Products and prepare the catalogue — steps 3 and 4.",
+    next: "Sign in on each device with the right staff account.",
   },
   {
-    title: "Create categories and stock units",
-    where: "Sidebar → Products → panels “Categories” and “Units”",
+    title: "Add your shop details",
+    where: "Sidebar → Settings → Shop & invoice settings",
+    href: "/settings",
     actions: [
-      "Under Categories type a Category name such as Drinks or Household and press Add category. Description is optional.",
-      "Under Units add the way you count stock: Unit name (Kilogram), Symbol (kg), Unique code (kg) → Add unit. Every product must pick one of these as its stock unit.",
-      "Units are for loose counting; pack sizes are handled per product later (Package conversions).",
+      "Enter the shop name. Add address, phone and logo URL if you want them on invoices.",
+      "Choose the country. StockPilot sets the currency and regional formats from it.",
+      "Choose invoice prefixes and a costing method before recording your first purchase.",
+      "Press Save shop settings.",
     ],
-    next: "Then add your products — step 4.",
+    next: "Set up the payment methods your shop accepts.",
   },
   {
-    title: "Add products (stock is still zero at this point)",
-    where: "Sidebar → Products → button “Add product”",
+    title: "Choose payment methods",
+    where: "Sidebar → Settings → Payment methods",
+    href: "/settings",
     actions: [
-      "Product name is the only required field. Pick a Category (default Uncategorized) and a Stock unit, then set a Low stock alert level so the dashboard warns you in time.",
-      "SKU shows as Auto generated (RIC-###) — do not invent one. It comes from the category name and counts up, so Rice gets RIC-001, RIC-002, RIC-003. Brand and Barcode are optional; add the manufacturer barcode here if the packet already has one.",
-      "Press Create product. The new row appears with stock 0 and no prices.",
+      "Enable the methods you take, such as cash, card, bank or mobile payment.",
+      "Add a method if you need one. Disabled methods will not appear when staff record a payment.",
     ],
-    next: "Important: a product is only a catalogue entry. Stock and both prices arrive with the first purchase — step 5.",
+    next: "Create your product categories and stock units.",
   },
   {
-    title: "Receive the first purchase — this is what puts stock in the shop",
+    title: "Set up products",
+    where: "Sidebar → Products",
+    href: "/products",
+    actions: [
+      "Add a few categories, such as Grocery or Drinks, and the units you count in, such as piece, kg or litre.",
+      "Add each product, choose its stock unit and set a low-stock alert. Barcode and brand are optional.",
+      "Add package conversions only when you sell the same product by pack and by its base unit.",
+    ],
+    next: "Products start with zero stock. Receive stock through Purchases.",
+  },
+  {
+    title: "Record your opening stock as a purchase",
     where: "Sidebar → Purchases → New purchase",
+    href: "/purchases",
     actions: [
-      "Panel “Add products”: search by name/SKU or scan into “Search or scan barcode”. A scanner presses Enter by itself, so a unique match lands on the invoice immediately; when several products match, click the right one.",
-      "Panel “Invoice items”: enter Qty, the Cost you paid per stock unit, and the required Selling price / stock unit (what a customer pays). Selling price entered here is what the counter later charges.",
-      "Tick Track batches for this product / Track expiry for this product only for goods that need it (medicines, perishables) and fill Batch number or expiry date. Leave them off for ordinary goods.",
-      "Panel “Supplier”: choose an existing supplier or type a new supplier name (a supplier is required). Add Supplier invoice number (optional) to match the paper bill, and Additional landed cost for freight or loading.",
-      "Panel “Discount and payment”: enter Paid amount, or tick Allow due if you owe part of it; choose the Payment method. Then press Complete purchase.",
+      "Choose the products and enter the quantity, actual cost per stock unit and selling price per stock unit.",
+      "Enter the supplier and payment. You can type a new supplier name here; you do not need to create it first.",
+      "Use batch and expiry fields only for products that need tracking, then press Complete purchase.",
     ],
-    next: "Stock and cost update together the moment the purchase completes. Confirm it on Sidebar → Inventory → Current stock, then continue to step 6.",
+    next: "Check the new quantities in Inventory → Current stock.",
   },
   {
-    title: "Add staff and decide what each role may do",
-    where: "Sidebar → Settings → panel “Staff accounts”",
+    title: "Add staff (optional)",
+    where: "Sidebar → Settings → Staff accounts and Role permissions",
+    href: "/settings",
     actions: [
-      "Enter Full name, Email and a Temporary password of at least 12 characters, choose Role (manager, cashier or stock clerk) and press Create account.",
-      "Open the “Role permissions” panel below: each role has its own checklist of 12 actions in three groups — Counter (New sale / POS, Payments and due collection, Returns and invoice cancel, Discount on invoice), Stock (Products, units, batches, Raise a purchase, Receive purchase stock, Stock adjustments) and Shop (Expenses and void expense, Reports and statements, Shop settings, Staff accounts and roles). Tick what that role needs, or use Select all / Clear, then press Save role permissions — it stays disabled until something actually changes.",
-      "Hand over the password. On first login the staff member opens their own Settings → Change password panel and sets a private one (12+ characters; this signs out their other sessions).",
-      "To stop someone keeping the shop, press Disable in the Access column of their row — that is the normal way to retire a staff account, because their sales, purchases and adjustments keep a traceable author. Delete removes the login entirely and is offered only for an account that never recorded anything (a mistake or a test account); if it already traded, the app refuses and tells you to disable it instead.",
+      "Create an account with the staff member's name, email and a temporary password of at least 12 characters.",
+      "Give the role only the permissions needed for that job, then save the permissions.",
+      "Ask each staff member to change their temporary password after signing in.",
     ],
-    next: "Now the counter is ready — sell your first invoice (step 7).",
+    next: "Keep the owner login private; use staff accounts for daily work.",
   },
   {
-    title: "Make the first sale and print the bill",
+    title: "Make a small first sale and check the receipt",
     where: "Sidebar → Sales & POS → New sale",
+    href: "/sales",
     actions: [
-      "Add products: the search box is already focused when the page opens, so scan or type straight away (Enter adds a unique match), or search and click a result for each line, then adjust Qty.",
-      "The price on a sale line comes from the product's selling price and is read-only at the counter — change it permanently from the purchase/product record, not during a sale.",
-      "Panel “Customer”: search by phone, name or email, or type new details. Leave it empty for a walk-in sale.",
-      "Panel “Discount and payment”: apply a Percentage or Fixed amount discount if your role has the apply discounts permission; enter Paid amount, or tick Allow due to sell on credit and see the Due: preview (a credit sale needs a customer with a phone number); choose the Payment method.",
-      "Press Complete sale. The success screen confirms the invoice and stock moved together, and offers Open printable invoice or Create another.",
-      "On the invoice: Print invoice (one A4 page) or Print 80 mm receipt for a thermal printer.",
+      "Use a real small sale, not a fake test: completing it changes stock and balances. Search or scan a product and enter the quantity.",
+      "Add a customer for a due sale; credit sales require the customer's phone number.",
+      "Choose the payment method, enter the amount paid and press Complete sale.",
+      "Open the invoice and check the details. Print an A4 invoice or an 80 mm receipt to confirm your printer settings.",
     ],
-    next: "End of day: check Sidebar → Dashboard, and export statements from Sidebar → Reports.",
+    next: "Check that the sale reduced stock and that the invoice appears in Recent sales.",
+  },
+  {
+    title: "Download backups regularly",
+    where: "Sidebar → Settings → Database Backup & Restore (owner only)",
+    href: "/settings",
+    actions: [
+      "Press Download Backup and save the file somewhere outside the shop computer as well.",
+      "Make a fresh backup before major changes or a restore. Restoring replaces current records; only restore a file you trust.",
+      "On Vercel, the restore screen accepts backup files up to 4 MB.",
+    ],
+    next: "The shop is ready. Check Dashboard and Reports during the day.",
   },
 ];
-
 const scenarios = [
   { icon: RotateCcw, when: "A customer brings goods back", where: "Open that invoice (Sidebar → Sales → the invoice number)", steps: "In the “Process customer return” panel enter Return quantity per line, pick a Return batch/expiry if tracked, add a Return reason, choose a Refund method if money goes back, then press Complete return. Stock and the balance correct themselves." },
   { icon: CircleDollarSign, when: "A credit customer pays part of their due", where: "Sidebar → Customers → that customer's History", steps: "Read Outstanding balance, then on the unpaid invoice type Amount to collect, pick the method (Reference is optional) and press Record payment. The same form exists for suppliers under Sidebar → Suppliers." },
@@ -119,7 +140,7 @@ const scenarios = [
   { icon: ShoppingBag, when: "More stock arrives from the same supplier", where: "Sidebar → Purchases → New purchase", steps: "Repeat step 5. Costing is recalculated from the new cost, so always enter the real per-unit cost — it drives the profit figure." },
   { icon: Printer, when: "You need paperwork for the owner or an audit", where: "Sidebar → Reports", steps: "Pick the report type, set From and To dates, press Refresh, then Print / Save PDF. Choose “Save as PDF” as the destination; Bengali and English text both save correctly because it prints the page itself." },
   { icon: Hourglass, when: "An item shows as out of stock during a sale", where: "The blocked sale screen", steps: "Press Create a purchase to receive stock from a supplier, complete it, then come back and finish the sale. Selling below zero is not allowed." },
-  { icon: KeyRound, when: "A staff member forgets their password", where: "Sidebar → Settings → panel “Staff accounts”", steps: "Press Reset password in their row, type a new temporary password of at least 12 characters and press Set password. Hand it over in person: it works on their next sign-in and every session they were signed in from is signed out. Only an owner or manager with the staff-accounts permission sees this. The owner’s own account cannot be reset here — use option 4 of the Start StockPilot.bat server menu instead." },
+  { icon: KeyRound, when: "A staff member forgets their password", where: "Sidebar → Settings → panel “Staff accounts”", steps: "Press Reset password in their row, type a new temporary password of at least 12 characters and press Set password. Hand it over in person: it works on their next sign-in and every session they were signed in from is signed out. Only an owner or manager with the staff-accounts permission sees this. The owner’s own account cannot be reset here. Use Reset admin password in the server control menu (option 4 in Docker Control Hub, option 3 in the local Windows menu), or ask the server administrator." },
 ];
 
 const words = [
@@ -147,18 +168,16 @@ const rules = [
 ];
 
 const serverMenu = [
-  { key: "1", name: "Start StockPilot and open the browser", text: "Switches the server on and opens the shop. If it asks you to wait, the first start can take a couple of minutes." },
-  { key: "2", name: "Stop StockPilot", text: "Switches the server off cleanly. All shop data stays safe on the disk — nothing is lost." },
-  { key: "3", name: "Show staff list", text: "Prints every staff account with name, email and role, straight from the database." },
-  { key: "4", name: "Reset a password (admin or staff)", text: "Type the account's email and it gives a new password. This is the only way to reset the owner's own password — the app cannot do it." },
-  { key: "5", name: "Change an account email", text: "Moves an account from its old email to a new one — useful when a staff member's address changes." },
-  { key: "6", name: "Add a staff member", text: "Creates an account from the menu: full name, email and role (OWNER, MANAGER, CASHIER or STOCK_CLERK)." },
-  { key: "7", name: "Remove a staff member", text: "Deletes an account by email." },
-  { key: "8", name: "Backup all data to a file", text: "Writes every table and every record into one file inside the backups folder, named stockpilot-date-time.gz. Take one before any big change, and keep copies somewhere outside the shop computer from time to time." },
-  { key: "9", name: "Restore data from a backup", text: "Shows the backups as a numbered list — type the number of the file you want. It asks twice (YES, then the word RESTORE) and automatically saves a safety copy of the current data first. Everything recorded after that backup was made is replaced." },
-  { key: "0", name: "Exit", text: "Closes the menu." },
+  { key: "1", name: "Start StockPilot (Docker)", text: "Starts the app and opens it in your browser." },
+  { key: "2", name: "Stop StockPilot (Docker)", text: "Stops the app and database containers. Your database volume remains on disk." },
+  { key: "3", name: "View account details", text: "Shows the owner and staff account details without changing them." },
+  { key: "4", name: "Reset the admin password", text: "Sets a new password for the owner account." },
+  { key: "5", name: "Change an account email", text: "Updates the email address for an owner or staff account." },
+  { key: "6", name: "Reset the database", text: "Offers a clean reset or demo data. This can erase the shop's current records; use only when you intend to start over." },
+  { key: "7", name: "Back up the database", text: "Saves a compressed backup file in the backups folder. Copy it to another safe place too." },
+  { key: "8", name: "Restore a backup", text: "Replaces current records with the selected backup. Make a backup first and choose the file carefully." },
+  { key: "9", name: "View Docker logs", text: "Shows recent service output to help diagnose a startup problem." },
 ];
-
 export function GuidePage() {
   const permissions = useShopPermissions();
   const visibleFeatures = features.filter((feature) => feature.requires.some((permission) => permissions.includes(permission)));
@@ -203,7 +222,7 @@ export function GuidePage() {
         </div>
       </Panel>
 
-      <Panel title="Set up your shop in this order" description="Do these seven steps once, top to bottom. Each one says where to go, what to press, and what to do next.">
+      <Panel title="Set up your shop in this order" description="Follow these nine short steps. Each step links to the page you need.">
         <ol className="space-y-4">{setupSteps.map((step, index) => <Step key={step.title} number={index + 1} {...step} />)}</ol>
       </Panel>
 
@@ -231,16 +250,26 @@ export function GuidePage() {
         <Callout icon={ArrowDownToLine} title="The one rule people miss" text="Adding a product does not put stock in the shop. Stock appears only after a purchase is completed — that is what keeps the stock count, the supplier bill and the cost price tied together. For the same reason, Inventory → Adjust stock refuses “Stock in” for a product that has no selling price yet; use a purchase for opening stock and keep adjustments for count corrections." />
       </Panel>
 
-      <Panel title="Server menu (Start StockPilot.bat)" description="On the shop's own computer there is a file named Start StockPilot.bat. Double-click it to open a small menu — the owner uses it for the jobs that cannot be done from inside the app, straight on the database. Pick a number and answer the questions it asks.">
-        <ol className="space-y-2.5 border-l border-border pl-4">
-          {serverMenu.map((item) => (
-            <li key={item.key} className="relative text-sm leading-6 text-muted-foreground">
-              <span className="absolute -left-[21px] top-1.5 grid size-3.5 place-items-center rounded-full bg-muted text-[8px] font-bold text-foreground tabular-nums">{item.key}</span>
-              <span className="font-semibold text-foreground">{item.name}</span> — {item.text}
-            </li>
-          ))}
-        </ol>
-        <Callout icon={ShieldCheck} title="This menu belongs to the owner" text="It works directly on the database, so it ignores the role permissions of the app. Keep it away from the counter staff." />
+      <Panel title="Starting StockPilot and managing data" description="Choose the control menu that matches how the shop was installed. Docker and local installs have different options.">
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,1.3fr)_minmax(260px,0.7fr)]">
+          <div>
+            <p className="mb-3 text-sm font-semibold">Docker Control Hub</p>
+            <ol className="space-y-2.5 border-l border-border pl-4">
+              {serverMenu.map((item) => (
+                <li key={item.key} className="relative text-sm leading-6 text-muted-foreground">
+                  <span className="absolute -left-[21px] top-1.5 grid size-3.5 place-items-center rounded-full bg-muted text-[8px] font-bold text-foreground tabular-nums">{item.key}</span>
+                  <span className="font-semibold text-foreground">{item.name}</span> — {item.text}
+                </li>
+              ))}
+            </ol>
+          </div>
+          <div className="rounded-2xl border border-border/80 bg-muted/25 p-4">
+            <p className="text-sm font-semibold text-foreground">Local Windows install</p>
+            <p className="mt-1 text-xs leading-5 text-muted-foreground">The local control menu has Start, View accounts, Reset admin password, Change email, Database reset and Exit. It does not use the Docker backup menu.</p>
+            <p className="mt-3 text-xs leading-5 text-muted-foreground">For a local install, use Settings → Database Backup &amp; Restore to download and restore a backup. Save downloaded backups away from the shop computer.</p>
+          </div>
+        </div>
+        <Callout icon={ShieldCheck} title="Keep admin tools private" text="Account resets, database resets and restores can affect the whole shop. Only the owner or a trusted administrator should use these tools. Never choose Database reset for routine maintenance." />
       </Panel>
 
       <Panel title="Words made simple" description="Short meanings for the terms you see on screens and invoices.">
@@ -259,12 +288,12 @@ export function GuidePage() {
   );
 }
 
-function Step({ number, title, where, actions, next }: { number: number; title: string; where: string; actions: string[]; next: string }) {
+function Step({ number, title, where, href, actions, next }: { number: number; title: string; where: string; href: string; actions: string[]; next: string }) {
   return (
-    <li className="rounded-2xl border border-border bg-background p-4 sm:p-5">
-      <div className="flex flex-wrap items-center gap-3">
-        <span className="grid size-8 shrink-0 place-items-center rounded-xl bg-primary text-sm font-bold text-primary-foreground tabular-nums">{number}</span>
-        <h3 className="text-sm font-semibold text-foreground sm:text-[15px]">{title}</h3>
+    <li className="rounded-2xl border border-border/80 bg-card p-4 shadow-sm sm:p-5">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-3"><span className="grid size-9 shrink-0 place-items-center rounded-xl bg-primary text-sm font-bold text-primary-foreground tabular-nums">{number}</span><h3 className="text-sm font-semibold text-foreground sm:text-[15px]">{title}</h3></div>
+        <Link href={href} className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-lg border border-primary/20 bg-primary/5 px-2.5 text-xs font-semibold text-primary transition-colors hover:bg-primary/10">Open page <ArrowRight size={13}/></Link>
       </div>
       <p className="mt-2.5 flex items-start gap-1.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-primary"><MapPin size={12} className="mt-0.5 shrink-0" />{where}</p>
       <ol className="mt-3 space-y-2 border-l border-border pl-4">
