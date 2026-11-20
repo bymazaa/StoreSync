@@ -111,6 +111,9 @@ const ProductSchema = new Schema<IProduct>(
 ProductSchema.index({ name: 1, isActive: 1 });
 ProductSchema.index({ categoryId: 1, isActive: 1 });
 ProductSchema.index({ stockOnHand: 1, lowStockThreshold: 1 });
+ProductSchema.index({ barcode: 1 }, {
+  partialFilterExpression: { barcode: { $type: 'string' } },
+});
 
 const Product = mongoose.models.Product || mongoose.model<IProduct>('Product', ProductSchema);
 

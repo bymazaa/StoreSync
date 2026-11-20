@@ -65,6 +65,14 @@ const CustomerSchema = new Schema<ICustomer>(
 );
 
 CustomerSchema.index({ name: 1, isActive: 1 });
+CustomerSchema.index({ phoneE164: 1 }, {
+  unique: true,
+  partialFilterExpression: { phoneE164: { $type: 'string' } },
+});
+CustomerSchema.index({ email: 1 }, {
+  unique: true,
+  partialFilterExpression: { email: { $type: 'string' } },
+});
 
 const Customer = mongoose.models.Customer || mongoose.model<ICustomer>('Customer', CustomerSchema);
 

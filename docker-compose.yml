@@ -28,7 +28,6 @@ services:
     volumes:
       - mongodb_data:/data/db
       - mongo_keyfile:/key
-      - ./mongodb-init.js:/docker-entrypoint-initdb.d/mongodb-init.js:ro
 
     networks:
       - stockpilot-network

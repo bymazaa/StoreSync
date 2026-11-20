@@ -65,6 +65,15 @@ const SupplierSchema = new Schema<ISupplier>(
 );
 
 SupplierSchema.index({ name: 1, isActive: 1 });
+// Existing shops can contain duplicate supplier phones, so keep lookup indexed
+// while the API prevents new duplicates; a unique index cannot build safely yet.
+SupplierSchema.index({ phoneE164: 1 }, {
+  partialFilterExpression: { phoneE164: { $type: 'string' } },
+});
+SupplierSchema.index({ email: 1 }, {
+  unique: true,
+  partialFilterExpression: { email: { $type: 'string' } },
+});
 
 const Supplier = mongoose.models.Supplier || mongoose.model<ISupplier>('Supplier', SupplierSchema);
 
