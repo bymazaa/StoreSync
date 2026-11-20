@@ -105,6 +105,7 @@ services:
       HOSTNAME: 0.0.0.0
       APP_URL: ${APP_URL:-http://localhost:3000}
       MONGODB_URI: "mongodb://sp_admin_156ba86bacf19a8cba711e10:68c053b792b26ce8cad252f894c143615cce3a7cfc132ab42c1e92ff6246f37c@mongodb:27017/stockpilot?authSource=admin&replicaSet=rs0"
+      MONGODB_STORAGE_LIMIT_MB: ${MONGODB_STORAGE_LIMIT_MB:-}
       JWT_ACCESS_SECRET: "4d0bfca0df43b733daf38c60562aa69fdf1127e68f10e79504c8e0da2a9951f2d7ff1896555b530fe6c39dc5731bcc42"
       JWT_REFRESH_SECRET: "cf9ed570b9fce2bd22f14af415dd3e6c4da4354ec1ec64ef81316b388e1ab3ec196753bc9943b120e20ed45c05ada670"
 

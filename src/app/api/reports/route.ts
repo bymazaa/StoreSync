@@ -50,6 +50,28 @@ export async function GET(request: Request) {
   const purchaseDateFilter = dateRange ? { purchasedAt: dateRange } : {};
   const saleStatuses = { $in: [SaleStatus.COMPLETED, SaleStatus.PARTIALLY_RETURNED, SaleStatus.RETURNED] };
 
+  if (type === "sales-returns" || type === "purchase-returns") {
+    const isSales = type === "sales-returns";
+    const returns = isSales
+      ? await SaleReturn.find({ status: "COMPLETED", ...(dateRange ? { returnedAt: dateRange } : {}) }).sort({ returnedAt: -1 }).limit(5000).lean()
+      : await PurchaseReturn.find({ status: "COMPLETED", ...(dateRange ? { returnedAt: dateRange } : {}) }).sort({ returnedAt: -1 }).limit(5000).lean();
+    const invoiceIds = [...new Set(returns.map((entry) => isSales ? (entry as any).saleId : (entry as any).purchaseId))];
+    const invoices = isSales
+      ? await Sale.find({ _id: { $in: invoiceIds } }).lean()
+      : await Purchase.find({ _id: { $in: invoiceIds } }).lean();
+    const contactIds = [...new Set(invoices.map((invoice: any) => isSales ? invoice.customerId : invoice.supplierId).filter(Boolean))];
+    const contacts = isSales ? await Customer.find({ _id: { $in: contactIds } }).lean() : await Supplier.find({ _id: { $in: contactIds } }).lean();
+    const invoiceMap = new Map(invoices.map((invoice: any) => [invoice._id, invoice]));
+    const contactMap = new Map(contacts.map((contact: any) => [contact._id, contact]));
+    const rows = returns.map((entry: any) => {
+      const invoice = invoiceMap.get(isSales ? entry.saleId : entry.purchaseId) as any;
+      const contact = invoice ? contactMap.get(isSales ? invoice.customerId : invoice.supplierId) as any : null;
+      return { returnedAt: entry.returnedAt, returnNumber: entry.returnNumber, invoiceNumber: invoice?.invoiceNumber ?? "—", ...(isSales ? { customerName: contact?.name ?? "Walk-in customer", refundAmount: entry.refundAmount } : { supplierName: contact?.name ?? "—" }), reason: entry.reason ?? "—", total: entry.total };
+    });
+    const total = returns.reduce((sum: number, entry: any) => sum + toNumber(entry.total), 0);
+    return NextResponse.json({ type, shop, currencyCode: settings?.currencyCode ?? "USD", returns: rows, summary: { returnCount: returns.length, returns: total.toFixed(2) } });
+  }
+
   if (type === "sales") {
     const sales = await Sale.find({ status: saleStatuses, ...dateFilter })
       .sort({ soldAt: -1 })
@@ -371,7 +393,7 @@ export async function GET(request: Request) {
     };
   };
 
-  if (type === "due") {
+  if (type === "customer-due" || type === "supplier-due") {
     const [customers, suppliers, openSales, openPurchases] = await Promise.all([
       Customer.find({}).lean(),
       Supplier.find({}).lean(),
@@ -394,14 +416,14 @@ export async function GET(request: Request) {
     const salesByCustomer = groupByContact(openSales as Record<string, any>[], "customerId");
     const purchasesBySupplier = groupByContact(openPurchases as Record<string, any>[], "supplierId");
 
-    const customersWithDue = customers
+    const customersWithDue = type === "supplier-due" ? [] : customers
       .map((customer) => dueRow(customer, (salesByCustomer.get(customer._id) ?? []).map((sale) => ({
         invoiceNumber: sale.invoiceNumber, dueAmount: toNumber(sale.dueAmount), invoiceDate: sale.soldAt,
       }))))
       .filter((row) => Number(row.dueAmount) > 0)
       .sort((a, b) => Number(b.dueAmount) - Number(a.dueAmount));
 
-    const suppliersWithDue = suppliers
+    const suppliersWithDue = type === "customer-due" ? [] : suppliers
       .map((supplier) => dueRow(supplier, (purchasesBySupplier.get(supplier._id) ?? []).map((purchase) => ({
         invoiceNumber: purchase.invoiceNumber, dueAmount: toNumber(purchase.dueAmount), invoiceDate: purchase.purchasedAt,
       }))))
@@ -415,14 +437,11 @@ export async function GET(request: Request) {
       type, shop, currencyCode: settings?.currencyCode ?? "USD",
       customers: customersWithDue,
       suppliers: suppliersWithDue,
-      summary: {
-        customerDue: customerDue.toFixed(2),
-        supplierDue: supplierDue.toFixed(2),
-        customersOwed: customersWithDue.length,
-        suppliersOwed: suppliersWithDue.length,
-      },
+      summary: type === "customer-due"
+        ? { customerDue: customerDue.toFixed(2), customersOwed: customersWithDue.length }
+        : { supplierDue: supplierDue.toFixed(2), suppliersOwed: suppliersWithDue.length },
     });
   }
 
-  return NextResponse.json({ error: { code: "BAD_REQUEST", message: "Choose sales, purchases, product-sales, profit-loss, expenses, stock, or due." } }, { status: 400 });
+  return NextResponse.json({ error: { code: "BAD_REQUEST", message: "Choose a supported report type." } }, { status: 400 });
 }

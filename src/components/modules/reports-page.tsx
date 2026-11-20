@@ -30,14 +30,18 @@ type Payload = ReportPayload;
 const options: { value: ReportType; label: string }[] = [
     { value: 'sales', label: 'Sales' },
     { value: 'purchases', label: 'Purchases' },
+    { value: 'sales-returns', label: 'Sales returns' },
+    { value: 'purchase-returns', label: 'Purchase returns' },
     { value: 'product-sales', label: 'Product sales' },
     { value: 'profit-loss', label: 'Profit & loss' },
     { value: 'stock', label: 'Stock valuation' },
-    { value: 'due', label: 'Customer & supplier due' },
+    { value: 'customer-due', label: 'Customer due' },
+    { value: 'supplier-due', label: 'Supplier due' },
     { value: 'expenses', label: 'Expenses' },
 ];
-type Preset = '3' | '7' | '15' | '30' | 'all' | 'custom';
+type Preset = 'today' | '3' | '7' | '15' | '30' | 'all' | 'custom';
 const presets: { value: Preset; label: string }[] = [
+    { value: 'today', label: 'Today' },
     { value: '3', label: 'Last 3 days' },
     { value: '7', label: 'Last 7 days' },
     { value: '15', label: 'Last 15 days' },
@@ -154,6 +158,12 @@ export function ReportsPage() {
             setTo('');
             return;
         }
+        if (value === 'today') {
+            const currentDay = localDateKey(new Date(), timezone);
+            setFrom(currentDay);
+            setTo(currentDay);
+            return;
+        }
         if (value === 'custom') return;
         const end = localDateKey(new Date(), timezone);
         setTo(end);
@@ -226,12 +236,6 @@ export function ReportsPage() {
                             <span>Official Statement</span>
                         </div>
                     </div>
-                </div>
-                <div className="report-title-band">
-                    <p className="report-title">{label} statement</p>
-                    <p className="report-period">
-                        {from || 'Start'} → {to || today}
-                    </p>
                 </div>
             </div>
 
@@ -319,7 +323,7 @@ export function ReportsPage() {
                         {busy ? 'Loading…' : 'Refresh'}
                     </Button>
                 </div>
-                {type === 'due' && (
+                {(type === 'customer-due' || type === 'supplier-due') && (
                     <p className="mt-3 text-xs text-muted-foreground">
                         Aging buckets are counted from each unpaid invoice date.
                     </p>

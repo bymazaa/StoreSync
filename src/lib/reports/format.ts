@@ -3,7 +3,7 @@
 
 import { formatCurrencyMoney } from "@/lib/currency";
 
-export type ReportType = "sales" | "purchases" | "product-sales" | "profit-loss" | "stock" | "due" | "expenses";
+export type ReportType = "sales" | "purchases" | "sales-returns" | "purchase-returns" | "product-sales" | "profit-loss" | "stock" | "customer-due" | "supplier-due" | "expenses";
 export type Row = Record<string, unknown>;
 
 export const printable = (value: unknown): string => { if (value == null) return "—"; if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") return String(value); return ""; };
@@ -21,11 +21,14 @@ export const quantityKeys = new Set(["quantity", "baseQuantity", "soldQuantity",
 export const reportColumns: Record<ReportType, string[]> = {
   sales: ["soldAt", "invoiceNumber", "subtotal", "discountAmount", "total", "paidAmount", "dueAmount"],
   purchases: ["purchasedAt", "invoiceNumber", "subtotal", "discountAmount", "additionalCost", "total", "paidAmount", "dueAmount"],
+  "sales-returns": ["returnedAt", "returnNumber", "invoiceNumber", "customerName", "reason", "total", "refundAmount"],
+  "purchase-returns": ["returnedAt", "returnNumber", "invoiceNumber", "supplierName", "reason", "total"],
+  "customer-due": ["name", "phone", "dueAmount", "due0to30", "due31to60", "dueOver60", "oldestDueDays", "invoices"],
+  "supplier-due": ["name", "phone", "dueAmount", "due0to30", "due31to60", "dueOver60", "oldestDueDays", "invoices"],
   "product-sales": ["productName", "unit", "quantity", "revenue", "costOfGoods", "grossProfit"],
   "profit-loss": ["soldAt", "invoiceNumber", "subtotal", "discountAmount"],
   expenses: ["expenseDate", "title", "category", "amount", "notes"],
   stock: ["name", "sku", "stockOnHand", "lowStockThreshold", "purchasePrice", "sellingPrice"],
-  due: ["name", "phone", "dueAmount", "due0to30", "due31to60", "dueOver60", "oldestDueDays", "invoices"],
 };
 export const expiringColumns = ["productName", "batchNumber", "expiresAt", "availableQuantity", "costPerBaseUnit"];
 export const isNumericColumn = (key: string) => moneyKeys.has(key) || quantityKeys.has(key);
@@ -96,11 +99,11 @@ export function statementCellTone(key: string, value: unknown, isFirst: boolean)
   return "plain";
 }
 
-export const reportLabels: Record<ReportType, string> = { sales: "Sales", purchases: "Purchases", "product-sales": "Product sales", "profit-loss": "Profit & loss", stock: "Stock valuation", due: "Customer & supplier due", expenses: "Expenses" };
+export const reportLabels: Record<ReportType, string> = { sales: "Sales", purchases: "Purchases", "sales-returns": "Sales returns", "purchase-returns": "Purchase returns", "customer-due": "Customer due", "supplier-due": "Supplier due", "product-sales": "Product sales", "profit-loss": "Profit & loss", stock: "Stock valuation", expenses: "Expenses" };
 export const reportLabel = (type: ReportType) => reportLabels[type] ?? "Report";
 
 // The /api/reports response, shaped by report type: each branch returns only its own row collections.
-export type ReportPayload = Record<string, unknown> & { type: string; currencyCode?: string; shop?: { name: string; address: string | null; phone: string | null }; summary?: Record<string, string | number>; sales?: Row[]; purchases?: Row[]; products?: Row[]; expenses?: Row[]; customers?: Row[]; suppliers?: Row[]; lowStock?: Row[]; expiringBatches?: Row[] };
+export type ReportPayload = Record<string, unknown> & { type: string; currencyCode?: string; shop?: { name: string; address: string | null; phone: string | null }; summary?: Record<string, string | number>; sales?: Row[]; purchases?: Row[]; returns?: Row[]; products?: Row[]; expenses?: Row[]; customers?: Row[]; suppliers?: Row[]; lowStock?: Row[]; expiringBatches?: Row[] };
 
 export type StatementSection = { title: string; description: string; rows: Row[]; columns: string[] };
 
@@ -108,8 +111,10 @@ export type StatementSection = { title: string; description: string; rows: Row[]
 export const batchRows = (payload: ReportPayload): Row[] => (payload.expiringBatches ?? []).map((batch) => ({ ...batch, product: undefined, productName: (batch.product as { name?: string } | null | undefined)?.name ?? "" }));
 
 export function reportRows(type: ReportType, payload: ReportPayload): Row[] {
-  if (type === "due") return [...(payload.customers ?? []), ...(payload.suppliers ?? [])];
+  if (type === "customer-due") return payload.customers ?? [];
+  if (type === "supplier-due") return payload.suppliers ?? [];
   if (type === "stock") return payload.lowStock ?? [];
+  if (type === "sales-returns" || type === "purchase-returns") return payload.returns ?? [];
   return payload.sales ?? payload.purchases ?? payload.products ?? payload.expenses ?? [];
 }
 
@@ -123,13 +128,10 @@ export function statementSections(type: ReportType, payload: ReportPayload): Sta
       { title: "Expiring batches", description: `${batches.length} batches expiring within 30 days.`, rows: batches, columns: statementColumns(batches, expiringColumns) },
     ];
   }
-  if (type === "due") {
-    const customers = payload.customers ?? [];
-    const suppliers = payload.suppliers ?? [];
-    return [
-      { title: "Customers with due balances", description: `${customers.length} customers · grouped by how long each invoice has been unpaid.`, rows: customers, columns: statementColumns(customers, reportColumns.due) },
-      { title: "Suppliers with due balances", description: `${suppliers.length} suppliers with unpaid invoices.`, rows: suppliers, columns: statementColumns(suppliers, reportColumns.due) },
-    ];
+  if (type === "customer-due" || type === "supplier-due") {
+    const rows = reportRows(type, payload);
+    const noun = type === "customer-due" ? "customers" : "suppliers";
+    return [{ title: `${reportLabel(type)} balances`, description: `${rows.length} ${noun} with unpaid invoices, grouped by how long each invoice has been due.`, rows, columns: statementColumns(rows, reportColumns["customer-due"]) }];
   }
   const label = reportLabel(type);
   const rows = reportRows(type, payload);

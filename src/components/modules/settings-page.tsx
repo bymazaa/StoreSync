@@ -15,7 +15,7 @@ type Settings = { shopName: string; logoUrl: string | null; address: string | nu
 type Method = { id: string; code: string; name: string; kind: string; isEnabled: boolean; sortOrder: number };
 type LoginHistoryItem = { id?: string; _id?: string; timestamp: string | Date; ip: string; device: string; location?: string; userAgent?: string };
 type User = { id: string; fullName: string; email: string; role: string; isActive: boolean; lastLoginAt?: string | Date | null; loginHistory?: LoginHistoryItem[] };
-type StorageMetrics = { dataBytes: number; indexBytes: number; usedBytes: number; atlasFreeLimitBytes: number; measuredAt: string };
+type StorageMetrics = { dataBytes: number; indexBytes: number; usedBytes: number; capacityBytes: number; capacitySource: "configured" | "default"; measuredAt: string };
 
 function formatStorageSize(bytes: number) {
   if (bytes < 1024) return `${bytes} B`;
@@ -484,7 +484,7 @@ export function SettingsPage() {
       <Panel
         className="settings-panel"
         title="Database storage"
-        description="See how much storage the shop’s records currently use."
+        description="See how much storage the database uses and its total capacity."
         action={<Button type="button" variant="outline" className="h-9 px-3 text-xs" icon={<RotateCcw size={14} className={storageLoading ? "animate-spin" : ""} />} disabled={storageLoading} onClick={() => void loadStorageMetrics()}>{storageLoading ? "Refreshing…" : "Refresh"}</Button>}
       >
         {storageError && <ErrorMessage>{storageError}</ErrorMessage>}
@@ -493,9 +493,9 @@ export function SettingsPage() {
         ) : storageMetrics ? (
           <>
             <div className="w-full rounded-2xl border border-border/70 bg-background/50 p-4">
-              <div className="flex flex-wrap items-center justify-between gap-2"><div className="flex items-center gap-2 text-xs font-semibold text-foreground"><HardDrive size={15} className="text-primary"/>Storage used</div><span className="inline-flex rounded-full border border-border/70 bg-muted/60 px-3 py-1 text-sm font-semibold tabular-nums">{formatStorageSize(storageMetrics.usedBytes)} <span className="ml-1 font-normal text-muted-foreground">of {formatStorageSize(storageMetrics.atlasFreeLimitBytes)}</span></span></div>
-              <div className="mt-2 h-2 overflow-hidden rounded-full bg-muted"><div className="h-full rounded-full bg-primary transition-[width]" style={{ width: `${Math.min(100, storageMetrics.usedBytes / storageMetrics.atlasFreeLimitBytes * 100)}%` }} /></div>
-              <p className="mt-2 text-[11px] leading-5 text-muted-foreground">Compared with the Atlas Free 512 MB limit. Actual available space depends on your database plan or server. Downloaded backups are not included.</p>
+              <div className="flex flex-wrap items-center justify-between gap-2"><div className="flex items-center gap-2 text-xs font-semibold text-foreground"><HardDrive size={15} className="text-primary"/>Storage used</div><span className="inline-flex rounded-full border border-border/70 bg-muted/60 px-3 py-1 text-sm font-semibold tabular-nums">{formatStorageSize(storageMetrics.usedBytes)}<span className="ml-1 font-normal text-muted-foreground">of {formatStorageSize(storageMetrics.capacityBytes)}</span></span></div>
+              <div className="mt-2 h-2 overflow-hidden rounded-full bg-muted"><div className="h-full rounded-full bg-primary transition-[width]" style={{ width: `${Math.min(100, storageMetrics.usedBytes / storageMetrics.capacityBytes * 100)}%` }} /></div>
+              <p className="mt-2 text-[11px] leading-5 text-muted-foreground">{storageMetrics.capacitySource === "configured" ? "Using the storage limit set by MONGODB_STORAGE_LIMIT_MB." : "Default limit: 512 MB. For a larger database, set MONGODB_STORAGE_LIMIT_MB in .env or your deployment environment."} Downloaded backups are not included.</p>
             </div>
           </>
         ) : !storageError ? <p className="text-sm text-muted-foreground">Storage metrics are not available yet.</p> : null}

@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { DM_Sans, Righteous } from "next/font/google";
+import { DM_Sans, Fredoka, Righteous } from "next/font/google";
 import { ThemeProvider } from "@/components/providers/theme-provider";
 import { SITE_CONFIG, absoluteUrl, getBaseUrl } from "@/lib/site-config";
 import "./globals.css";
@@ -15,6 +15,12 @@ const righteous = Righteous({
   weight: "400",
   display: "swap",
   variable: "--font-righteous",
+});
+const fredoka = Fredoka({
+  subsets: ["latin"],
+  weight: ["500", "600", "700"],
+  display: "swap",
+  variable: "--font-shop-name",
 });
 
 // Dynamic base URL derived from environment variables (APP_URL, NEXT_PUBLIC_APP_URL, VERCEL_URL, etc.)
@@ -147,7 +153,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   };
 
   return (
-    <html lang="en" suppressHydrationWarning className={`h-full antialiased ${dmSans.variable} ${righteous.variable}`}>
+    <html lang="en" suppressHydrationWarning className={`h-full antialiased ${dmSans.variable} ${righteous.variable} ${fredoka.variable}`}>
       <head>
         <script
           type="application/ld+json"

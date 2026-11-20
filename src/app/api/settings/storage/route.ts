@@ -3,7 +3,7 @@ import { authorized } from "@/lib/auth/api-guard";
 import connectDB from "@/lib/db";
 import { Permission, UserRole } from "@/types";
 
-const ATLAS_FREE_LIMIT_BYTES = 512 * 1024 * 1024;
+const DEFAULT_STORAGE_CAPACITY_BYTES = 512 * 1024 * 1024;
 
 export async function GET() {
   const guard = await authorized(Permission.MANAGE_SETTINGS);
@@ -20,13 +20,19 @@ export async function GET() {
     const stats = await database.stats();
     const dataBytes = Number(stats.dataSize ?? 0);
     const indexBytes = Number(stats.indexSize ?? 0);
+    const configuredValue = process.env.MONGODB_STORAGE_LIMIT_MB?.trim();
+    const configuredCapacity = Number(configuredValue || (DEFAULT_STORAGE_CAPACITY_BYTES / (1024 * 1024))) * 1024 * 1024;
+    const hasConfiguredCapacity = Boolean(configuredValue) && Number.isFinite(configuredCapacity) && configuredCapacity > 0;
+    const capacityBytes = hasConfiguredCapacity ? configuredCapacity : DEFAULT_STORAGE_CAPACITY_BYTES;
+    const capacitySource = hasConfiguredCapacity ? "configured" : "default";
 
     return NextResponse.json(
       {
         dataBytes,
         indexBytes,
         usedBytes: dataBytes + indexBytes,
-        atlasFreeLimitBytes: ATLAS_FREE_LIMIT_BYTES,
+        capacityBytes,
+        capacitySource,
         measuredAt: new Date().toISOString(),
       },
       { headers: { "Cache-Control": "private, no-store, max-age=0" } },

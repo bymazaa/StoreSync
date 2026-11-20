@@ -549,321 +549,49 @@
         print-color-adjust: exact;
         -webkit-print-color-adjust: exact;
     }
-    @page report {
-        size: A4 landscape;
-        margin: 10mm 12mm;
-    }
-    /* Modern, borderless statement with subtle soft-tinted backgrounds for effortless readability. */
-    .report-print {
-        page: report;
-        color: #162420;
-        font-family: var(--app-font-sans);
-    }
-    .report-print .overflow-x-auto {
-        overflow: visible !important;
-    }
-    .report-print thead {
-        display: table-header-group;
-    }
-    .report-print tr,
-    .report-print .report-summary {
-        break-inside: avoid;
-        page-break-inside: avoid;
-    }
-    .report-print .report-section > div:first-child {
-        break-inside: avoid;
-        break-after: avoid;
-        page-break-inside: avoid;
-        page-break-after: avoid;
-    }
-    /* Fixed column shares with zero borders and clean spacing */
-    .report-print table,
-    .report-print thead,
-    .report-print tbody,
-    .report-print tfoot,
-    .report-print tr,
-    .report-print th,
-    .report-print td {
-        border: 0 !important;
-        border-style: none !important;
-        border-width: 0 !important;
-        box-shadow: none !important;
-    }
-    .report-print .divide-y > * {
-        border-top-width: 0 !important;
-        border-style: none !important;
-    }
-    .report-print table {
-        width: 100%;
-        min-width: 0 !important;
-        margin: 0;
-        border-collapse: separate;
-        border-spacing: 0;
-        table-layout: fixed;
-        font-size: 7.2pt;
-        line-height: 1.45;
-        font-variant-numeric: tabular-nums;
-    }
-    .report-print th {
-        padding: 2.2mm 2.2mm;
-        line-height: 1.35;
-        background: #f1f5f4 !important;
-        color: #1a3832 !important;
-        font-size: 6.8pt;
-        font-weight: 700;
-        letter-spacing: 0.06em;
-        text-transform: uppercase;
-        text-align: left;
-        vertical-align: middle;
-        print-color-adjust: exact;
-        -webkit-print-color-adjust: exact;
-    }
-    .report-print th:first-child {
-        border-top-left-radius: 1.6mm;
-        border-bottom-left-radius: 1.6mm;
-    }
-    .report-print th:last-child {
-        border-top-right-radius: 1.6mm;
-        border-bottom-right-radius: 1.6mm;
-    }
-    .report-print th.text-right,
-    .report-print td.text-right {
-        text-align: right;
-    }
-    .report-print td {
-        padding: 1.7mm 2.2mm;
-        line-height: 1.45;
-        color: #1a2a26 !important;
-        vertical-align: middle;
-    }
-    .report-print td.text-danger {
-        color: #b91c1c !important;
-    }
-    .report-print td.text-amber-strong {
-        color: #92400e !important;
-    }
-    .report-print tbody tr:nth-child(even) td {
-        background: #f7faf9 !important;
-        print-color-adjust: exact;
-        -webkit-print-color-adjust: exact;
-    }
-    .report-print tbody tr:nth-child(odd) td {
-        background: #ffffff !important;
-    }
-    .report-print tbody tr:nth-child(even) td:first-child {
-        border-top-left-radius: 1.4mm;
-        border-bottom-left-radius: 1.4mm;
-    }
-    .report-print tbody tr:nth-child(even) td:last-child {
-        border-top-right-radius: 1.4mm;
-        border-bottom-right-radius: 1.4mm;
-    }
-    .report-print .report-serial {
-        color: #7c8985 !important;
-    }
-    .report-print tfoot {
-        display: table-row-group;
-    }
-    .report-print tfoot tr {
-        background: transparent !important;
-    }
-    .report-print tfoot td {
-        padding: 2.2mm 2.2mm !important;
-        background: #e6f0ed !important;
-        print-color-adjust: exact;
-        -webkit-print-color-adjust: exact;
-        color: #084841 !important;
-        font-weight: 700;
-        font-size: 7.6pt;
-        vertical-align: middle;
-    }
-    .report-print tfoot td:first-child {
-        border-top-left-radius: 1.6mm;
-        border-bottom-left-radius: 1.6mm;
-    }
-    .report-print tfoot td:last-child {
-        border-top-right-radius: 1.6mm;
-        border-bottom-right-radius: 1.6mm;
-    }
-    .report-print .report-empty {
-        color: #6b7874 !important;
-        background: #fff !important;
-    }
-    .report-print td,
-    .report-print th {
-        overflow-wrap: anywhere;
-    }
-    .report-print .report-table-frame {
-        border: 0 !important;
-        border-radius: 2mm !important;
-        overflow: hidden !important;
-        box-shadow: none !important;
-        background: transparent !important;
-    }
-    .report-letterhead {
-        display: flex;
-        align-items: flex-start;
-        justify-content: space-between;
-        gap: 8mm;
-        padding-bottom: 3mm;
-        border-bottom: 0.25mm solid #0f766e;
-    }
-    .report-shop-name {
-        font-size: 13.5pt;
-        font-weight: 800;
-        letter-spacing: 0.02em;
-        line-height: 1.25;
-        color: #0b4d46 !important;
-    }
-    .report-contact {
-        margin-top: 0.6mm;
-        font-size: 7.6pt;
-        line-height: 1.4;
-        color: #4e5f5b !important;
-    }
-    .report-letterhead-shop {
-        max-width: 60%;
-    }
-    .report-shop-extra {
-        margin-top: 1.6mm;
-        display: flex;
-        flex-direction: column;
-        gap: 0.5mm;
-    }
-    .report-meta-sub {
-        font-size: 7.2pt;
-        line-height: 1.35;
-        color: #4c5d59 !important;
-    }
-    .report-meta-sub span {
-        font-weight: 700;
-        color: #182c28 !important;
-    }
-    .report-meta {
-        font-size: 7.2pt;
-        color: #24332f !important;
-        text-align: right;
-    }
-    .report-meta > div {
-        display: flex;
-        justify-content: flex-end;
-        gap: 2mm;
-    }
-    .report-meta > div + div {
-        margin-top: 0.5mm;
-    }
-    .report-meta-label {
-        min-width: 20mm;
-        text-align: right;
-        font-size: 6.2pt;
-        font-weight: 700;
-        letter-spacing: 0.06em;
-        text-transform: uppercase;
-        color: #75827e !important;
-    }
-    .report-title-band {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 6mm;
-        margin-top: 3.5mm;
-        padding: 2.5mm 4mm;
-        border: 0.2mm solid #d5e2de !important;
-        border-radius: 2mm;
-        background: #f1f6f5 !important;
-        print-color-adjust: exact;
-        -webkit-print-color-adjust: exact;
-    }
-    .report-title {
-        font-size: 11pt;
-        font-weight: 800;
-        letter-spacing: 0.07em;
-        text-transform: uppercase;
-        color: #0b4d46 !important;
-    }
-    .report-period {
-        font-size: 7.5pt;
-        font-weight: 600;
-        color: #435954 !important;
-    }
-    .report-print .report-section {
-        margin-top: 4.5mm !important;
-        padding: 0 !important;
-        border: 0 !important;
-        border-radius: 0 !important;
-        background: transparent !important;
-        box-shadow: none !important;
-    }
-    .report-print .report-section h2 {
-        font-size: 9.5pt;
-        font-weight: 700;
-        letter-spacing: 0.05em;
-        text-transform: uppercase;
-        color: #0b4d46 !important;
-    }
-    .report-print .report-section p {
-        font-size: 7.2pt;
-        color: #5c6d69 !important;
-    }
-    .report-print .report-section > div:first-child {
-        margin-bottom: 2.2mm !important;
-        padding-bottom: 1.6mm;
-        border-bottom: 0.15mm solid #e5edea;
-    }
-    .report-summary {
-        display: grid !important;
-        grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
-        gap: 2.5mm !important;
-        margin-top: 3.5mm !important;
-        border: 0 !important;
-        border-radius: 0 !important;
-        overflow: visible !important;
-        background: transparent !important;
-    }
-    .report-summary > div {
-        padding: 2.6mm 3.2mm !important;
-        margin: 0 !important;
-        border: 0.25mm solid #cddcd7 !important;
-        border-radius: 2mm !important;
-        background: #f4f8f7 !important;
-        print-color-adjust: exact;
-        -webkit-print-color-adjust: exact;
-        box-shadow: none !important;
-    }
-    .report-summary > div > div:first-child > p,
-    .report-summary p:first-child {
-        font-size: 6.5pt !important;
-        font-weight: 700 !important;
-        letter-spacing: 0.05em !important;
-        text-transform: uppercase !important;
-        color: #405751 !important;
-        line-height: 1.3 !important;
-    }
-    .report-summary > div > p:nth-child(2),
-    .report-summary > div > p:nth-of-type(1),
-    .report-summary > div > p {
-        margin-top: 1.5mm !important;
-        font-size: 10.5pt !important;
-        font-weight: 800 !important;
-        color: #084841 !important;
-        line-height: 1.2 !important;
-    }
-    .report-summary > div > p.text-danger {
-        color: #b91c1c !important;
-    }
-    .report-footnote {
-        display: flex;
-        justify-content: space-between;
-        gap: 6mm;
-        margin-top: 3.5mm !important;
-        padding-top: 2mm;
-        border-top: 0.2mm solid #0f766e;
-        font-size: 6.4pt;
-        letter-spacing: 0.04em;
-        color: #61706c !important;
-    }
+    @page report { size: A4 landscape; margin: 10mm 11mm; }
+    .report-print { page: report; color: #172a26; font-family: var(--app-font-sans); font-size: 9pt; line-height: 1.4; }
+    .report-print .overflow-x-auto { overflow: visible !important; }
+    .report-print .report-letterhead { display:flex; align-items:center; justify-content:space-between; gap:10mm; padding:0 0 4mm; border-bottom:.3mm dashed #aabbb6; }
+    .report-print .report-letterhead-shop { max-width:62%; }
+    .report-print .report-shop-name { color:#123d38 !important; font-family:var(--font-shop-name), var(--app-font-sans) !important; font-size:17pt; font-weight:600; line-height:1.15; letter-spacing:.025em; text-transform:uppercase; }
+    .report-print .report-contact { margin-top:1mm; color:#52645f !important; font-size:8.5pt; line-height:1.35; }
+    .report-print .report-shop-extra { display:grid; gap:.8mm; margin-top:2.5mm; }
+    .report-print .report-meta-sub { color:#435650 !important; font-size:8pt; line-height:1.3; }
+    .report-print .report-meta-sub span { color:#18352f !important; font-weight:700; }
+    .report-print .report-meta { color:#253a35 !important; font-size:8pt; text-align:right; }
+    .report-print .report-meta > div { display:flex; justify-content:flex-end; gap:2mm; }
+    .report-print .report-meta > div + div { margin-top:1mm; }
+    .report-print .report-meta-label { min-width:20mm; color:#687a75 !important; font-size:7pt; font-weight:700; letter-spacing:.05em; text-align:right; text-transform:uppercase; }
+    .report-print .report-title { color:#123d38 !important; font-size:13pt; font-weight:800; letter-spacing:.045em; text-transform:uppercase; }
+    .report-print .report-period { color:#52645f !important; font-size:9pt; font-weight:600; }
+    .report-print .report-summary { display:grid !important; grid-template-columns:repeat(4,minmax(0,1fr)) !important; gap:3mm !important; margin-top:4mm !important; overflow:visible !important; background:transparent !important; }
+    .report-print .report-summary > div { min-width:0; margin:0 !important; padding:2.8mm 3.5mm !important; border:0 !important; border-radius:1.8mm !important; background:#f3f7f6 !important; box-shadow:none !important; print-color-adjust:exact; -webkit-print-color-adjust:exact; }
+    .report-print .report-summary > div > div:first-child > p,.report-print .report-summary p:first-child { color:#50635e !important; font-size:7.2pt !important; font-weight:700 !important; letter-spacing:.04em !important; line-height:1.25 !important; text-transform:uppercase !important; }
+    .report-print .report-summary > div > p { margin-top:2.2mm !important; color:#123d38 !important; font-size:15pt !important; font-weight:800 !important; line-height:1.1 !important; letter-spacing:-.02em; }
+    .report-print .report-summary > div > p.text-danger { color:#b42318 !important; }
+    .report-print .report-section { margin-top:5mm !important; padding:0 !important; border:0 !important; border-radius:0 !important; background:transparent !important; box-shadow:none !important; break-inside:auto; }
+    .report-print .report-section > div:first-child { margin:0 0 2mm !important; padding:0 0 1.5mm; border:0 !important; break-after:avoid; }
+    .report-print .report-section h2 { color:#123d38 !important; font-size:9pt; font-weight:800; letter-spacing:.04em; text-transform:uppercase; }
+    .report-print .report-section p { color:#62736e !important; font-size:7.5pt; }
+    .report-print .report-table-frame { overflow:visible !important; border:0 !important; border-radius:0 !important; background:#fff !important; box-shadow:none !important; }
+    .report-print table { width:100%; min-width:0 !important; margin:0; border-collapse:collapse; table-layout:fixed; font-size:8pt; line-height:1.35; font-variant-numeric:tabular-nums; }
+    .report-print thead { display:table-header-group; }
+    .report-print tr { break-inside:avoid; page-break-inside:avoid; }
+    .report-print th,.report-print td { border:0 !important; box-shadow:none !important; vertical-align:middle; text-align:left; overflow-wrap:break-word; word-break:normal; }
+    .report-print th { padding:2.4mm 2mm; background:#0a8178 !important; color:#fff !important; font-size:7.2pt; font-weight:700; letter-spacing:.035em; text-transform:uppercase; print-color-adjust:exact; -webkit-print-color-adjust:exact; }
+    .report-print td { padding:2mm; border:0 !important; color:#253a35 !important; }
+    .report-print th.text-right,.report-print td.text-right { text-align:right; }
+    .report-print tbody tr:nth-child(odd) td { background:#fff !important; }
+    .report-print tbody tr:nth-child(even) td { background:#f4f7f6 !important; print-color-adjust:exact; -webkit-print-color-adjust:exact; }
+    .report-print .report-serial { color:#71817c !important; }
+    .report-print td.text-danger { color:#b42318 !important; }
+    .report-print td.text-amber-strong { color:#8a4b08 !important; }
+    .report-print tfoot { display:table-row-group; }
+    .report-print tfoot td { padding:2.5mm 2mm !important; border:0 !important; background:#e6f2f0 !important; color:#123d38 !important; font-size:8.5pt; font-weight:800; print-color-adjust:exact; -webkit-print-color-adjust:exact; }
+    .report-print .report-empty { color:#687a75 !important; background:#fff !important; }
+    .report-print .report-footnote { display:flex; justify-content:space-between; gap:8mm; margin-top:4mm !important; padding-top:2mm; border-top:.25mm dashed #c5d1ce; color:#63736f !important; font-size:7pt; }
 }
-
 /* Keep the purchase receipt divider close to the invoice date. */
 .receipt-mode .print-document.invoice-purchase > header.invoice-brand-header {
     padding-bottom: 0 !important;
@@ -1836,10 +1564,13 @@ label:has(
 }
 .invoice-editorial-header .receipt-shop-name {
     color: #123e38 !important;
-    font-family: var(--font-brand), var(--app-font-sans) !important;
+    font-family: var(--font-shop-name), var(--app-font-sans) !important;
     font-size: 16pt !important;
     line-height: 1.15 !important;
     letter-spacing: 0.025em !important;
+}
+.print-document .receipt-shop-name {
+    font-family: var(--font-shop-name), var(--app-font-sans) !important;
 }
 .print-document:not(.receipt-coupon-paper) .invoice-editorial-header .receipt-shop-name {
     text-transform: uppercase !important;
@@ -2176,6 +1907,13 @@ label:has(
 }
 
 @media print {
+    .print-document .invoice-editorial-header .receipt-shop-name,
+    .receipt-mode .print-document .invoice-brand-header .receipt-shop-name {
+        font-family: var(--font-shop-name), var(--app-font-sans) !important;
+        font-weight: 600 !important;
+        letter-spacing: 0.045em !important;
+        text-transform: uppercase !important;
+    }
     .print-document:not(.receipt-coupon-paper) > section.receipt-party-section {
         border-top: 0 !important;
         border-top-width: 0 !important;
