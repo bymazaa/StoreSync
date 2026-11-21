@@ -316,27 +316,22 @@ export function AppShell({
             >
                 <div className="nav-logo-card flex items-center justify-between gap-2 px-1 py-2">
                     <Link
-                        className="nav-brand flex min-w-0 items-center gap-1.5 rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+                        className="nav-brand flex min-w-0 items-center gap-3 rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-primary/30 group"
                         href="/dashboard"
                         aria-label={`${APP_META.name} home`}
                         onClick={() => setMenuOpen(false)}
                     >
-                        <span className="nav-logo-emblem grid size-10 shrink-0 place-items-center text-primary">
-                            <LogoMark className="size-9" />
+                        <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary text-primary-foreground shadow-md shadow-primary/25 transition-transform duration-200 group-hover:scale-105">
+                            <LogoMark className="size-6" />
                         </span>
-                        <span className="nav-wordmark min-w-0">
-
-                            {/* <span className="block font-brand text-[17px] leading-none tracking-[0.04em] text-foreground">
-                                STOCK PILOT
-                            </span> */}
+                        <div className="nav-wordmark min-w-0">
                             <span className="font-brand block text-[17px] font-bold tracking-tight text-foreground leading-none">
                                 STOCK <span className="text-primary">PILOT</span>
                             </span>
-
-                            <span className="mt-1 block truncate text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
-                                Shop management
+                            <span className="mt-1 block truncate text-[9.5px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                                Smart POS &amp; Inventory
                             </span>
-                        </span>
+                        </div>
                     </Link>
                     <div className="nav-actions flex items-center gap-1">
                         <button

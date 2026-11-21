@@ -95,7 +95,7 @@ export function AuthForm({ mode, showBrand = true }: AuthFormProps) {
                         href="/"
                         className="inline-flex items-center gap-1.5 rounded-xl border border-border/80 bg-muted/40 px-3 py-1.5 text-xs font-semibold text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                     >
-                        ← ব্যাক টু হোম পেজ
+                        ← Back to Home
                     </Link>
                     <span className="text-[11px] font-bold text-primary uppercase tracking-wider">StockPilot</span>
                 </div>
@@ -201,10 +201,10 @@ export function AuthForm({ mode, showBrand = true }: AuthFormProps) {
                     <div className="mt-5 space-y-2.5 pt-3 border-t border-border/80">
                         <div className="flex items-center justify-between">
                             <span className="inline-flex items-center gap-1.5 text-xs font-bold text-foreground">
-                                <Sparkles size={13} className="text-primary" /> ডেমো একাউন্ট (Demo Logins)
+                                <Sparkles size={13} className="text-primary" /> Demo Login Accounts
                             </span>
                             <span className="text-[10px] font-semibold text-muted-foreground">
-                                টেস্ট করতে অটো-ফিল করুন
+                                Click Auto Fill to test
                             </span>
                         </div>
 
@@ -213,7 +213,7 @@ export function AuthForm({ mode, showBrand = true }: AuthFormProps) {
                             <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-1.5">
                                     <span className="size-2 rounded-full bg-primary" />
-                                    <span className="font-bold text-foreground">মালিক / Owner Access</span>
+                                    <span className="font-bold text-foreground">Store Owner (Admin)</span>
                                 </div>
                                 <button
                                     type="button"
@@ -237,7 +237,7 @@ export function AuthForm({ mode, showBrand = true }: AuthFormProps) {
                             <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-1.5">
                                     <span className="size-2 rounded-full bg-teal-500" />
-                                    <span className="font-bold text-foreground">ক্যাশিয়ার / Staff Access</span>
+                                    <span className="font-bold text-foreground">Cashier / Staff (Counter)</span>
                                 </div>
                                 <button
                                     type="button"
