@@ -1,4 +1,3 @@
-
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { connection } from "next/server";
@@ -8,7 +7,7 @@ import { getViewerUser } from "@/lib/auth/session";
 
 export const instant = false;
 
-export default function Home() {
+export default function DashboardPage() {
   return (
     <Suspense
       fallback={
@@ -19,12 +18,12 @@ export default function Home() {
         />
       }
     >
-      <HomeContent />
+      <DashboardContent />
     </Suspense>
   );
 }
 
-async function HomeContent() {
+async function DashboardContent() {
   await connection();
   const user = await getViewerUser();
 

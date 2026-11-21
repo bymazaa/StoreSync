@@ -1,6 +1,8 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import {
   ArrowDownRight,
+  ArrowLeft,
   Boxes,
   ChartNoAxesCombined,
   Check,
@@ -27,7 +29,7 @@ export default async function LoginPage() {
   await connection();
   await connectDB();
   const user = await getViewerUser();
-  if (user) redirect("/");
+  if (user) redirect("/dashboard");
 
   const userCount = await User.countDocuments({});
   if (userCount === 0) redirect("/setup");
@@ -38,18 +40,31 @@ export default async function LoginPage() {
       <div aria-hidden="true" className="pointer-events-none absolute -bottom-64 -left-48 size-[580px] rounded-full bg-primary-soft/50 blur-3xl dark:bg-primary-soft/20" />
 
       <header className="relative z-10 mx-auto flex w-full max-w-7xl items-center justify-between px-5 py-6 sm:px-8 lg:px-12">
-        <a href="/login" className="flex items-center gap-3" aria-label="StockPilot home">
-          <span className="grid size-11 place-items-center rounded-[15px] bg-primary text-primary-foreground shadow-[0_8px_20px_color-mix(in_srgb,var(--primary)_25%,transparent)]">
-            <LogoMark className="size-7" />
+        <Link href="/" className="flex items-center gap-3 group" aria-label="StockPilot home">
+          <span className="grid size-11 place-items-center rounded-2xl bg-primary text-primary-foreground shadow-lg shadow-primary/25 transition-transform duration-200 group-hover:scale-105">
+            <LogoMark className="size-6.5" />
           </span>
-          <span>
-            <span className="font-brand block text-[20px] leading-none tracking-[0.025em] text-foreground">STOCK PILOT</span>
-            <span className="mt-1 block text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Shop management</span>
+          <div>
+            <span className="font-brand block text-xl font-bold tracking-tight text-foreground">
+              STOCK <span className="text-primary">PILOT</span>
+            </span>
+            <span className="block text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+              Smart POS &amp; Inventory
+            </span>
+          </div>
+        </Link>
+        <div className="flex items-center gap-3">
+          <Link
+            href="/"
+            className="inline-flex items-center gap-2 rounded-2xl border border-border bg-card px-4 py-2 text-xs font-bold text-foreground shadow-2xl shadow-gray-100 transition-all hover:bg-muted dark:shadow-none"
+          >
+            <ArrowLeft size={14} className="text-primary" />
+            হোম পেজে ফিরে যান
+          </Link>
+          <span className="hidden items-center gap-2 rounded-full border border-border bg-card/80 px-3.5 py-2 text-xs font-medium text-muted-foreground sm:inline-flex">
+            <ShieldCheck size={15} className="text-primary" /> Private to your shop
           </span>
-        </a>
-        <span className="hidden items-center gap-2 rounded-full border border-border bg-card/80 px-3.5 py-2 text-xs font-medium text-muted-foreground sm:inline-flex">
-          <ShieldCheck size={15} className="text-primary" /> Private to your shop
-        </span>
+        </div>
       </header>
 
       <main className="relative z-10 mx-auto grid w-full max-w-7xl items-center gap-8 px-5 pb-10 pt-3 sm:px-8 lg:min-h-[calc(100vh-104px)] lg:grid-cols-[minmax(0,1fr)_440px] lg:gap-16 lg:px-12 lg:pb-16 lg:pt-0">
@@ -67,14 +82,14 @@ export default async function LoginPage() {
 
             <div className="mt-7 flex flex-wrap gap-2.5">
               {highlights.map(({ icon: Icon, label }) => (
-                <span key={label} className="inline-flex items-center gap-2 rounded-xl border border-border bg-card/80 px-3 py-2.5 text-xs font-semibold text-foreground shadow-sm dark:shadow-none">
+                <span key={label} className="inline-flex items-center gap-2 rounded-2xl border border-border bg-card/80 px-3.5 py-2.5 text-xs font-semibold text-foreground shadow-2xl shadow-gray-100 dark:shadow-none">
                   <Icon size={15} className="text-primary" /> {label}
                 </span>
               ))}
             </div>
           </div>
 
-          <div className="relative mt-9 max-w-[590px] overflow-hidden rounded-[26px] border border-border bg-card/90 p-5 text-foreground shadow-xl dark:shadow-none sm:p-7">
+          <div className="relative mt-9 max-w-[590px] overflow-hidden rounded-[32px] border border-border bg-card/90 p-6 text-foreground shadow-2xl shadow-gray-100 dark:shadow-none sm:p-8">
             <div aria-hidden="true" className="absolute -right-14 -top-20 size-64 rounded-full border border-primary/10" />
             <div aria-hidden="true" className="absolute -right-1 top-2 size-44 rounded-full border border-primary/[0.07]" />
             <div className="relative flex items-start justify-between gap-4">
@@ -82,7 +97,7 @@ export default async function LoginPage() {
                 <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-primary">A clearer view of today</p>
                 <p className="mt-2 text-sm text-muted-foreground">Your counter at a glance</p>
               </div>
-              <span className="grid size-10 shrink-0 place-items-center rounded-[13px] bg-primary/10 text-primary"><Store size={19} /></span>
+              <span className="grid size-10 shrink-0 place-items-center rounded-2xl bg-primary/10 text-primary"><Store size={19} /></span>
             </div>
             <div className="relative mt-7 flex flex-wrap items-end justify-between gap-5">
               <div>
@@ -113,7 +128,6 @@ export default async function LoginPage() {
       <footer className="relative z-10 mx-auto flex w-full max-w-7xl flex-col gap-2 px-5 pb-6 text-[11px] text-muted-foreground sm:flex-row sm:justify-between sm:px-8 lg:px-12">
         <span>Secure sign-in for your shop team</span>
         <span>StockPilot · Shop management</span>
-        <span>Designed &amp; built by <a href="https://bymaza.me" target="_blank" rel="noopener noreferrer" className="font-semibold text-primary transition-colors hover:underline">Mazaharul</a></span>
       </footer>
     </div>
   );

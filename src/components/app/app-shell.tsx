@@ -40,7 +40,7 @@ import { refreshAuthSession } from '@/lib/client-api';
 import { cn } from '@/lib/utils';
 
 const navigation = [
-    { label: 'Dashboard', href: '/', icon: LayoutDashboard, requires: ['VIEW_REPORTS'] },
+    { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, requires: ['VIEW_REPORTS'] },
     { label: 'Sales & POS', href: '/sales', icon: ScanLine, requires: ['CREATE_SALES'] },
     { label: 'Purchases', href: '/purchases', icon: ShoppingBasket, requires: ['CREATE_PURCHASES'] },
     {
@@ -316,8 +316,8 @@ export function AppShell({
             >
                 <div className="nav-logo-card flex items-center justify-between gap-2 px-1 py-2">
                     <Link
-                        className="nav-brand flex min-w-0 items-center gap-2.5 rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
-                        href="/"
+                        className="nav-brand flex min-w-0 items-center gap-1.5 rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+                        href="/dashboard"
                         aria-label={`${APP_META.name} home`}
                         onClick={() => setMenuOpen(false)}
                     >
@@ -325,9 +325,14 @@ export function AppShell({
                             <LogoMark className="size-9" />
                         </span>
                         <span className="nav-wordmark min-w-0">
-                            <span className="block font-brand text-[17px] leading-none tracking-[0.04em] text-foreground">
+
+                            {/* <span className="block font-brand text-[17px] leading-none tracking-[0.04em] text-foreground">
                                 STOCK PILOT
+                            </span> */}
+                            <span className="font-brand block text-[17px] font-bold tracking-tight text-foreground leading-none">
+                                STOCK <span className="text-primary">PILOT</span>
                             </span>
+
                             <span className="mt-1 block truncate text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
                                 Shop management
                             </span>
@@ -347,7 +352,7 @@ export function AppShell({
 
                 <div className="nav-menu mt-6 space-y-5 px-1">
                     {[
-                        { label: 'Workspace', items: visibleNavigation.filter((item) => item.href === '/') },
+                        { label: 'Workspace', items: visibleNavigation.filter((item) => item.href === '/dashboard') },
                         { label: 'Operations', items: visibleNavigation.filter((item) => ['/sales', '/purchases', '/products', '/inventory'].includes(item.href)) },
                         { label: 'People', items: visibleNavigation.filter((item) => ['/customers', '/suppliers'].includes(item.href)) },
                         { label: 'Insights', items: visibleNavigation.filter((item) => ['/reports', '/activity', '/expenses'].includes(item.href)) },
@@ -358,7 +363,7 @@ export function AppShell({
                             </h2>
                             <nav aria-label={group.label} className="space-y-0.5">
                                 {group.items.map(({ label, href, icon }) => {
-                                    const active = href === '/' ? pathname === '/' : pathname === href || pathname.startsWith(`${href}/`);
+                                    const active = href === '/dashboard' ? pathname === '/dashboard' : pathname === href || pathname.startsWith(`${href}/`);
                                     return renderNavItem(href, label, icon, active);
                                 })}
                             </nav>
