@@ -45,20 +45,36 @@ export async function PATCH(request: Request) {
     parsed.data.phone = phone.number;
   }
   
+  const changedFields: string[] = [];
+  if (previous) {
+    for (const [key, val] of Object.entries(parsed.data)) {
+      const prevVal = (previous as Record<string, unknown>)[key];
+      const strVal = val === null || val === undefined ? '' : String(val).trim();
+      const strPrev = prevVal === null || prevVal === undefined ? '' : String(prevVal).trim();
+      if (strVal !== strPrev) {
+        changedFields.push(key);
+      }
+    }
+  } else {
+    changedFields.push(...Object.keys(parsed.data));
+  }
+
   const updated = await Settings.findByIdAndUpdate(
     "shop",
     parsed.data,
     { returnDocument: "after", runValidators: true }
   ).lean();
   
-  await AuditLog.create({
-    _id: crypto.randomUUID(),
-    actorId: guard.user.id,
-    action: "settings.updated",
-    entityType: "settings",
-    entityId: "shop",
-    metadata: { before: previous, changedFields: Object.keys(parsed.data) },
-  });
+  if (changedFields.length > 0) {
+    await AuditLog.create({
+      _id: crypto.randomUUID(),
+      actorId: guard.user.id,
+      action: "settings.updated",
+      entityType: "settings",
+      entityId: "shop",
+      metadata: { before: previous, changedFields },
+    });
+  }
   
   return NextResponse.json({ settings: updated });
 }

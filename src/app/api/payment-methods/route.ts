@@ -88,19 +88,38 @@ export async function PATCH(request: Request) {
       }
     }
     
+    const changedFields: string[] = [];
+    if (data.name !== undefined && data.name.trim() !== (existing.name ?? '').trim()) {
+      changedFields.push("name");
+    }
+    if (data.code !== undefined && data.code.trim() !== (existing.code ?? '').trim()) {
+      changedFields.push("code");
+    }
+    if (data.kind !== undefined && data.kind !== existing.kind) {
+      changedFields.push("kind");
+    }
+    if (data.isEnabled !== undefined && Boolean(data.isEnabled) !== Boolean(existing.isEnabled)) {
+      changedFields.push("isEnabled");
+    }
+    if (data.sortOrder !== undefined && Number(data.sortOrder) !== Number(existing.sortOrder)) {
+      changedFields.push("sortOrder");
+    }
+
     const updated = await PaymentMethod.findByIdAndUpdate(id, data, { returnDocument: "after", runValidators: true }).lean();
     if (!updated) {
       return NextResponse.json({ error: { code: "NOT_FOUND", message: "Payment method was not found." } }, { status: 404 });
     }
     
-    await AuditLog.create({
-      _id: crypto.randomUUID(),
-      actorId: guard.user.id,
-      action: "payment_method.updated",
-      entityType: "payment_method",
-      entityId: id,
-      metadata: { changedFields: Object.keys(data) },
-    });
+    if (changedFields.length > 0) {
+      await AuditLog.create({
+        _id: crypto.randomUUID(),
+        actorId: guard.user.id,
+        action: "payment_method.updated",
+        entityType: "payment_method",
+        entityId: id,
+        metadata: { changedFields },
+      });
+    }
     
     return NextResponse.json({ paymentMethod: { ...updated, id: updated._id } });
   } catch (error: any) {

@@ -24,7 +24,7 @@ type InvoiceItem = { id: string; productName: string; skuSnapshot: string; quant
 type InvoicePayment = { id: string; amount: number; paidAt: string; reference?: string | null; method?: { name: string } | null; collectedBy?: { fullName: string } | null };
 type InvoiceReturn = { id: string; returnNumber: string; total: number };
 type InvoiceDetail = { id: string; invoiceNumber: string; status: string; subtotal: number; discountAmount: number; additionalCost?: number; total: number; paidAmount: number; dueAmount: number; notes?: string | null; supplierInvoiceNumber?: string | null; soldAt?: string; purchasedAt?: string; customer?: { name: string; phoneE164?: string | null } | null; supplier?: { name: string } | null; createdBy?: { fullName: string } | null; items: InvoiceItem[]; payments: InvoicePayment[]; returns?: InvoiceReturn[] };
-type Line = { productId: string; unitId: string; quantity: string; price: string; sellingPrice: string; batchNumber: string; expiresAt: string; trackBatch: boolean; trackExpiry: boolean };
+type Line = { productId: string; unitId: string; quantity: string; price: string; sellingPrice: string; batchNumber: string; expiresAt: string; trackBatch: boolean; trackExpiry: boolean; isCustomPrice?: boolean };
 
 const invoiceStatusTones: Record<string, string> = {
   COMPLETED: "bg-teal-soft text-teal-strong",
@@ -208,7 +208,7 @@ export function TransactionPage({ mode }: { mode: "sale" | "purchase" }) {
     setLines((existing) => {
       const index = existing.findIndex((line) => line.productId === product.id && line.unitId === product.baseUnitId);
       if (index >= 0) return existing.map((line, i) => i === index ? { ...line, quantity: String(Number(line.quantity) + 1) } : line);
-      return [...existing, { productId: product.id, unitId: product.baseUnitId, quantity: "1", price: trimDecimalZeros(isSale ? product.sellingPrice : product.purchasePrice), sellingPrice: trimDecimalZeros(product.sellingPrice), batchNumber: "", expiresAt: "", trackBatch: product.tracksBatch, trackExpiry: product.tracksExpiry }];
+      return [...existing, { productId: product.id, unitId: product.baseUnitId, quantity: "1", price: trimDecimalZeros(isSale ? product.sellingPrice : product.purchasePrice), sellingPrice: trimDecimalZeros(product.sellingPrice), batchNumber: "", expiresAt: "", trackBatch: product.tracksBatch, trackExpiry: product.tracksExpiry, isCustomPrice: false }];
     }); setQuery("");
     keepSearchFocused();
   }
@@ -511,9 +511,9 @@ export function TransactionPage({ mode }: { mode: "sale" | "purchase" }) {
         </div>
         {outOfStock && <div role="alert" className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl border border-danger/30 bg-danger/10 px-3 py-2 text-xs text-danger"><span><strong>{outOfStock}</strong> is out of stock. Receive a purchase before selling it.</span>{canPurchase && <Link href="/purchases" className="font-semibold underline">Create a purchase</Link>}<button type="button" onClick={() => setOutOfStock("")} className="ml-auto rounded-md p-1 hover:bg-danger/10" aria-label="Dismiss stock warning"><X size={14} /></button></div>}
         <div className="mt-4">{lines.length === 0 ? <div className="rounded-xl border border-dashed border-border px-4 py-10 text-center text-sm text-muted-foreground">Nothing added yet. Scan a barcode, or press <Key>F2</Key> and start typing.</div> : <div className="rounded-xl border border-border/60 bg-muted/20 p-2 sm:p-3">
-          <div className="hidden bg-muted/35 px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.09em] text-muted-foreground sm:grid sm:grid-cols-[minmax(0,1fr)_96px_160px_128px_36px] sm:gap-3"><span>Product</span><span>Unit</span><span>Quantity</span><span className="text-right">Price / unit</span><span className="sr-only">Remove</span></div>
+          <div className="hidden bg-muted/35 px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.09em] text-muted-foreground sm:grid sm:grid-cols-[minmax(0,1fr)_96px_140px_200px_36px] sm:gap-3"><span>Product</span><span>Unit</span><span>Quantity</span><span className="text-right">Price / unit</span><span className="sr-only">Remove</span></div>
           <div className="space-y-3">{lines.map((line, index) => { const product = products.find((item) => item.id === line.productId); const units = unitOptions(line); const selectedUnit = units.find((unit) => unit.id === line.unitId); const wholeQuantity = usesWholeQuantity(selectedUnit?.name ?? "", selectedUnit?.symbol ?? ""); const lineTotal = centsToMoney(moneyProductCents(line.price || "0", line.quantity || "0")); return <div key={`${line.productId}-${index}`} className="rounded-xl border border-border bg-card p-3 shadow-2xl shadow-gray-50 transition-colors hover:border-primary/30 dark:shadow-none sm:p-3.5">
-            <div className="grid grid-cols-2 items-end gap-x-2 gap-y-3 sm:grid-cols-[minmax(0,1fr)_96px_160px_128px_36px] sm:items-center sm:gap-3">
+            <div className="grid grid-cols-2 items-end gap-x-2 gap-y-3 sm:grid-cols-[minmax(0,1fr)_96px_140px_200px_36px] sm:items-center sm:gap-3">
               <div className="col-span-2 min-w-0 sm:col-span-1"><span className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground sm:hidden">Product</span>{product ? <p className="truncate text-sm font-semibold">{product.name}<span className="ml-2 text-xs font-normal text-muted-foreground">{product.sku}{isSale && <span className={Number(product.stockOnHand) <= 0 ? " font-semibold text-danger" : ""}> ({trimDecimalZeros(product.stockOnHand)} {product.baseUnit.symbol})</span>}</span></p> : <select required aria-label="Product" value={line.productId} onChange={(e) => { const item = products.find((x) => x.id === e.target.value); if (item) addProduct(item); }} className={selectClass}><option value="">Choose product</option>{products.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select>}{product && <p className="break-words text-xs tabular-nums text-muted-foreground [overflow-wrap:anywhere]">Line total {formatMoney(lineTotal)}</p>}</div>
               {product && <label className="block min-w-0"><span className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground sm:hidden">Unit</span><select aria-label="Unit" value={line.unitId} onChange={(e) => { const nextUnit = units.find((unit) => unit.id === e.target.value); const oldUnit = units.find((unit) => unit.id === line.unitId); const convertedPrice = nextUnit && oldUnit ? convertUnitDecimal(line.price, oldUnit.conversion, nextUnit.conversion) : line.price; updateLine(index, { unitId: e.target.value, price: trimDecimalZeros(convertedPrice) }); }} className={selectClass}>{units.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}</select></label>}
               <div className="min-w-0"><span className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground sm:hidden">Quantity</span><div className="flex items-center gap-1">
@@ -521,7 +521,61 @@ export function TransactionPage({ mode }: { mode: "sale" | "purchase" }) {
                 <input ref={(node) => { qtyRefs.current[index] = node; }} aria-label="Quantity" required type="number" inputMode={wholeQuantity ? "numeric" : "decimal"} min={wholeQuantity ? "1" : "0.01"} step={wholeQuantity ? "1" : "0.01"} value={line.quantity} onChange={(e) => updateLine(index, { quantity: e.target.value })} onKeyDown={(e) => quantityKeyDown(e, index)} className={`${inputClass} min-w-0 flex-1 px-1 text-center`}/><span className="w-9 shrink-0 text-xs text-muted-foreground sm:hidden">{selectedUnit?.symbol}</span>
                 <button type="button" onClick={() => stepQuantity(index, 1)} aria-label={`Increase ${line.productId} quantity`} className="grid size-8 shrink-0 place-items-center rounded-lg border border-border text-muted-foreground transition-colors hover:bg-muted"><Plus size={13}/></button>
               </div></div>
-              <label className="block min-w-0"><span className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground sm:hidden">{isSale ? "Price / unit" : "Unit cost"}</span><input aria-label={isSale ? "Configured unit price" : "Unit cost"} required readOnly={isSale} type="number" inputMode="decimal" min="0" step="0.01" value={line.price} onChange={(e) => updateLine(index, { price: e.target.value })} className={`${inputClass} text-right`} placeholder={isSale ? "Price" : "Cost"}/></label>
+              <div className="min-w-0">
+                <span className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground sm:hidden">{isSale ? "Price / unit" : "Unit cost"}</span>
+                <div className="flex items-center gap-1.5">
+                  <input
+                    aria-label={isSale ? (line.isCustomPrice ? "Custom unit price" : "Configured unit price") : "Unit cost"}
+                    required
+                    readOnly={isSale && !line.isCustomPrice}
+                    type="number"
+                    inputMode="decimal"
+                    min="0"
+                    step="0.01"
+                    value={line.price}
+                    onChange={(e) => updateLine(index, { price: e.target.value })}
+                    className={`${inputClass} min-w-0 flex-1 text-right transition-colors ${
+                      isSale && !line.isCustomPrice
+                        ? "cursor-not-allowed bg-muted/40 text-muted-foreground select-none"
+                        : "bg-card font-semibold text-foreground border-primary/50 focus:border-primary shadow-xs"
+                    }`}
+                    placeholder={isSale ? "Price" : "Cost"}
+                    title={isSale && !line.isCustomPrice ? "Click 'Edit price' beside to unlock and modify amount" : undefined}
+                  />
+                  {isSale && (
+                    <label
+                      className={`inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg border px-2 text-[11px] font-medium cursor-pointer select-none transition-colors ${
+                        line.isCustomPrice
+                          ? "border-primary/60 bg-primary/10 text-primary shadow-xs"
+                          : "border-border bg-background text-muted-foreground hover:bg-muted hover:text-foreground"
+                      }`}
+                      title="Check to customize or adjust selling price for this product"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={Boolean(line.isCustomPrice)}
+                        onChange={(e) => {
+                          const checked = e.target.checked;
+                          if (!checked && product) {
+                            const basePrice = product.sellingPrice;
+                            const converted =
+                              selectedUnit && selectedUnit.id !== product.baseUnitId
+                                ? convertUnitDecimal(basePrice, "1", selectedUnit.conversion)
+                                : basePrice;
+                            updateLine(index, { isCustomPrice: false, price: trimDecimalZeros(converted) });
+                          } else {
+                            updateLine(index, { isCustomPrice: checked });
+                          }
+                        }}
+                        className="size-3.5 rounded border-border accent-primary cursor-pointer"
+                      />
+                      <span className="whitespace-nowrap font-medium">
+                        {line.isCustomPrice ? "Price ON" : "Edit price"}
+                      </span>
+                    </label>
+                  )}
+                </div>
+              </div>
               <button type="button" onClick={() => removeLine(index)} aria-label="Remove line" className="justify-self-end rounded-[10px] border border-danger/15 bg-danger/10 p-2 text-danger transition-colors hover:bg-danger/20"><X size={15}/></button>
             </div>
             {!isSale && <div className="mt-3 rounded-xl border border-border/60 bg-muted/25 p-3 sm:p-3.5">

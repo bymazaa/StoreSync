@@ -79,7 +79,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ su
   delete fields.phone;
   
   try {
-    const existing = await Supplier.findById(supplierId).select("_id").lean();
+    const existing = await Supplier.findById(supplierId).lean() as ISupplier | null;
     if (!existing) throw new SupplierUpdateError("Supplier was not found.", 404);
     
     if (fields.isActive === false) {
@@ -92,6 +92,26 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ su
         throw new SupplierUpdateError("Settle this supplier's outstanding balance before archiving the account.");
       }
     }
+
+    const changedFields: string[] = [];
+    if (fields.name !== undefined && fields.name.trim() !== (existing.name ?? '').trim()) {
+      changedFields.push("name");
+    }
+    if (fields.email !== undefined && (fields.email?.trim() || null) !== (existing.email || null)) {
+      changedFields.push("email");
+    }
+    if (phoneE164 !== undefined && (phoneE164 || null) !== (existing.phoneE164 || null)) {
+      changedFields.push("phone");
+    }
+    if (fields.address !== undefined && (fields.address?.trim() || null) !== (existing.address || null)) {
+      changedFields.push("address");
+    }
+    if (fields.notes !== undefined && (fields.notes?.trim() || null) !== (existing.notes || null)) {
+      changedFields.push("notes");
+    }
+    if (fields.isActive !== undefined && Boolean(fields.isActive) !== Boolean(existing.isActive)) {
+      changedFields.push("isActive");
+    }
     
     const updated = await Supplier.findByIdAndUpdate(
       supplierId,
@@ -99,11 +119,16 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ su
       { returnDocument: "after", runValidators: true }
     ).lean() as ISupplier;
     
-    await AuditLog.create({
-      _id: randomUUID(),
-      actorId: guard.user.id, action: "supplier.updated", entityType: "supplier", entityId: supplierId,
-      metadata: { changedFields: Object.keys(parsed.data) },
-    });
+    if (changedFields.length > 0) {
+      await AuditLog.create({
+        _id: randomUUID(),
+        actorId: guard.user.id,
+        action: "supplier.updated",
+        entityType: "supplier",
+        entityId: supplierId,
+        metadata: { changedFields },
+      });
+    }
     
     return NextResponse.json({ supplier: updated });
   } catch (error) {

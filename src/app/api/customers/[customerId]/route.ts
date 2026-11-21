@@ -79,7 +79,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ cu
   delete fields.phone;
   
   try {
-    const existing = await Customer.findById(customerId).select("_id").lean();
+    const existing = await Customer.findById(customerId).lean() as ICustomer | null;
     if (!existing) throw new CustomerUpdateError("Customer was not found.", 404);
     
     if (phoneE164 === null || fields.isActive === false) {
@@ -92,6 +92,23 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ cu
         throw new CustomerUpdateError("Settle the customer's outstanding balance before removing their phone or archiving the account.");
       }
     }
+
+    const changedFields: string[] = [];
+    if (fields.name !== undefined && fields.name.trim() !== (existing.name ?? '').trim()) {
+      changedFields.push("name");
+    }
+    if (phoneE164 !== undefined && (phoneE164 || null) !== (existing.phoneE164 || null)) {
+      changedFields.push("phone");
+    }
+    if (fields.address !== undefined && (fields.address?.trim() || null) !== (existing.address || null)) {
+      changedFields.push("address");
+    }
+    if (fields.notes !== undefined && (fields.notes?.trim() || null) !== (existing.notes || null)) {
+      changedFields.push("notes");
+    }
+    if (fields.isActive !== undefined && Boolean(fields.isActive) !== Boolean(existing.isActive)) {
+      changedFields.push("isActive");
+    }
     
     const updated = await Customer.findByIdAndUpdate(
       customerId,
@@ -99,11 +116,16 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ cu
       { returnDocument: "after", runValidators: true }
     ).lean() as ICustomer;
     
-    await AuditLog.create({
-      _id: randomUUID(),
-      actorId: guard.user.id, action: "customer.updated", entityType: "customer", entityId: customerId,
-      metadata: { changedFields: Object.keys(parsed.data) },
-    });
+    if (changedFields.length > 0) {
+      await AuditLog.create({
+        _id: randomUUID(),
+        actorId: guard.user.id,
+        action: "customer.updated",
+        entityType: "customer",
+        entityId: customerId,
+        metadata: { changedFields },
+      });
+    }
     
     return NextResponse.json({ customer: updated });
   } catch (error) {

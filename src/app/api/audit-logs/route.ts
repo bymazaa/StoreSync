@@ -19,6 +19,28 @@ function actorName(actor?: { fullName?: string; email?: string } | null) {
     return actor?.fullName?.trim() || actor?.email?.trim() || 'Removed user';
 }
 
+const FIELD_LABELS: Record<string, string> = {
+    sellingPrice: 'selling price',
+    purchasePrice: 'purchase price',
+    lowStockThreshold: 'low stock alert',
+    baseUnitId: 'stock unit',
+    categoryId: 'category',
+    tracksExpiry: 'expiry tracking',
+    tracksBatch: 'batch tracking',
+    isActive: 'status',
+    isEnabled: 'status',
+    phoneE164: 'phone',
+    contactPerson: 'contact person',
+    fullName: 'full name',
+    parentId: 'parent category',
+    sortOrder: 'sort order',
+};
+
+function formatFieldName(field: string): string {
+    if (FIELD_LABELS[field]) return FIELD_LABELS[field];
+    return field.replace(/([A-Z])/g, ' $1').toLowerCase().trim();
+}
+
 function describe(metadata?: Record<string, unknown> | null) {
     if (!metadata) return '';
     const parts: string[] = [];
@@ -39,8 +61,12 @@ function describe(metadata?: Record<string, unknown> | null) {
         parts.push(`Reason: ${metadata.reason}`);
     if (typeof metadata.deletedAccount === 'string' && metadata.deletedAccount)
         parts.push(`Removed account ${metadata.deletedAccount}`);
-    if (Array.isArray(metadata.changedFields) && metadata.changedFields.length)
-        parts.push(`Changed ${metadata.changedFields.join(', ')}`);
+    if (Array.isArray(metadata.changedFields) && metadata.changedFields.length) {
+        const formatted = metadata.changedFields.map((f: unknown) =>
+            typeof f === 'string' ? formatFieldName(f) : String(f)
+        );
+        parts.push(`Changed ${formatted.join(', ')}`);
+    }
     if (Array.isArray(metadata.permissions) && metadata.permissions.length)
         parts.push(`${metadata.permissions.length} permissions saved`);
     return parts.join(' · ');

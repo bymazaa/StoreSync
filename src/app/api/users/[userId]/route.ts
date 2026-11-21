@@ -28,7 +28,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ us
   const passwordHash = parsed.data.password ? await hash(parsed.data.password, 12) : undefined;
   
   try {
-    const existing = await User.findById(userId).select("role").lean() as Pick<IUser, "role"> | null;
+    const existing = await User.findById(userId).select("role fullName isActive").lean() as Pick<IUser, "role" | "fullName" | "isActive"> | null;
     if (!existing || (existing.role === UserRole.OWNER && !selfNameChange)) throw new UserUpdateError("Owner account changes must be managed separately.");
     
     const updateData: UpdateQuery<IUser> = {};
@@ -53,12 +53,31 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ us
         { revokedAt: new Date() }
       );
     }
+
+    const changedFields: string[] = [];
+    if (parsed.data.fullName !== undefined && parsed.data.fullName.trim() !== (existing.fullName ?? '').trim()) {
+      changedFields.push("fullName");
+    }
+    if (parsed.data.role !== undefined && parsed.data.role !== existing.role) {
+      changedFields.push("role");
+    }
+    if (parsed.data.isActive !== undefined && Boolean(parsed.data.isActive) !== Boolean(existing.isActive)) {
+      changedFields.push("isActive");
+    }
+    if (passwordHash) {
+      changedFields.push("password");
+    }
     
-    await AuditLog.create({
-      _id: randomUUID(),
-      actorId: guard.user.id, action: "user.updated", entityType: "user", entityId: userId,
-      metadata: { changedFields: Object.keys(parsed.data).filter((key) => key !== "password") },
-    });
+    if (changedFields.length > 0) {
+      await AuditLog.create({
+        _id: randomUUID(),
+        actorId: guard.user.id,
+        action: "user.updated",
+        entityType: "user",
+        entityId: userId,
+        metadata: { changedFields },
+      });
+    }
     
     return NextResponse.json({ user: updated });
   } catch (error) {

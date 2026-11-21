@@ -87,6 +87,77 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ pr
       if (!category) throw new ProductUpdateError("Category was not found.");
     }
     
+    // Calculate which fields actually changed compared to the existing product record
+    const changedFields: string[] = [];
+    if (data.name !== undefined && data.name.trim() !== (existing.name ?? '').trim()) {
+      changedFields.push("name");
+    }
+    if (data.sku !== undefined && data.sku.trim() !== (existing.sku ?? '').trim()) {
+      changedFields.push("sku");
+    }
+    if (data.barcode !== undefined) {
+      const nextBarcode = data.barcode ? data.barcode.trim() : null;
+      const currentBarcode = existing.barcode ? existing.barcode.trim() : null;
+      if (nextBarcode !== currentBarcode) {
+        changedFields.push("barcode");
+      }
+    }
+    if (data.brand !== undefined) {
+      const nextBrand = data.brand ? data.brand.trim() : null;
+      const currentBrand = existing.brand ? existing.brand.trim() : null;
+      if (nextBrand !== currentBrand) {
+        changedFields.push("brand");
+      }
+    }
+    if (data.categoryId !== undefined) {
+      const nextCat = data.categoryId || null;
+      const currentCat = existing.categoryId || null;
+      if (nextCat !== currentCat) {
+        changedFields.push("categoryId");
+      }
+    }
+    if (data.baseUnitId !== undefined && String(data.baseUnitId) !== String(existing.baseUnitId)) {
+      changedFields.push("baseUnitId");
+    }
+    if (data.purchasePrice !== undefined && Number(data.purchasePrice) !== Number(existing.purchasePrice)) {
+      changedFields.push("purchasePrice");
+    }
+    if (data.sellingPrice !== undefined && Number(data.sellingPrice) !== Number(existing.sellingPrice)) {
+      changedFields.push("sellingPrice");
+    }
+    if (data.lowStockThreshold !== undefined && Number(data.lowStockThreshold) !== Number(existing.lowStockThreshold)) {
+      changedFields.push("lowStockThreshold");
+    }
+    if (data.tracksExpiry !== undefined && Boolean(data.tracksExpiry) !== Boolean(existing.tracksExpiry)) {
+      changedFields.push("tracksExpiry");
+    }
+    if (data.tracksBatch !== undefined && Boolean(data.tracksBatch) !== Boolean(existing.tracksBatch)) {
+      changedFields.push("tracksBatch");
+    }
+    if (data.isActive !== undefined && Boolean(data.isActive) !== Boolean(existing.isActive)) {
+      changedFields.push("isActive");
+    }
+
+    let unitsChanged = false;
+    if (units !== undefined) {
+      const existingUnits = await ProductUnit.find({ productId }).lean();
+      if (existingUnits.length !== units.length) {
+        unitsChanged = true;
+      } else {
+        const existingMap = new Map(existingUnits.map((u) => [String(u.unitId), Number(u.conversionToBase)]));
+        for (const u of units) {
+          const conv = existingMap.get(String(u.unitId));
+          if (conv === undefined || conv !== Number(u.conversionToBase)) {
+            unitsChanged = true;
+            break;
+          }
+        }
+      }
+      if (unitsChanged) {
+        changedFields.push("units");
+      }
+    }
+
     // Update product first
     const updated = await Product.findByIdAndUpdate(
       productId,
@@ -94,8 +165,8 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ pr
       { returnDocument: "after", runValidators: true }
     ).lean() as IProduct;
     
-    // Handle units update
-    if (units) {
+    // Handle units update only if units changed
+    if (units && unitsChanged) {
       if (units.some((unit) => unit.unitId === nextBaseUnitId)) {
         throw new ProductUpdateError("Base unit is configured automatically; choose other units only.");
       }
@@ -109,11 +180,16 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ pr
       await ProductUnit.create(units.map((unit) => ({ productId, ...unit })));
     }
     
-    await AuditLog.create({
-      _id: randomUUID(),
-      actorId: guard.user.id, action: "product.updated", entityType: "product", entityId: productId, 
-      metadata: { changedFields: [...Object.keys(data), ...(units ? ["units"] : [])] }
-    });
+    if (changedFields.length > 0) {
+      await AuditLog.create({
+        _id: randomUUID(),
+        actorId: guard.user.id,
+        action: "product.updated",
+        entityType: "product",
+        entityId: productId, 
+        metadata: { changedFields }
+      });
+    }
     
     // Fetch related data for response
     const [category, baseUnit, productUnits] = await Promise.all([

@@ -122,17 +122,50 @@ function ProductEditor({ product, units, categories, onClose, onSaved, onCategor
       setError("Every package conversion needs a unit and a base-unit amount. Fill the row or remove it.");
       return;
     }
-    // Prices go up only when they actually moved, so the activity log doesn't claim a change on every save.
+    // Compare against existing product so only genuinely modified fields are transmitted
     const sellingPrice = toAsciiDigits(String(values.get("sellingPrice") ?? ""));
     const costPrice = toAsciiDigits(String(values.get("purchasePrice") ?? ""));
-    const body = {
-      name: values.get("name"), barcode: values.get("barcode") || null,
-      brand: values.get("brand") || null, categoryId: values.get("categoryId") || null, baseUnitId,
-      lowStockThreshold: values.get("lowStockThreshold"),
-      units: filled,
-      ...(product && sellingPrice && sellingPrice !== String(product.sellingPrice) ? { sellingPrice } : {}),
-      ...(product && costPrice && costPrice !== String(product.purchasePrice) ? { purchasePrice: costPrice } : {}),
-    };
+    const name = String(values.get("name") ?? "").trim();
+    const barcode = values.get("barcode") ? String(values.get("barcode")).trim() : null;
+    const brand = values.get("brand") ? String(values.get("brand")).trim() : null;
+    const categoryIdVal = values.get("categoryId") ? String(values.get("categoryId")) : null;
+    const lowStockThresholdVal = values.get("lowStockThreshold") ? String(values.get("lowStockThreshold")) : "0";
+
+    const body: Record<string, unknown> = {};
+
+    if (product) {
+      if (name !== product.name) body.name = name;
+      if (barcode !== (product.barcode || null)) body.barcode = barcode;
+      if (brand !== (product.brand || null)) body.brand = brand;
+      if (categoryIdVal !== (product.categoryId || null)) body.categoryId = categoryIdVal;
+      if (baseUnitId !== product.baseUnitId) body.baseUnitId = baseUnitId;
+      if (Number(lowStockThresholdVal) !== Number(product.lowStockThreshold)) body.lowStockThreshold = lowStockThresholdVal;
+      if (sellingPrice && Number(sellingPrice) !== Number(product.sellingPrice)) body.sellingPrice = sellingPrice;
+      if (costPrice && Number(costPrice) !== Number(product.purchasePrice)) body.purchasePrice = costPrice;
+
+      const existingUnits = product.units || [];
+      const unitsChanged =
+        filled.length !== existingUnits.length ||
+        filled.some((f) => {
+          const match = existingUnits.find((u) => u.unitId === f.unitId);
+          return !match || String(match.conversionToBase) !== String(f.conversionToBase);
+        });
+      if (unitsChanged) body.units = filled;
+
+      if (Object.keys(body).length === 0) {
+        setBusy(false);
+        onClose();
+        return;
+      }
+    } else {
+      body.name = name;
+      body.barcode = barcode;
+      body.brand = brand;
+      body.categoryId = categoryIdVal;
+      body.baseUnitId = baseUnitId;
+      body.lowStockThreshold = lowStockThresholdVal;
+      body.units = filled;
+    }
     try {
       await apiRequest(product ? `/api/products/${product.id}` : "/api/products", {
         method: product ? "PATCH" : "POST", body: jsonBody(body),

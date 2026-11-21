@@ -40,17 +40,36 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ ca
       }
     }
     
+    const changedFields: string[] = [];
+    if (parsed.data.name !== undefined && parsed.data.name.trim() !== (existing.name ?? '').trim()) {
+      changedFields.push("name");
+    }
+    if (parsed.data.parentId !== undefined && (parsed.data.parentId || null) !== (existing.parentId || null)) {
+      changedFields.push("parentId");
+    }
+    if (parsed.data.description !== undefined && (parsed.data.description?.trim() || null) !== (existing.description || null)) {
+      changedFields.push("description");
+    }
+    if (parsed.data.isActive !== undefined && Boolean(parsed.data.isActive) !== Boolean(existing.isActive)) {
+      changedFields.push("isActive");
+    }
+
     const updated = await Category.findByIdAndUpdate(
       categoryId,
       parsed.data,
       { returnDocument: "after", runValidators: true }
     ).lean() as ICategory;
     
-    await AuditLog.create({
-      _id: randomUUID(),
-      actorId: guard.user.id, action: "category.updated", entityType: "category", entityId: categoryId,
-      metadata: { changedFields: Object.keys(parsed.data) },
-    });
+    if (changedFields.length > 0) {
+      await AuditLog.create({
+        _id: randomUUID(),
+        actorId: guard.user.id,
+        action: "category.updated",
+        entityType: "category",
+        entityId: categoryId,
+        metadata: { changedFields },
+      });
+    }
     
     return NextResponse.json({ category: updated });
   } catch (error) {

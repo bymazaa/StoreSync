@@ -40,16 +40,32 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ un
       return NextResponse.json({ error: { code: "CONFLICT", message: "A unit used by products or invoices cannot have its definition changed." } }, { status: 409 });
     }
 
+    const changedFields: string[] = [];
+    if (parsed.data.name !== undefined && parsed.data.name.trim() !== (existing.name ?? '').trim()) {
+      changedFields.push("name");
+    }
+    if (parsed.data.symbol !== undefined && parsed.data.symbol.trim() !== (existing.symbol ?? '').trim()) {
+      changedFields.push("symbol");
+    }
+    if (parsed.data.code !== undefined && parsed.data.code.trim() !== (existing.code ?? '').trim()) {
+      changedFields.push("code");
+    }
+    if (parsed.data.isActive !== undefined && Boolean(parsed.data.isActive) !== Boolean(existing.isActive)) {
+      changedFields.push("isActive");
+    }
+
     const unit = await Unit.findByIdAndUpdate(unitId, parsed.data, { returnDocument: "after", runValidators: true }).lean();
     
-    await AuditLog.create({
-      _id: crypto.randomUUID(),
-      actorId: guard.user.id,
-      action: "unit.updated",
-      entityType: "unit",
-      entityId: unitId,
-      metadata: { changedFields: Object.keys(parsed.data) },
-    });
+    if (changedFields.length > 0) {
+      await AuditLog.create({
+        _id: crypto.randomUUID(),
+        actorId: guard.user.id,
+        action: "unit.updated",
+        entityType: "unit",
+        entityId: unitId,
+        metadata: { changedFields },
+      });
+    }
     
     return NextResponse.json({ unit });
   } catch (error: any) {
