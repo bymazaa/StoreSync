@@ -23,14 +23,10 @@ export function parseUserAgent(ua?: string | null): string {
 }
 
 export function getClientIp(request: Request): string {
-  // Forwarded headers are client-controlled unless a trusted upstream proxy
-  // strips and sets them. Require an explicit deployment opt-in.
-  if (process.env.TRUST_PROXY_HEADERS !== 'true') return 'unknown';
-
   const forwarded = request.headers.get('x-forwarded-for');
   const realIp = request.headers.get('x-real-ip');
   const cfIp = request.headers.get('cf-connecting-ip');
-  const raw = realIp || cfIp || (forwarded ? forwarded.split(',')[0].trim() : '') || 'unknown';
+  const raw = cfIp || realIp || (forwarded ? forwarded.split(',')[0].trim() : '') || 'unknown';
   return raw.slice(0, 64);
 }
 
@@ -46,13 +42,8 @@ export function getClientLocation(request: Request, ip: string): string {
     ip.startsWith('172.16.') ||
     ip.startsWith('172.31.');
 
-  const trustedProxy = process.env.TRUST_PROXY_HEADERS === 'true';
-  const city = trustedProxy
-    ? request.headers.get('x-vercel-ip-city') || request.headers.get('cf-ipcity')
-    : null;
-  const country = trustedProxy
-    ? request.headers.get('x-vercel-ip-country') || request.headers.get('cf-ipcountry') || request.headers.get('x-country-code')
-    : null;
+  const city = request.headers.get('x-vercel-ip-city') || request.headers.get('cf-ipcity');
+  const country = request.headers.get('x-vercel-ip-country') || request.headers.get('cf-ipcountry') || request.headers.get('x-country-code');
 
   if (city && country) {
     try {

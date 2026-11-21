@@ -62,14 +62,14 @@ export async function GET() {
         sessionHistoryMap[session.userId] = [];
       }
       if (sessionHistoryMap[session.userId].length < 5) {
-        const ip = session.ipAddress || '127.0.0.1';
+        const ip = session.ipAddress || 'unknown';
         sessionHistoryMap[session.userId].push({
           _id: session._id,
           id: session._id,
           timestamp: session.createdAt,
           ip,
           device: parseUserAgent(session.userAgent),
-          location: ip === '127.0.0.1' || ip.startsWith('192.168.') ? 'Localhost / Local Network' : 'Unknown Location',
+          location: ip === 'unknown' ? 'Unknown Location' : ip === '127.0.0.1' || ip.startsWith('192.168.') ? 'Localhost / Local Network' : 'Unknown Location',
           userAgent: session.userAgent || "",
         });
       }

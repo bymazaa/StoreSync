@@ -241,7 +241,7 @@ export function ActivityPage() {
             .catch(() => {
                 if (!cancelled) {
                     setDeviceDetails({
-                        ip: selectedLog.ipAddress || '127.0.0.1',
+                        ip: selectedLog.ipAddress || 'unknown',
                         isLocal: true,
                         type: 'IPv4',
                         network: 'Local Store Network (LAN)',
@@ -668,7 +668,7 @@ export function ActivityPage() {
                                             </button>
                                         </div>
                                         <p className="mt-1 font-mono text-base font-semibold tabular-nums text-foreground">
-                                            {selectedLog.ipAddress || '127.0.0.1'}
+                                            {selectedLog.ipAddress || 'Unknown'}
                                         </p>
                                         <span className="mt-1 inline-block text-[11px] text-muted-foreground">
                                             {deviceDetails?.isLocal

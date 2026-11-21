@@ -138,7 +138,7 @@ export async function GET(request: Request) {
                 log.ipAddress ||
                 (typeof logMeta?.ipAddress === 'string' ? logMeta.ipAddress : '') ||
                 actorSession?.ipAddress ||
-                '127.0.0.1';
+                'unknown';
             const userAgent =
                 (typeof logMeta?.userAgent === 'string' ? logMeta.userAgent : '') ||
                 actorSession?.userAgent ||
