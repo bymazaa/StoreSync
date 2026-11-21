@@ -376,19 +376,15 @@
     }
     .receipt-mode th.receipt-th-item,
     .receipt-coupon-paper th.receipt-th-item {
-        width: 48% !important;
+        width: 52% !important;
     }
     .receipt-mode th.receipt-th-qty,
     .receipt-coupon-paper th.receipt-th-qty {
-        width: 14% !important;
+        width: 22% !important;
     }
     .receipt-mode th.receipt-th-rate,
     .receipt-coupon-paper th.receipt-th-rate {
-        width: 18% !important;
-    }
-    .receipt-mode th.receipt-th-total,
-    .receipt-coupon-paper th.receipt-th-total {
-        width: 20% !important;
+        width: 26% !important;
     }
     .receipt-mode .receipt-notes,
     .receipt-coupon-paper .receipt-notes,
@@ -776,16 +772,13 @@
     -webkit-print-color-adjust: exact;
 }
 .receipt-mode .print-document th.receipt-th-item {
-    width: 48% !important;
+    width: 52% !important;
 }
 .receipt-mode .print-document th.receipt-th-qty {
-    width: 14% !important;
+    width: 22% !important;
 }
 .receipt-mode .print-document th.receipt-th-rate {
-    width: 18% !important;
-}
-.receipt-mode .print-document th.receipt-th-total {
-    width: 20% !important;
+    width: 26% !important;
 }
 .receipt-mode .print-document td {
     padding: 1.5mm 0.7mm !important;

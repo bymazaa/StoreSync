@@ -464,19 +464,17 @@ export function InvoiceView({ mode }: { mode: 'sale' | 'purchase' }) {
                                 <colgroup>
                                     {completedReturns.length > 0 ? (
                                         <>
-                                            <col style={{ width: '36%' }} />
-                                            <col style={{ width: '11%' }} />
-                                            <col style={{ width: '11%' }} />
-                                            <col style={{ width: '11%' }} />
-                                            <col style={{ width: '14%' }} />
-                                            <col style={{ width: '17%' }} />
+                                            <col style={{ width: '40%' }} />
+                                            <col style={{ width: '15%' }} />
+                                            <col style={{ width: '15%' }} />
+                                            <col style={{ width: '15%' }} />
+                                            <col style={{ width: '15%' }} />
                                         </>
                                     ) : (
                                         <>
-                                            <col style={{ width: '48%' }} />
-                                            <col style={{ width: '14%' }} />
-                                            <col style={{ width: '18%' }} />
-                                            <col style={{ width: '20%' }} />
+                                            <col style={{ width: '52%' }} />
+                                            <col style={{ width: '22%' }} />
+                                            <col style={{ width: '26%' }} />
                                         </>
                                     )}
                                 </colgroup>
@@ -493,7 +491,7 @@ export function InvoiceView({ mode }: { mode: 'sale' | 'purchase' }) {
                                         </>
                                     )}
                                     <th className={`py-2.5 px-2 text-right ${receiptPrint ? 'receipt-th-rate' : ''}`}>Rate</th>
-                                    <th className={`py-2.5 px-2 text-right ${receiptPrint ? 'receipt-th-total' : ''}`}>Total</th>
+                                    {!receiptPrint && <th className="py-2.5 px-2 text-right">Total</th>}
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-border/40">
@@ -534,9 +532,11 @@ export function InvoiceView({ mode }: { mode: 'sale' | 'purchase' }) {
                                                     : (item.unitCost ?? '0'),
                                             )}
                                         </td>
-                                        <td className="py-2.5 px-2 text-right whitespace-nowrap font-semibold">
-                                            {formatMoney(item.lineTotal)}
-                                        </td>
+                                        {!receiptPrint && (
+                                            <td className="py-2.5 px-2 text-right whitespace-nowrap font-semibold">
+                                                {formatMoney(item.lineTotal)}
+                                            </td>
+                                        )}
                                     </tr>
                                 ))}
                             </tbody>
