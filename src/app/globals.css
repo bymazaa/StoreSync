@@ -27,7 +27,11 @@
         --amber-strong: #92400E !important;
     }
     @page {
-        size: A4;
+        size: A4 portrait;
+        margin: 8mm;
+    }
+    @page invoice {
+        size: A4 portrait;
         margin: 8mm;
     }
     @page receipt {
@@ -108,6 +112,9 @@
      wrappers so no second page box is left over. */
     html:has(.report-print) {
         page: report;
+    }
+    html:has(.print-document:not(.receipt-coupon-paper)) {
+        page: invoice;
     }
     html,
     body {

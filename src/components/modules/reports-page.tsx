@@ -124,6 +124,11 @@ export function ReportsPage() {
         }
     }, [canViewProfit, type]);
     useEffect(() => {
+        return () => {
+            document.getElementById('report-print-page-style')?.remove();
+        };
+    }, []);
+    useEffect(() => {
         const end = localDateKey(new Date(), timezone);
         setToday(end);
         setFrom((previous) => previous || addDateKeyDays(end, -30));
@@ -182,13 +187,23 @@ export function ReportsPage() {
     // PDF" is the same button — the document title becomes the suggested filename.
     function printStatement() {
         const previousTitle = document.title;
+        document.getElementById('report-print-page-style')?.remove();
+        const pageStyle = document.createElement('style');
+        pageStyle.id = 'report-print-page-style';
+        pageStyle.textContent =
+            '@media print { @page { size: A4 landscape !important; margin: 10mm 11mm !important; } }';
+        document.head.append(pageStyle);
+
         const restore = () => {
             document.title = previousTitle;
+            document.getElementById('report-print-page-style')?.remove();
             window.removeEventListener('afterprint', restore);
         };
         document.title = fileStem;
-        window.addEventListener('afterprint', restore);
-        window.print();
+        window.addEventListener('afterprint', restore, { once: true });
+        window.setTimeout(() => {
+            window.print();
+        }, 50);
     }
 
     return (

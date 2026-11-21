@@ -125,9 +125,13 @@ export function InvoiceView({ mode }: { mode: 'sale' | 'purchase' }) {
     useEffect(() => {
         const reset = () => {
             document.getElementById('receipt-print-page-size')?.remove();
+            document.getElementById('invoice-print-page-style')?.remove();
         };
         window.addEventListener('afterprint', reset);
-        return () => window.removeEventListener('afterprint', reset);
+        return () => {
+            window.removeEventListener('afterprint', reset);
+            reset();
+        };
     }, []);
 
     useEffect(() => {
@@ -217,12 +221,14 @@ export function InvoiceView({ mode }: { mode: 'sale' | 'purchase' }) {
         }
     }
 
-    function setReceiptPageSize(enabled: boolean) {
+    function setInvoicePrintPageSize(useReceipt: boolean) {
         document.getElementById('receipt-print-page-size')?.remove();
-        if (!enabled) return;
+        document.getElementById('invoice-print-page-style')?.remove();
         const pageStyle = document.createElement('style');
-        pageStyle.id = 'receipt-print-page-size';
-        pageStyle.textContent = '@media print { @page { size: 80mm auto; margin: 0; } }';
+        pageStyle.id = 'invoice-print-page-style';
+        pageStyle.textContent = useReceipt
+            ? '@media print { @page { size: 80mm auto !important; margin: 0 !important; } }'
+            : '@media print { @page { size: A4 portrait !important; margin: 8mm !important; } }';
         document.head.append(pageStyle);
     }
 
@@ -230,14 +236,20 @@ export function InvoiceView({ mode }: { mode: 'sale' | 'purchase' }) {
         if (!invoice) return;
         const previousTitle = document.title;
         document.title = invoice.invoiceNumber;
-        window.addEventListener('afterprint', () => {
-            document.title = previousTitle;
-        }, { once: true });
+        window.addEventListener(
+            'afterprint',
+            () => {
+                document.title = previousTitle;
+                document.getElementById('receipt-print-page-size')?.remove();
+                document.getElementById('invoice-print-page-style')?.remove();
+            },
+            { once: true },
+        );
         setReceiptPrint(useReceiptSize);
         window.setTimeout(() => {
-            setReceiptPageSize(useReceiptSize);
+            setInvoicePrintPageSize(useReceiptSize);
             window.print();
-        }, 100);
+        }, 80);
     }
 
     function printReceipt() {
