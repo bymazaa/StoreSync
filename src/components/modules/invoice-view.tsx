@@ -366,9 +366,9 @@ export function InvoiceView({ mode }: { mode: 'sale' | 'purchase' }) {
 
             {/* ── Printable Paper Document (No heavy boxes, clean typography & generous spacing) ── */}
             <Panel className="invoice-panel overflow-hidden">
-                <div className={`print-document invoice-paper mx-auto w-full min-w-0 max-w-4xl break-words px-4 py-6 sm:px-8 sm:py-8 print:px-0 print:py-0 ${mode === 'purchase' ? 'invoice-purchase' : 'invoice-sale'} ${receiptPrint ? 'receipt-coupon-paper' : ''}`}>
+                <div className={`print-document invoice-paper mx-auto w-full min-w-0 max-w-4xl break-words px-4 py-6 sm:px-8 sm:py-8 print:px-0 print:py-0 ${mode === 'purchase' ? 'invoice-purchase' : 'invoice-sale'} ${receiptPrint ? 'receipt-coupon-paper !bg-white !text-black shadow-md' : ''}`}>
                     {/* Header: Brand details + Invoice title */}
-                    <header className="invoice-brand-header invoice-editorial-header pb-4 sm:pb-5">
+                    <header className={`invoice-brand-header invoice-editorial-header ${receiptPrint ? 'pb-1' : 'pb-4 sm:pb-5'}`}>
                         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                             <div className="flex items-start gap-3.5">
                                 {shop?.logoUrl ? (
@@ -398,7 +398,7 @@ export function InvoiceView({ mode }: { mode: 'sale' | 'purchase' }) {
                             </div>
 
                             <div className={`invoice-number-block text-left sm:text-right ${mode === 'sale' && !receiptPrint ? 'a4-sales-invoice-meta' : ''} ${mode === 'purchase' && !receiptPrint ? 'a4-purchase-invoice-meta' : ''}`}>
-                                <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                                <p className={`text-[11px] font-bold uppercase tracking-wider ${receiptPrint ? 'text-black dark:text-white font-extrabold' : 'text-muted-foreground'}`}>
                                     {mode === 'sale' ? (receiptPrint ? 'Sales Receipt' : 'Sales Invoice') : 'Purchase Invoice'}
                                 </p>
                                 <p className="receipt-doc-no mt-1 text-base font-bold tabular-nums text-foreground sm:text-xl">
@@ -417,7 +417,7 @@ export function InvoiceView({ mode }: { mode: 'sale' | 'purchase' }) {
                     </header>
 
                     {/* Party information: clean 2-column without boxed backgrounds */}
-                    <section className="receipt-party-section py-4 sm:py-5 border-t border-b border-border/70">
+                    <section className={`receipt-party-section ${receiptPrint ? 'py-1 mt-0.5' : 'py-4 sm:py-5'} border-t border-b border-border/70`}>
                         <div className="invoice-party-grid grid grid-cols-2 gap-4 sm:gap-8">
                             <div className="invoice-party-cell min-w-0">
                                 <p className="invoice-section-label text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
@@ -492,7 +492,7 @@ export function InvoiceView({ mode }: { mode: 'sale' | 'purchase' }) {
                                 </colgroup>
                             )}
                             <thead>
-                                <tr className="border-b border-border/80 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                                <tr className={`border-b border-border/80 text-[11px] font-bold uppercase tracking-wider ${receiptPrint ? 'bg-neutral-200 text-black dark:bg-neutral-700 dark:text-white' : 'text-muted-foreground'}`}>
                                     {!receiptPrint && <th className="py-2.5 px-2 w-[24mm]">SKU</th>}
                                     <th className={`py-2.5 px-2 ${receiptPrint ? 'receipt-th-item' : ''}`}>Item</th>
                                     <th className={`py-2.5 px-2 text-right ${receiptPrint ? 'receipt-th-qty' : ''}`}>Qty</th>

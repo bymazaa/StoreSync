@@ -595,15 +595,15 @@
     .report-print .report-empty { color:#687a75 !important; background:#fff !important; }
     .report-print .report-footnote { display:flex; justify-content:space-between; gap:8mm; margin-top:4mm !important; padding-top:2mm; border-top:.25mm dashed #c5d1ce; color:#63736f !important; font-size:7pt; }
 }
-/* Keep the purchase receipt divider close to the invoice date. */
-.receipt-mode .print-document.invoice-purchase > header.invoice-brand-header {
+/* Keep the receipt divider close to the invoice date (both sale & purchase). */
+.receipt-mode .print-document > header.invoice-brand-header {
     padding-bottom: 0 !important;
 }
-.receipt-mode .print-document.invoice-purchase > section.receipt-party-section {
+.receipt-mode .print-document > section.receipt-party-section {
     margin-top: 0.5mm !important;
     padding-top: 0 !important;
 }
-.receipt-mode .print-document.invoice-purchase > section.receipt-party-section > .invoice-party-grid {
+.receipt-mode .print-document > section.receipt-party-section > .invoice-party-grid {
     margin-top: 0 !important;
 }
 /* 80 mm thermal receipt: compact content inside a light dashed coupon frame. */
@@ -681,6 +681,12 @@
     padding-top: 0 !important;
     border-top: 0 !important;
     text-align: left !important;
+}
+.receipt-mode .print-document .invoice-number-block > p:first-child,
+.receipt-mode .invoice-number-block > p:first-child {
+    color: #000000 !important;
+    -webkit-text-fill-color: #000000 !important;
+    font-weight: 800 !important;
 }
 .receipt-mode .print-document .receipt-payment-history > p {
     font-size: 0.8em !important;
@@ -768,8 +774,8 @@
 }
 .receipt-mode .print-document th {
     padding: 1.4mm 0.7mm !important;
-    background: #f1f5f4 !important;
-    color: #263632 !important;
+    background: #e5e7eb !important;
+    color: #000000 !important;
     font-size: 0.78em !important;
     font-weight: 700 !important;
     text-transform: uppercase !important;
@@ -1782,6 +1788,8 @@ label:has(
     font-size: 0.84em !important;
     font-weight: 800 !important;
     letter-spacing: 0.08em !important;
+    color: #000000 !important;
+    -webkit-text-fill-color: #000000 !important;
 }
 .receipt-mode .print-document .invoice-brand-header .receipt-doc-no {
     margin-top: 0.5mm !important;
@@ -1796,19 +1804,19 @@ label:has(
     align-items: flex-start !important;
     justify-content: space-between !important;
     gap: 2mm !important;
-    margin: 0.5mm 0 2mm !important;
-    padding: 1.5mm 0 !important;
+    margin: 0.5mm 0 1.5mm !important;
+    padding: 0.8mm 0 1.5mm !important;
     border-top: 0.15mm dashed #cbd3d0 !important;
     border-bottom: 0.15mm solid #cbd3d0 !important;
 }
-.receipt-mode .print-document.invoice-purchase .invoice-brand-header {
+.receipt-mode .print-document .invoice-brand-header {
     padding-bottom: 0.5mm !important;
 }
-.receipt-mode .print-document.invoice-purchase .receipt-party-section {
+.receipt-mode .print-document .receipt-party-section {
     margin-top: 0.5mm !important;
     padding-top: 0 !important;
 }
-.receipt-mode .print-document.invoice-purchase .invoice-party-grid {
+.receipt-mode .print-document .invoice-party-grid {
     margin-top: 0 !important;
 }
 .receipt-mode .print-document .invoice-party-grid > .invoice-party-cell {

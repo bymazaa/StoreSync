@@ -329,7 +329,7 @@ export function AppShell({
                                 STOCK <span className="text-primary">PILOT</span>
                             </span>
                             <span className="mt-1 block truncate text-[9.5px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-                                Smart POS &amp; Inventory
+                                Smart POS
                             </span>
                         </div>
                     </Link>
