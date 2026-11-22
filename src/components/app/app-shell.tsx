@@ -19,6 +19,7 @@ import {
     Settings2,
     SlidersHorizontal,
     ShoppingBasket,
+    Snowflake,
     Store,
     Truck,
     WalletCards,
@@ -406,13 +407,13 @@ export function AppShell({
             </aside>
 
             <div className="app-shell-frame flex min-w-0 flex-1 flex-col bg-transparent">
-                <header className="app-shell-header sticky top-0 z-20 flex h-[72px] items-center justify-between gap-3 border-b border-shell-border/50 bg-transparent px-4 backdrop-blur-xl sm:px-7 xl:px-10">
-                    <div className="flex items-center gap-3">
+                <header className="app-shell-header sticky top-0 z-20 flex h-16 sm:h-[72px] items-center justify-between gap-2 sm:gap-3 border-b border-shell-border/50 bg-transparent px-3 sm:px-7 xl:px-10 backdrop-blur-xl">
+                    <div className="flex min-w-0 items-center gap-2 sm:gap-3">
                         <button
                             aria-label="Open navigation"
                             type="button"
                             onClick={() => setMenuOpen(true)}
-                            className="grid size-10 place-items-center rounded-[13px] border border-shell-border/80 bg-card/85 text-muted-foreground transition-colors hover:border-primary/30 hover:bg-primary-soft/50 hover:text-primary lg:hidden"
+                            className="grid size-9 sm:size-10 shrink-0 place-items-center rounded-[13px] border border-shell-border/80 bg-card/85 text-muted-foreground transition-colors hover:border-primary/30 hover:bg-primary-soft/50 hover:text-primary lg:hidden"
                         >
                             <Menu size={18} />
                         </button>
@@ -421,25 +422,29 @@ export function AppShell({
                             aria-pressed={collapsed}
                             type="button"
                             onClick={() => setCollapsed((value) => !value)}
-                            className="hidden size-10 place-items-center rounded-[13px] border border-shell-border/80 bg-card/85 text-muted-foreground transition-colors hover:border-primary/30 hover:bg-primary-soft/50 hover:text-primary lg:grid"
+                            className="hidden size-10 shrink-0 place-items-center rounded-[13px] border border-shell-border/80 bg-card/85 text-muted-foreground transition-colors hover:border-primary/30 hover:bg-primary-soft/50 hover:text-primary lg:grid"
                         >
                             {collapsed ? <PanelLeftOpen size={17} /> : <PanelLeftClose size={17} />}
                         </button>
                         <HeaderSearch currencyCode={currencyCode} locale={locale} />
-                        <p className="text-sm font-semibold text-foreground sm:hidden">
+                        <p className="truncate text-sm font-semibold text-foreground sm:hidden max-w-[120px] xs:max-w-[180px]">
                             {navigation.find((item) => item.href === pathname)?.label ??
                                 'StockPilot'}
                         </p>
                     </div>
-                    <div className="flex items-center gap-2 sm:gap-3">
-                        <SnowfallToggle />
-                        <FullscreenToggle />
+                    <div className="flex shrink-0 items-center gap-1.5 sm:gap-3">
+                        <div className="hidden lg:block">
+                            <SnowfallToggle />
+                        </div>
+                        <div className="hidden lg:block">
+                            <FullscreenToggle />
+                        </div>
                         <ThemeToggle />
                         <span className="hidden h-8 w-px bg-line sm:block" />
                         <div ref={profileMenuRef} className="relative">
                             <button
                                 onClick={() => setProfileOpen((open) => !open)}
-                                className="flex items-center gap-2 rounded-[15px] border border-shell-border/70 bg-card/80 py-1.5 pl-1.5 pr-2.5 text-left transition-colors hover:border-primary/25 hover:bg-card"
+                                className="flex items-center gap-1.5 sm:gap-2 rounded-[15px] border border-shell-border/70 bg-card/80 p-1 sm:py-1.5 sm:pl-1.5 sm:pr-2.5 text-left transition-colors hover:border-primary/25 hover:bg-card"
                                 aria-expanded={profileOpen}
                                 aria-label="Open profile menu"
                                 type="button"
@@ -487,6 +492,15 @@ export function AppShell({
                                     >
                                         <Settings2 size={15} /> Account settings
                                     </Link>
+                                    <div className="my-1.5 border-t border-line/80 lg:hidden" />
+                                    <div className="mx-0.5 my-1.5 rounded-xl border border-primary/25 bg-primary/5 p-2.5 lg:hidden">
+                                        <div className="flex items-center justify-between">
+                                            <span className="flex items-center gap-2 text-xs font-semibold text-foreground">
+                                                <Snowflake size={16} className="text-primary" /> Snow Effect
+                                            </span>
+                                            <SnowfallToggle />
+                                        </div>
+                                    </div>
                                     <div className="my-1.5 border-t border-line/80" />
                                     <button
                                         onClick={() => {

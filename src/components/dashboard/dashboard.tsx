@@ -100,18 +100,32 @@ export function Dashboard() {
 
   return (
     <>
-      <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-end">
+      <div className="flex flex-col justify-between gap-4 sm:gap-5 lg:flex-row lg:items-end">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.08em] text-primary">Overview</p>
-          <h1 className="mt-2 text-[28px] font-semibold text-foreground sm:text-[32px]">Today at your shop</h1>
-          <p className="mt-1.5 text-sm text-muted-foreground">{data && updatedAt ? formatDate(updatedAt) : "A live view of sales, stock and shop activity."}</p>
+          <h1 className="mt-1.5 text-2xl font-bold tracking-tight text-foreground sm:text-[32px] sm:font-semibold">Today at your shop</h1>
+          <p className="mt-1 text-xs text-muted-foreground sm:text-sm sm:mt-1.5">{data && updatedAt ? formatDate(updatedAt) : "A live view of sales, stock and shop activity."}</p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          {updatedAt ? <span className="text-xs text-muted-foreground tabular-nums">Updated {new Intl.DateTimeFormat(locale, { timeStyle: "short" }).format(updatedAt)}</span> : null}
-          <button type="button" onClick={() => void load()} disabled={loading} className="inline-flex h-11 items-center gap-2 rounded-xl border border-border bg-card px-4 text-sm font-medium text-foreground transition-colors hover:bg-muted disabled:opacity-50">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+          {updatedAt ? (
+            <span className="w-full text-xs text-muted-foreground tabular-nums sm:w-auto">
+              Updated {new Intl.DateTimeFormat(locale, { timeStyle: "short" }).format(updatedAt)}
+            </span>
+          ) : null}
+          <button
+            type="button"
+            onClick={() => void load()}
+            disabled={loading}
+            className="inline-flex h-10 sm:h-11 flex-1 sm:flex-initial items-center justify-center gap-2 rounded-xl border border-border bg-card px-3 sm:px-4 text-xs sm:text-sm font-medium text-foreground transition-colors hover:bg-muted disabled:opacity-50"
+          >
             <RefreshCw size={15} className={loading ? "animate-spin" : ""} /> Refresh
           </button>
-          <Link href="/sales" className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-primary px-4 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"><PackagePlus size={16} /> New sale</Link>
+          <Link
+            href="/sales"
+            className="inline-flex h-10 sm:h-11 flex-1 sm:flex-initial items-center justify-center gap-2 rounded-xl bg-primary px-3 sm:px-4 text-xs sm:text-sm font-medium text-primary-foreground shadow-sm transition-colors hover:bg-primary/90"
+          >
+            <PackagePlus size={16} /> New sale
+          </Link>
         </div>
       </div>
 

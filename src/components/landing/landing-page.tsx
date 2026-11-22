@@ -95,135 +95,146 @@ export function LandingPage() {
 
             {/* ── TOP NAVBAR ── */}
             <header className="sticky top-0 z-50 border-b border-border/60 bg-background/85 backdrop-blur-md">
-                <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-                    {/* Brand Logo matching sidebar */}
-                    <Link href="/" className="flex items-center gap-3 group" aria-label="StockPilot Home">
-                        <span className="grid size-11 place-items-center rounded-2xl bg-primary text-primary-foreground shadow-lg shadow-primary/25 transition-transform duration-200 group-hover:scale-105">
-                            <LogoMark className="size-6.5" />
-                        </span>
-                        <div>
-                            <span className="font-brand block text-xl font-bold tracking-tight text-foreground leading-none">
+                <div className="mx-auto flex h-16 sm:h-20 max-w-7xl items-center justify-between px-3 sm:px-6 lg:px-8">
+                    {/* ── MOBILE NAVBAR (lg:hidden): Left: Logo | Middle: Appearance + Language | Right: 3-Dot Menu ── */}
+                    <div className="flex w-full items-center justify-between gap-1.5 sm:gap-3 lg:hidden">
+                        {/* Left: Brand Logo */}
+                        <Link href="/" className="flex items-center gap-2 group shrink-0" aria-label="StockPilot Home">
+                            <span className="grid size-9 sm:size-10 place-items-center rounded-xl bg-primary text-primary-foreground shadow-md shadow-primary/25 transition-transform duration-200 group-hover:scale-105">
+                                <LogoMark className="size-5 sm:size-6" />
+                            </span>
+                            <span className="font-brand text-base sm:text-lg font-bold tracking-tight text-foreground leading-none">
                                 STOCK <span className="text-primary">PILOT</span>
                             </span>
-                            <span className="mt-1 block text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-                                Smart POS &amp; Inventory
-                            </span>
-                        </div>
-                    </Link>
+                        </Link>
 
-                    {/* Desktop Nav Links */}
-                    <nav className="hidden items-center gap-7 lg:flex">
-                        <a
-                            href="#features"
-                            className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-                        >
-                            {isEn ? 'Features' : 'সুবিধাসমূহ'}
-                        </a>
-                        <a
-                            href="#what-we-do"
-                            className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-                        >
-                            {isEn ? 'What We Do' : 'কী করে ও করে না'}
-                        </a>
-                        <a
-                            href="#who-its-for"
-                            className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-                        >
-                            {isEn ? "Who It's For" : 'কারা ব্যবহার করবে'}
-                        </a>
-                        <a
-                            href="#services"
-                            className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-                        >
-                            {isEn ? 'Modules' : 'মডিউল'}
-                        </a>
-                        <a
-                            href="#contact"
-                            className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-                        >
-                            {isEn ? 'Contact' : 'যোগাযোগ'}
-                        </a>
-                    </nav>
-
-                    {/* Top Right Actions (Language Switcher, Theme Toggle, Phone, Login) */}
-                    <div className="hidden items-center gap-3 sm:flex">
-                        <ThemeToggle />
-
-                        {/* Language Switcher Pill */}
-                        <div className="inline-flex items-center rounded-xl border border-border bg-card p-1 text-xs font-semibold shadow-xs">
-                            <Globe size={13} className="ml-1.5 mr-1 text-muted-foreground" />
+                        {/* Middle: Appearance (ThemeToggle) + Language Switcher */}
+                        <div className="flex items-center gap-1 sm:gap-2">
+                            <ThemeToggle />
                             <button
                                 type="button"
-                                onClick={() => toggleLang('en')}
-                                className={`rounded-lg px-2.5 py-1 transition-all ${
-                                    isEn
-                                        ? 'bg-primary text-primary-foreground font-bold shadow-xs'
-                                        : 'text-muted-foreground hover:text-foreground'
-                                }`}
-                                aria-label="Switch to English"
+                                onClick={() => toggleLang(isEn ? 'bn' : 'en')}
+                                className="inline-flex h-9 items-center gap-1 rounded-xl border border-border bg-card px-2 sm:px-2.5 text-xs font-bold text-foreground shadow-xs hover:bg-muted transition-colors shrink-0"
+                                title={isEn ? "Switch to বাংলা" : "Switch to English"}
+                                aria-label="Toggle language"
                             >
-                                English
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => toggleLang('bn')}
-                                className={`rounded-lg px-2.5 py-1 transition-all ${
-                                    !isEn
-                                        ? 'bg-primary text-primary-foreground font-bold shadow-xs'
-                                        : 'text-muted-foreground hover:text-foreground'
-                                }`}
-                                aria-label="বাংলা ভাষায় পরিবর্তন করুন"
-                            >
-                                বাংলা
+                                <Globe size={13} className="text-primary shrink-0" />
+                                <span>{isEn ? 'বাংলা' : 'EN'}</span>
                             </button>
                         </div>
 
-                        <a
-                            href={`tel:${PHONE_NUMBER}`}
-                            className="inline-flex h-10 items-center gap-2 rounded-2xl border border-border bg-card px-3.5 text-xs font-semibold text-muted-foreground shadow-2xl shadow-gray-100 transition-colors hover:bg-muted hover:text-foreground dark:shadow-none"
-                        >
-                            <Phone size={14} className="text-primary" />
-                            <span>{PHONE_NUMBER}</span>
-                        </a>
-
-                        <Link
-                            href="/login"
-                            className="inline-flex h-10.5 items-center gap-2 rounded-2xl bg-primary px-5.5 text-sm font-bold text-primary-foreground shadow-xl shadow-primary/25 transition-all duration-200 hover:bg-primary-strong active:scale-95"
-                        >
-                            <LogIn size={15} />
-                            <span>{isEn ? 'Sign In' : 'লগইন করুন'}</span>
-                        </Link>
-                    </div>
-
-                    {/* Mobile Controls */}
-                    <div className="flex items-center gap-2 lg:hidden">
-                        {/* Mobile Language Switcher */}
-                        <button
-                            type="button"
-                            onClick={() => toggleLang(isEn ? 'bn' : 'en')}
-                            className="inline-flex h-9 items-center gap-1 rounded-xl border border-border bg-card px-2.5 text-xs font-bold text-foreground"
-                            title="Toggle English / বাংলা"
-                        >
-                            <Globe size={13} className="text-primary" />
-                            <span>{isEn ? 'বাংলা' : 'EN'}</span>
-                        </button>
-
-                        <Link
-                            href="/login"
-                            className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-primary px-3 text-xs font-bold text-primary-foreground shadow-md shadow-primary/25"
-                        >
-                            <LogIn size={14} />
-                            {isEn ? 'Sign In' : 'লগইন'}
-                        </Link>
-
+                        {/* Right: Menu Toggle Button */}
                         <button
                             type="button"
                             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                            className="grid size-9 place-items-center rounded-xl border border-border text-foreground hover:bg-muted"
-                            aria-label="Toggle navigation"
+                            className="grid size-9 shrink-0 place-items-center rounded-xl border border-border bg-card text-foreground shadow-xs hover:bg-muted transition-colors"
+                            aria-label="Toggle navigation menu"
+                            title="Menu"
                         >
                             {mobileMenuOpen ? <X size={18} /> : <Menu size={18} />}
                         </button>
+                    </div>
+
+                    {/* ── DESKTOP NAVBAR (hidden lg:flex) ── */}
+                    <div className="hidden w-full items-center justify-between lg:flex">
+                        {/* Brand Logo matching sidebar */}
+                        <Link href="/" className="flex items-center gap-3 group shrink-0" aria-label="StockPilot Home">
+                            <span className="grid size-11 place-items-center rounded-2xl bg-primary text-primary-foreground shadow-lg shadow-primary/25 transition-transform duration-200 group-hover:scale-105">
+                                <LogoMark className="size-6.5" />
+                            </span>
+                            <div>
+                                <span className="font-brand block text-xl font-bold tracking-tight text-foreground leading-none">
+                                    STOCK <span className="text-primary">PILOT</span>
+                                </span>
+                                <span className="mt-1 block text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                                    Smart POS &amp; Inventory
+                                </span>
+                            </div>
+                        </Link>
+
+                        {/* Desktop Nav Links */}
+                        <nav className="flex items-center gap-7">
+                            <a
+                                href="#features"
+                                className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+                            >
+                                {isEn ? 'Features' : 'সুবিধাসমূহ'}
+                            </a>
+                            <a
+                                href="#what-we-do"
+                                className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+                            >
+                                {isEn ? 'What We Do' : 'কী করে ও করে না'}
+                            </a>
+                            <a
+                                href="#who-its-for"
+                                className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+                            >
+                                {isEn ? "Who It's For" : 'কারা ব্যবহার করবে'}
+                            </a>
+                            <a
+                                href="#services"
+                                className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+                            >
+                                {isEn ? 'Modules' : 'মডিউল'}
+                            </a>
+                            <a
+                                href="#contact"
+                                className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+                            >
+                                {isEn ? 'Contact' : 'যোগাযোগ'}
+                            </a>
+                        </nav>
+
+                        {/* Top Right Actions (Language Switcher, Theme Toggle, Phone, Login) */}
+                        <div className="flex items-center gap-3">
+                            <ThemeToggle />
+
+                            {/* Language Switcher Pill */}
+                            <div className="inline-flex items-center rounded-xl border border-border bg-card p-1 text-xs font-semibold shadow-xs">
+                                <Globe size={13} className="ml-1.5 mr-1 text-muted-foreground" />
+                                <button
+                                    type="button"
+                                    onClick={() => toggleLang('en')}
+                                    className={`rounded-lg px-2.5 py-1 transition-all ${
+                                        isEn
+                                            ? 'bg-primary text-primary-foreground font-bold shadow-xs'
+                                            : 'text-muted-foreground hover:text-foreground'
+                                    }`}
+                                    aria-label="Switch to English"
+                                >
+                                    English
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => toggleLang('bn')}
+                                    className={`rounded-lg px-2.5 py-1 transition-all ${
+                                        !isEn
+                                            ? 'bg-primary text-primary-foreground font-bold shadow-xs'
+                                            : 'text-muted-foreground hover:text-foreground'
+                                    }`}
+                                    aria-label="বাংলা ভাষায় পরিবর্তন করুন"
+                                >
+                                    বাংলা
+                                </button>
+                            </div>
+
+                            <a
+                                href={`tel:${PHONE_NUMBER}`}
+                                className="inline-flex h-10 items-center gap-2 rounded-2xl border border-border bg-card px-3.5 text-xs font-semibold text-muted-foreground shadow-2xl shadow-gray-100 transition-colors hover:bg-muted hover:text-foreground dark:shadow-none"
+                            >
+                                <Phone size={14} className="text-primary" />
+                                <span>{PHONE_NUMBER}</span>
+                            </a>
+
+                            <Link
+                                href="/login"
+                                className="inline-flex h-10.5 items-center gap-2 rounded-2xl bg-primary px-5.5 text-sm font-bold text-primary-foreground shadow-xl shadow-primary/25 transition-all duration-200 hover:bg-primary-strong active:scale-95"
+                            >
+                                <LogIn size={15} />
+                                <span>{isEn ? 'Sign In' : 'লগইন করুন'}</span>
+                            </Link>
+                        </div>
                     </div>
                 </div>
 
@@ -274,10 +285,13 @@ export function LandingPage() {
                                 >
                                     <LogIn size={16} /> {isEn ? 'Sign In to Workspace' : 'লগইন পেজে যান'}
                                 </Link>
-                            </div>
-                            <div className="mt-2 pt-3 flex items-center justify-between border-t border-border/60">
-                                <span className="text-xs font-semibold text-muted-foreground">{isEn ? 'Appearance' : 'থিম মোড'}</span>
-                                <ThemeToggle />
+                                <a
+                                    href={`tel:${PHONE_NUMBER}`}
+                                    className="flex h-10 w-full items-center justify-center gap-2 rounded-xl border border-border bg-muted/40 text-xs font-semibold text-foreground hover:bg-muted"
+                                >
+                                    <Phone size={14} className="text-primary" />
+                                    <span>Call: {PHONE_NUMBER}</span>
+                                </a>
                             </div>
                         </nav>
                     </div>
@@ -1215,8 +1229,9 @@ export function LandingPage() {
             </section>
 
             {/* ── FOOTER ── */}
-            <footer className="border-t border-border/80 bg-card py-10 text-xs text-muted-foreground">
-                <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-6 px-4 sm:flex-row sm:px-6 lg:px-8">
+            <footer className="border-t border-border/80 bg-card py-8 text-xs text-muted-foreground">
+                <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-5 px-4 sm:flex-row sm:px-6 lg:px-8">
+                    {/* Left: Brand Logo */}
                     <div className="flex items-center gap-3">
                         <span className="grid size-9 place-items-center rounded-xl bg-primary text-primary-foreground">
                             <LogoMark className="size-5.5" />
@@ -1229,36 +1244,7 @@ export function LandingPage() {
                         </div>
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-5">
-                        <a href="#features" className="hover:text-foreground">
-                            {isEn ? 'Features' : 'সুবিধাসমূহ'}
-                        </a>
-                        <a href="#what-we-do" className="hover:text-foreground">
-                            {isEn ? 'What We Do' : 'কী করে ও করে না'}
-                        </a>
-                        <a href="#who-its-for" className="hover:text-foreground">
-                            {isEn ? "Who It's For" : 'কারা ব্যবহার করবে'}
-                        </a>
-                        <a href="#contact" className="hover:text-foreground">
-                            {isEn ? 'Contact' : 'যোগাযোগ'}
-                        </a>
-                        <Link href="/login" className="font-semibold text-primary hover:underline">
-                            {isEn ? 'Login Page' : 'লগইন পেজ'}
-                        </Link>
-
-                        {/* Footer Language Switcher */}
-                        <button
-                            type="button"
-                            onClick={() => toggleLang(isEn ? 'bn' : 'en')}
-                            className="inline-flex items-center gap-1 rounded-lg border border-border bg-muted/40 px-2 py-1 text-[11px] font-semibold text-foreground hover:bg-muted"
-                        >
-                            <Globe size={11} className="text-primary" />
-                            <span>{isEn ? 'বাংলায় দেখুন' : 'View in English'}</span>
-                        </button>
-
-                        <ThemeToggle />
-                    </div>
-
+                    {/* Right: Copyright & Credits */}
                     <div className="flex flex-col items-center gap-1 sm:items-end text-center sm:text-right">
                         <p>&copy; {new Date().getFullYear()} StockPilot · Phone: {PHONE_NUMBER}</p>
                         <p>

@@ -2,7 +2,6 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import {
   ArrowDownRight,
-  ArrowLeft,
   Boxes,
   ChartNoAxesCombined,
   Check,
@@ -40,32 +39,22 @@ export default async function LoginPage() {
       <div aria-hidden="true" className="pointer-events-none absolute -right-40 -top-52 size-[540px] rounded-full bg-primary-soft/80 blur-3xl dark:bg-primary-soft/30" />
       <div aria-hidden="true" className="pointer-events-none absolute -bottom-64 -left-48 size-[580px] rounded-full bg-primary-soft/50 blur-3xl dark:bg-primary-soft/20" />
 
-      <header className="relative z-10 mx-auto flex w-full max-w-7xl items-center justify-between px-5 py-6 sm:px-8 lg:px-12">
-        <Link href="/" className="flex items-center gap-3 group" aria-label="StockPilot home">
-          <span className="grid size-11 place-items-center rounded-2xl bg-primary text-primary-foreground shadow-lg shadow-primary/25 transition-transform duration-200 group-hover:scale-105">
-            <LogoMark className="size-6.5" />
+      <header className="relative z-10 mx-auto flex w-full max-w-7xl items-center justify-between px-4 py-4 sm:px-8 sm:py-6 lg:px-12">
+        <Link href="/" className="flex items-center gap-2.5 sm:gap-3 group shrink-0" aria-label="StockPilot home">
+          <span className="grid size-9.5 sm:size-11 place-items-center rounded-xl sm:rounded-2xl bg-primary text-primary-foreground shadow-lg shadow-primary/25 transition-transform duration-200 group-hover:scale-105">
+            <LogoMark className="size-5.5 sm:size-6.5" />
           </span>
           <div>
-            <span className="font-brand block text-xl font-bold tracking-tight text-foreground">
+            <span className="font-brand block text-lg sm:text-xl font-bold tracking-tight text-foreground leading-none">
               STOCK <span className="text-primary">PILOT</span>
             </span>
-            <span className="block text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+            <span className="mt-1 hidden text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground sm:block">
               Smart POS &amp; Inventory
             </span>
           </div>
         </Link>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
           <ThemeToggle />
-          <Link
-            href="/"
-            className="inline-flex items-center gap-2 rounded-2xl border border-border bg-card px-4 py-2 text-xs font-bold text-foreground shadow-2xl shadow-gray-100 transition-all hover:bg-muted dark:shadow-none"
-          >
-            <ArrowLeft size={14} className="text-primary" />
-            Back to Home
-          </Link>
-          <span className="hidden items-center gap-2 rounded-full border border-border bg-card/80 px-3.5 py-2 text-xs font-medium text-muted-foreground sm:inline-flex">
-            <ShieldCheck size={15} className="text-primary" /> Private to your shop
-          </span>
         </div>
       </header>
 
