@@ -470,7 +470,7 @@
     .print-document .a4-invoice-table th:last-child {
         border-top-right-radius: 1mm;
     }
-    .print-document .a4-invoice-table tbody tr:nth-child(even) {
+    .print-document:not(.receipt-coupon-paper) .a4-invoice-table tbody tr:nth-child(even) {
         background: #f7faf9 !important;
         print-color-adjust: exact;
         -webkit-print-color-adjust: exact;
@@ -799,6 +799,13 @@
     border-bottom: 0.12mm solid #e1e6e4 !important;
     vertical-align: top !important;
     overflow-wrap: anywhere;
+    background: #ffffff !important;
+    background-color: #ffffff !important;
+}
+.receipt-mode .print-document tbody tr,
+.receipt-coupon-paper tbody tr {
+    background: #ffffff !important;
+    background-color: #ffffff !important;
 }
 .receipt-mode .print-document .receipt-item-name,
 .receipt-coupon-paper .receipt-item-name {

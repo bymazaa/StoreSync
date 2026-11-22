@@ -471,7 +471,7 @@ export function InvoiceView({ mode }: { mode: 'sale' | 'purchase' }) {
 
                     {/* Items table: clear headers, borderless look, comfortable spacing */}
                     <div className="receipt-items-wrap overflow-x-auto py-2">
-                        <table className={`a4-invoice-table w-full min-w-[500px] text-left text-xs sm:min-w-0 sm:text-sm print:min-w-0 ${!receiptPrint ? 'a4-print-invoice-table' : ''} ${mode === 'sale' && !receiptPrint ? 'a4-sales-invoice-table' : ''}`}>
+                        <table className={`w-full min-w-[500px] text-left text-xs sm:min-w-0 sm:text-sm print:min-w-0 ${!receiptPrint ? 'a4-invoice-table a4-print-invoice-table' : 'receipt-table'} ${mode === 'sale' && !receiptPrint ? 'a4-sales-invoice-table' : ''}`}>
                             {receiptPrint && (
                                 <colgroup>
                                     {completedReturns.length > 0 ? (
