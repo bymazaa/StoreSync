@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import LogoMark from '@/components/brand/logo-mark';
+import { ThemeToggle } from '@/components/theme-toggle';
 import {
     ArrowRight,
     BadgeCheck,
@@ -144,8 +145,10 @@ export function LandingPage() {
                         </a>
                     </nav>
 
-                    {/* Top Right Actions (Language Switcher, Phone, Login) */}
+                    {/* Top Right Actions (Language Switcher, Theme Toggle, Phone, Login) */}
                     <div className="hidden items-center gap-3 sm:flex">
+                        <ThemeToggle />
+
                         {/* Language Switcher Pill */}
                         <div className="inline-flex items-center rounded-xl border border-border bg-card p-1 text-xs font-semibold shadow-xs">
                             <Globe size={13} className="ml-1.5 mr-1 text-muted-foreground" />
@@ -271,6 +274,10 @@ export function LandingPage() {
                                 >
                                     <LogIn size={16} /> {isEn ? 'Sign In to Workspace' : 'লগইন পেজে যান'}
                                 </Link>
+                            </div>
+                            <div className="mt-2 pt-3 flex items-center justify-between border-t border-border/60">
+                                <span className="text-xs font-semibold text-muted-foreground">{isEn ? 'Appearance' : 'থিম মোড'}</span>
+                                <ThemeToggle />
                             </div>
                         </nav>
                     </div>
@@ -1248,6 +1255,8 @@ export function LandingPage() {
                             <Globe size={11} className="text-primary" />
                             <span>{isEn ? 'বাংলায় দেখুন' : 'View in English'}</span>
                         </button>
+
+                        <ThemeToggle />
                     </div>
 
                     <div className="flex flex-col items-center gap-1 sm:items-end text-center sm:text-right">

@@ -3,19 +3,29 @@
 import { useEffect, useRef, useState } from "react";
 import { Snowflake } from "lucide-react";
 
-const STORAGE_KEY = "stockpilot_snowfall_enabled";
+const STORAGE_KEY = "stockpilot_snowfall_v2";
 
 export function useSnowfall() {
   const [enabled, setEnabled] = useState(false);
 
   useEffect(() => {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    // Default to true if not set yet
-    if (saved === null) {
-      setEnabled(true);
-      localStorage.setItem(STORAGE_KEY, "true");
-    } else {
-      setEnabled(saved === "true");
+    // Clear legacy key to ensure fresh default OFF for all users
+    try {
+      if (localStorage.getItem("stockpilot_snowfall_enabled") !== null) {
+        localStorage.removeItem("stockpilot_snowfall_enabled");
+      }
+    } catch {}
+
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      // Default to false (OFF) unless explicitly turned on
+      if (saved === "true") {
+        setEnabled(true);
+      } else {
+        setEnabled(false);
+      }
+    } catch {
+      setEnabled(false);
     }
 
     const handler = (e: CustomEvent<boolean>) => {
@@ -29,7 +39,9 @@ export function useSnowfall() {
   const toggle = () => {
     const next = !enabled;
     setEnabled(next);
-    localStorage.setItem(STORAGE_KEY, String(next));
+    try {
+      localStorage.setItem(STORAGE_KEY, String(next));
+    } catch {}
     window.dispatchEvent(new CustomEvent("stockpilot:snowfall", { detail: next }));
   };
 

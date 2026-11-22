@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { AuthForm } from "@/components/auth/auth-form";
 import LogoMark from "@/components/brand/logo-mark";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { getViewerUser } from "@/lib/auth/session";
 import connectDB from "@/lib/db";
 import { User } from "@/models";
@@ -54,6 +55,7 @@ export default async function LoginPage() {
           </div>
         </Link>
         <div className="flex items-center gap-3">
+          <ThemeToggle />
           <Link
             href="/"
             className="inline-flex items-center gap-2 rounded-2xl border border-border bg-card px-4 py-2 text-xs font-bold text-foreground shadow-2xl shadow-gray-100 transition-all hover:bg-muted dark:shadow-none"
