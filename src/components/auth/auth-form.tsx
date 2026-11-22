@@ -233,7 +233,7 @@ export function AuthForm({ mode, showBrand = true }: AuthFormProps) {
                         </div>
 
                         {/* Staff Login Card */}
-                        <div className="rounded-2xl border border-teal-500/30 bg-teal-500/5 p-3 text-xs transition-colors hover:bg-teal-500/10">
+                        {/* <div className="rounded-2xl border border-teal-500/30 bg-teal-500/5 p-3 text-xs transition-colors hover:bg-teal-500/10">
                             <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-1.5">
                                     <span className="size-2 rounded-full bg-teal-500" />
@@ -254,7 +254,7 @@ export function AuthForm({ mode, showBrand = true }: AuthFormProps) {
                                 <span>Email: <strong className="text-foreground">staff@stockpilot.local</strong></span>
                                 <span>Pass: <strong className="text-foreground">Staff@123456</strong></span>
                             </div>
-                        </div>
+                        </div> */}
                     </div>
                 )}
             </div>
